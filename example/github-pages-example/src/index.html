@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CodeMirror 6 LaTeX Visual Editor">
+  <title>CodeMirror 6 LaTeX Visual Editor</title>
+</head>
+<body>
+  <header>
+    <h1>CodeMirror LaTeX Visual Editor</h1>
+    <p>Non-lossy visual editing for LaTeX documents</p>
+    <div class="links">
+      <a href="https://github.com/texlyre/codemirror-latex-visual" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://www.npmjs.com/package/codemirror-latex-visual" target="_blank" rel="noopener noreferrer">npm</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="demo-container">
+      <h2>Side-by-Side Demo</h2>
+      <p>See how changes in either editor update the other in real-time.</p>
+      <div class="editors-grid">
+        <div class="editor-panel">
+          <h3>CodeMirror (Source)</h3>
+          <div id="codemirror-editor"></div>
+        </div>
+        <div class="editor-panel">
+          <h3>ProseMirror (Visual)</h3>
+          <div id="prosemirror-editor"></div>
+        </div>
+      </div>
+
+      <div class="single-editor-demo">
+        <h2>Integrated Dual Editor</h2>
+        <p>Toggle between source and visual editing modes. Press <kbd>Ctrl+E</kbd> to switch modes.</p>
+        <div id="dual-editor"></div>
+      </div>
+    </section>
+
+    <section class="features">
+      <h2>Features</h2>
+      <ul>
+        <li>Non-lossy visual editing - LaTeX source remains authoritative</li>
+        <li>Real-time bidirectional synchronization between editors</li>
+        <li>Visual rendering of math formulas, sections, and environments</li>
+        <li>Mode switching with keyboard shortcut (Ctrl+E)</li>
+        <li>Works with any existing CodeMirror setup</li>
+        <li>Collaborative editing support through Yjs integration</li>
+        <li>Extensible schema for custom LaTeX constructs</li>
+        <li>Position mapping maintains cursor relationships</li>
+      </ul>
+    </section>
+
+    <section class="installation">
+      <h2>Installation</h2>
+      <pre><code>npm install codemirror-latex-visual</code></pre>
+    </section>
+
+    <section class="usage">
+      <h2>Usage</h2>
+      <pre><code>import { EditorState, EditorView } from '@codemirror/state';
+import { DualLatexEditor } from 'codemirror-latex-visual';
+import 'codemirror-latex-visual/dist/styles.css';
+
+// Create your CodeMirror editor
+const cmEditor = new EditorView({
+  state: EditorState.create({
+    doc: '\\section{Title}\nSome text with $x^2$ inline math.',
+    extensions: [/* your extensions */]
+  }),
+  parent: document.getElementById('cm-container')
+});
+
+// Add visual editing capability
+const dualEditor = new DualLatexEditor(
+  document.getElementById('editor-wrapper'),
+  cmEditor,
+  {
+    initialMode: 'source',
+    onModeChange: (mode) => console.log('Switched to:', mode)
+  }
+);</code></pre>
+    </section>
+
+    <section class="api">
+      <h2>API Reference</h2>
+      <h3>DualLatexEditor</h3>
+      <pre><code>const dualEditor = new DualLatexEditor(container, cmEditor, options);
+
+// Methods
+dualEditor.setMode('visual');  // Switch to visual mode
+dualEditor.setMode('source');  // Switch to source mode
+dualEditor.destroy();          // Clean up resources
+
+// Options
+{
+  initialMode: 'source' | 'visual',  // Default: 'source'
+  onModeChange: (mode) => void,      // Mode change callback
+  className: string                  // Additional CSS class
+}</code></pre>
+    </section>
+  </main>
+
+  <footer>
+    <p>MIT License &copy; 2025 <a href="https://abawi.me">Fares Abawi</a></p>
+  </footer>
+</body>
+</html>
