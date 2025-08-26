@@ -1,6 +1,6 @@
 # CodeMirror 6 LaTeX Visual Editor
 
-**WIP** This package provides non-lossy visual editing for LaTeX documents in [CodeMirror 6](https://codemirror.net/6/), designed to work with academic writing workflows and document preparation.
+**WIP** This package provides WYSIWYM visual editing for LaTeX documents in [CodeMirror 6](https://codemirror.net/6/), designed to work with academic writing workflows and document preparation.
 
 ## Features
 
