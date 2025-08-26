@@ -1,6 +1,36 @@
 import { latexVisualSchema } from './prosemirror-schema';
 import { Node as PMNode } from 'prosemirror-model';
 
+interface LatexToken {
+  type: 'text' | 'math_inline' | 'math_display' | 'section' | 'environment' | 'command' | 'comment' | 'paragraph_break' | 'mixed_paragraph' | 'editable_command';
+  content: string;
+  latex: string;
+  start: number;
+  end: number;
+  level?: number;
+  name?: string;
+  params?: string;
+  children?: LatexToken[];
+  elements?: Array<{
+    type: 'text' | 'command' | 'math_inline' | 'editable_command';
+    content: string | LatexToken[];
+    latex: string;
+    name?: string;
+  }>;
+}
+
+const EDITABLE_COMMANDS = new Set([
+  'textbf', 'textit', 'emph', 'underline', 'textsc', 'textsf', 'texttt',
+  'section', 'subsection', 'subsubsection', 'title', 'author', 'date',
+  'footnote', 'cite', 'ref', 'label', 'url', 'href'
+]);
+
+const FORMATTING_COMMANDS = new Map([
+  ['textbf', 'strong'],
+  ['textit', 'em'],
+  ['emph', 'em']
+]);
+
 export function parseLatexToProseMirror(latex: string): PMNode {
   const tokens = tokenizeLatex(latex);
   return buildProseMirrorDoc(tokens);
@@ -11,6 +41,9 @@ export function renderProseMirrorToLatex(pmDoc: PMNode): string {
 
   pmDoc.descendants((node, pos) => {
     switch (node.type.name) {
+      case 'comment':
+        parts.push(node.attrs.latex);
+        return false;
       case 'math_inline':
         parts.push(`$${node.attrs.latex}$`);
         return false;
@@ -30,6 +63,11 @@ export function renderProseMirrorToLatex(pmDoc: PMNode): string {
         } else {
           parts.push(node.attrs.latex);
         }
+        return false;
+      case 'editable_command':
+        const cmdName = node.attrs.name;
+        const innerContent = node.textContent;
+        parts.push(`\\${cmdName}{${innerContent}}`);
         return false;
       case 'command':
         parts.push(node.attrs.latex);
@@ -65,6 +103,11 @@ function renderParagraphContent(paragraphNode: PMNode): string {
       case 'math_inline':
         result += `$${node.attrs.latex}$`;
         return false;
+      case 'editable_command':
+        const cmdName = node.attrs.name;
+        const innerContent = node.textContent;
+        result += `\\${cmdName}{${innerContent}}`;
+        return false;
       case 'command':
         result += node.attrs.latex;
         return false;
@@ -76,23 +119,20 @@ function renderParagraphContent(paragraphNode: PMNode): string {
   return result;
 }
 
-interface LatexToken {
-  type: 'text' | 'math_inline' | 'math_display' | 'section' | 'environment' | 'command' | 'paragraph_break' | 'mixed_paragraph';
-  content: string;
-  latex: string;
-  start: number;
-  end: number;
-  level?: number;
-  name?: string;
-  params?: string;
-  elements?: Array<{type: 'text' | 'command' | 'math_inline', content: string, latex: string}>;
-}
-
 function tokenizeLatex(latex: string): LatexToken[] {
   const tokens: LatexToken[] = [];
   let pos = 0;
 
   while (pos < latex.length) {
+    // Handle comments
+    if (latex.charAt(pos) === '%') {
+      const token = extractComment(latex, pos);
+      tokens.push(token);
+      pos = token.end;
+      continue;
+    }
+
+    // Handle display math
     if (latex.startsWith('$$', pos)) {
       const token = extractDisplayMath(latex, pos);
       tokens.push(token);
@@ -100,6 +140,7 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
+    // Handle inline math
     if (latex.charAt(pos) === '$' && latex.charAt(pos + 1) !== '$') {
       const token = extractInlineMath(latex, pos);
       tokens.push(token);
@@ -107,6 +148,7 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
+    // Handle commands
     if (latex.charAt(pos) === '\\') {
       if (latex.startsWith('\\section', pos) || latex.startsWith('\\subsection', pos) || latex.startsWith('\\subsubsection', pos)) {
         const token = extractSection(latex, pos);
@@ -122,13 +164,13 @@ function tokenizeLatex(latex: string): LatexToken[] {
         continue;
       }
 
-      // For inline commands, we'll handle them as part of mixed paragraphs
       const token = extractMixedParagraph(latex, pos);
       tokens.push(token);
       pos = token.end;
       continue;
     }
 
+    // Handle paragraph breaks
     if (latex.startsWith('\n\n', pos)) {
       tokens.push({
         type: 'paragraph_break',
@@ -141,6 +183,7 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
+    // Handle regular text and mixed content
     const token = extractMixedParagraph(latex, pos);
     tokens.push(token);
     pos = token.end;
@@ -149,8 +192,100 @@ function tokenizeLatex(latex: string): LatexToken[] {
   return tokens;
 }
 
+function extractComment(latex: string, start: number): LatexToken {
+  let end = start + 1;
+  while (end < latex.length && latex.charAt(end) !== '\n') {
+    end++;
+  }
+
+  if (end < latex.length && latex.charAt(end) === '\n') {
+    end++;
+  }
+
+  const fullComment = latex.slice(start, end);
+  const commentContent = latex.slice(start + 1, end - (latex.charAt(end - 1) === '\n' ? 1 : 0));
+
+  return {
+    type: 'comment',
+    content: commentContent,
+    latex: fullComment,
+    start,
+    end
+  };
+}
+
+function extractBalancedBraces(latex: string, start: number): { content: string; end: number } | null {
+  if (latex.charAt(start) !== '{') return null;
+
+  let pos = start + 1;
+  let braceCount = 1;
+  let escaped = false;
+
+  while (pos < latex.length && braceCount > 0) {
+    if (escaped) {
+      escaped = false;
+      pos++;
+      continue;
+    }
+
+    if (latex.charAt(pos) === '\\') {
+      escaped = true;
+      pos++;
+      continue;
+    }
+
+    if (latex.charAt(pos) === '{') {
+      braceCount++;
+    } else if (latex.charAt(pos) === '}') {
+      braceCount--;
+    }
+
+    pos++;
+  }
+
+  if (braceCount === 0) {
+    return {
+      content: latex.slice(start + 1, pos - 1),
+      end: pos
+    };
+  }
+
+  return null;
+}
+
+function extractCommandWithBraces(latex: string, start: number): { cmdName: string; cmdParams: string; fullCmd: string } | null {
+  const cmdMatch = latex.slice(start).match(/^\\([a-zA-Z*]+)/);
+  if (!cmdMatch) return null;
+
+  const cmdName = cmdMatch[1];
+  let pos = start + cmdMatch[0].length;
+  let cmdParams = '';
+  let fullCmd = cmdMatch[0];
+
+  // Skip whitespace
+  while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
+    pos++;
+  }
+
+  // Extract braced parameter if present
+  if (pos < latex.length && latex.charAt(pos) === '{') {
+    const braceResult = extractBalancedBraces(latex, pos);
+    if (braceResult) {
+      cmdParams = braceResult.content;
+      fullCmd = latex.slice(start, braceResult.end);
+    }
+  }
+
+  return { cmdName, cmdParams, fullCmd };
+}
+
 function extractMixedParagraph(latex: string, start: number): LatexToken {
-  const elements: Array<{type: 'text' | 'command' | 'math_inline', content: string, latex: string}> = [];
+  const elements: Array<{
+    type: 'text' | 'command' | 'math_inline' | 'editable_command';
+    content: string | LatexToken[];
+    latex: string;
+    name?: string;
+  }> = [];
   let pos = start;
   let fullContent = '';
 
@@ -160,10 +295,12 @@ function extractMixedParagraph(latex: string, start: number): LatexToken {
         latex.startsWith('\\section', pos) ||
         latex.startsWith('\\subsection', pos) ||
         latex.startsWith('\\subsubsection', pos) ||
-        latex.startsWith('\\begin{', pos)) {
+        latex.startsWith('\\begin{', pos) ||
+        latex.charAt(pos) === '%') {
       break;
     }
 
+    // Handle inline math
     if (latex.charAt(pos) === '$' && latex.charAt(pos + 1) !== '$') {
       const mathEnd = findMatchingDollar(latex, pos + 1);
       if (mathEnd !== -1) {
@@ -180,24 +317,40 @@ function extractMixedParagraph(latex: string, start: number): LatexToken {
       }
     }
 
+    // Handle commands
     if (latex.charAt(pos) === '\\') {
-      const cmdMatch = latex.slice(pos).match(/^\\([a-zA-Z*]+)(?:\{([^}]*)\})?(?:\[([^\]]*)\])?/);
-      if (cmdMatch) {
-        elements.push({
-          type: 'command',
-          content: cmdMatch[2] || '',
-          latex: cmdMatch[0]
-        });
-        fullContent += cmdMatch[0];
-        pos += cmdMatch[0].length;
+      const cmdResult = extractCommandWithBraces(latex, pos);
+      if (cmdResult) {
+        const { cmdName, cmdParams, fullCmd } = cmdResult;
+
+        if (EDITABLE_COMMANDS.has(cmdName)) {
+          const innerTokens = cmdParams ? tokenizeLatex(cmdParams) : [];
+          elements.push({
+            type: 'editable_command',
+            content: innerTokens,
+            latex: fullCmd,
+            name: cmdName
+          });
+        } else {
+          elements.push({
+            type: 'command',
+            content: cmdParams,
+            latex: fullCmd,
+            name: cmdName
+          });
+        }
+        fullContent += fullCmd;
+        pos += fullCmd.length;
         continue;
       }
     }
 
+    // Handle regular text
     let textEnd = pos;
     while (textEnd < latex.length &&
            latex.charAt(textEnd) !== '$' &&
            latex.charAt(textEnd) !== '\\' &&
+           latex.charAt(textEnd) !== '%' &&
            !latex.startsWith('\n\n', textEnd) &&
            !latex.startsWith('$$', textEnd) &&
            !latex.startsWith('\\section', textEnd) &&
@@ -355,8 +508,8 @@ function extractEnvironment(latex: string, start: number): LatexToken {
 }
 
 function extractCommand(latex: string, start: number): LatexToken {
-  const match = latex.slice(start).match(/^\\([a-zA-Z*]+)(?:\{([^}]*)\})?(?:\[([^\]]*)\])?/);
-  if (!match) {
+  const cmdResult = extractCommandWithBraces(latex, start);
+  if (!cmdResult) {
     return {
       type: 'text',
       content: latex.charAt(start),
@@ -368,12 +521,12 @@ function extractCommand(latex: string, start: number): LatexToken {
 
   return {
     type: 'command',
-    content: match[2] || '',
-    latex: match[0],
+    content: cmdResult.cmdParams,
+    latex: cmdResult.fullCmd,
     start,
-    end: start + match[0].length,
-    name: match[1],
-    params: match[3] || ''
+    end: start + cmdResult.fullCmd.length,
+    name: cmdResult.cmdName,
+    params: ''
   };
 }
 
@@ -393,30 +546,63 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
 
   for (const token of tokens) {
     switch (token.type) {
+      case 'comment':
+        flushParagraph();
+        nodes.push(
+          latexVisualSchema.nodes.comment.create(
+            { latex: token.latex },
+            token.content ? [latexVisualSchema.text(token.content)] : []
+          )
+        );
+        break;
+
       case 'mixed_paragraph':
         if (token.elements) {
           for (const element of token.elements) {
             switch (element.type) {
               case 'text':
-                if (element.content.trim()) {
+                if (typeof element.content === 'string' && element.content) {
                   currentParagraphContent.push(latexVisualSchema.text(element.content));
                 }
                 break;
               case 'math_inline':
                 currentParagraphContent.push(
                   latexVisualSchema.nodes.math_inline.create({
-                    latex: element.content,
-                    rendered: element.content
+                    latex: typeof element.content === 'string' ? element.content : '',
+                    rendered: typeof element.content === 'string' ? element.content : ''
                   })
                 );
                 break;
+              case 'editable_command':
+                if (Array.isArray(element.content)) {
+                  const innerDoc = buildProseMirrorDoc(element.content);
+
+                  // Always create editable_command nodes, but apply formatting if it's a formatting command
+                  const commandNode = latexVisualSchema.nodes.editable_command.create({
+                    name: element.name || '',
+                    latex: element.latex
+                  }, innerDoc.content);
+
+                  currentParagraphContent.push(commandNode);
+                } else {
+                  // Handle empty commands like \textbf{}
+                  currentParagraphContent.push(
+                    latexVisualSchema.nodes.editable_command.create({
+                      name: element.name || '',
+                      latex: element.latex
+                    })
+                  );
+                }
+                break;
               case 'command':
+                // Make all commands editable
                 currentParagraphContent.push(
-                  latexVisualSchema.nodes.command.create({
-                    name: extractCommandName(element.latex),
-                    latex: element.latex,
-                    params: ''
-                  })
+                  latexVisualSchema.nodes.editable_command.create({
+                    name: element.name || '',
+                    latex: element.latex
+                  }, typeof element.content === 'string' && element.content ?
+                    [latexVisualSchema.text(element.content)] : []
+                  )
                 );
                 break;
             }
@@ -468,12 +654,12 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
         break;
 
       case 'command':
+        // Make standalone commands editable too
         currentParagraphContent.push(
-          latexVisualSchema.nodes.command.create({
+          latexVisualSchema.nodes.editable_command.create({
             name: token.name || '',
-            latex: token.latex,
-            params: token.params || ''
-          })
+            latex: token.latex
+          }, token.content ? [latexVisualSchema.text(token.content)] : [])
         );
         break;
 
@@ -497,9 +683,4 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
   }
 
   return latexVisualSchema.nodes.doc.create({}, nodes);
-}
-
-function extractCommandName(latex: string): string {
-  const match = latex.match(/^\\([a-zA-Z*]+)/);
-  return match ? match[1] : '';
 }

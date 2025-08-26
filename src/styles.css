@@ -90,6 +90,63 @@
   font-weight: 500;
 }
 
+.latex-editable-command {
+  display: inline-block;
+  margin: 0 1px;
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 3px;
+  background: rgba(0, 123, 255, 0.05);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.latex-editable-command:hover {
+  background: rgba(0, 123, 255, 0.1);
+  border-color: rgba(0, 123, 255, 0.5);
+}
+
+.latex-editable-command .cmd-label {
+  color: #007acc;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.85em;
+  font-weight: 600;
+  padding: 1px 2px;
+  user-select: none;
+}
+
+.latex-editable-command .cmd-content {
+  padding: 1px 2px;
+  min-width: 1em;
+  display: inline-block;
+}
+
+.latex-cmd-textbf .cmd-content {
+  font-weight: bold;
+}
+
+.latex-cmd-textit .cmd-content,
+.latex-cmd-emph .cmd-content {
+  font-style: italic;
+}
+
+.latex-cmd-underline .cmd-content {
+  text-decoration: underline;
+}
+
+.latex-cmd-textsc .cmd-content {
+  font-variant: small-caps;
+}
+
+.latex-cmd-textsf .cmd-content {
+  font-family: sans-serif;
+}
+
+.latex-cmd-texttt .cmd-content {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+}
+
 h1, h2, h3 {
   margin: 20px 0 10px 0;
 }

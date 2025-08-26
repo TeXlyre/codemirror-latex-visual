@@ -7,6 +7,7 @@ This package provides non-lossy visual editing for LaTeX documents in [CodeMirro
 - Non-lossy visual editing - LaTeX source remains authoritative
 - Real-time bidirectional synchronization between source and visual editors
 - Visual representation of LaTeX structures (sections, math blocks, environments)
+- KaTeX rendering for math content
 - Mode switching between source and visual editing
 - Works with any existing CodeMirror 6 setup
 - Preserves LaTeX formatting and commands exactly as written
