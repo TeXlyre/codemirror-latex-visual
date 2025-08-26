@@ -36,7 +36,8 @@
     "@rollup/plugin-typescript": "^11.0.0",
     "rollup-plugin-dts": "^6.0.0",
     "rollup": "^3.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "tslib": "^2.6.0"
   },
   "files": [
     "dist/",
