@@ -79,11 +79,21 @@ math-field:hover {
 }
 
 math-field:focus,
-math-field:focus-within {
+math-field:focus-within,
+math-field.focused {
   outline: 2px solid #007acc;
   outline-offset: 1px;
   background: rgba(0, 123, 255, 0.1);
   border-color: #007acc;
+}
+
+math-field[contenteditable="false"] {
+  outline: none !important;
+}
+
+math-field:focus[contenteditable="false"] {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
 }
 
 .math-error {

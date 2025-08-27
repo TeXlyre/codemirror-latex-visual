@@ -6,10 +6,17 @@ export function createEditableMath(latex: string, displayMode: boolean = false):
 
   mathfield.value = latex;
   mathfield.readOnly = false;
-  mathfield.mathVirtualKeyboardPolicy = 'manual';
+
+  // Critical: Don't set to 'sandboxed' - this might block keyboard input
+  mathfield.mathVirtualKeyboardPolicy = 'auto';
+
   mathfield.smartMode = true;
   mathfield.smartFence = true;
   mathfield.smartSuperscript = true;
+  mathfield.letterShapeStyle = 'tex';
+
+  // Remove this line - it might interfere with keyboard input
+  // mathfield.setAttribute('contenteditable', 'false');
 
   if (displayMode) {
     mathfield.classList.add('math-display-field');
@@ -19,52 +26,25 @@ export function createEditableMath(latex: string, displayMode: boolean = false):
     mathfield.setAttribute('style', 'display: inline-block; min-width: 2em;');
   }
 
-  let wasRecentlyFocused = false;
-  let menuClickHandler: ((e: MouseEvent) => void) | null = null;
-
+  // Ensure proper focus handling
   mathfield.addEventListener('focusin', () => {
-    wasRecentlyFocused = true;
-    if ((window as any).mathVirtualKeyboard) {
-      (window as any).mathVirtualKeyboard.show();
-    }
+    mathfield.classList.add('focused');
 
-    if (menuClickHandler) {
-      document.removeEventListener('mousedown', menuClickHandler, true);
-    }
+    // Don't override selection immediately
+    // setTimeout(() => {
+    //   if (mathfield.selection.ranges.length === 0) {
+    //     mathfield.selection = { ranges: [[0, 0]] };
+    //   }
+    // }, 10);
 
-    menuClickHandler = (e: MouseEvent) => {
-      const target = e.target as Element;
-      if (target && (target.closest('.ML__popover') || target.closest('.ML__menu') || target.classList.contains('ML__button'))) {
-        setTimeout(() => {
-          if (wasRecentlyFocused) {
-            mathfield.focus();
-          }
-        }, 50);
-      }
-    };
-
-    document.addEventListener('mousedown', menuClickHandler, true);
+    // Let MathLive handle virtual keyboard automatically
+    // if ((window as any).mathVirtualKeyboard) {
+    //   (window as any).mathVirtualKeyboard.show();
+    // }
   });
 
   mathfield.addEventListener('focusout', () => {
-    setTimeout(() => {
-      wasRecentlyFocused = false;
-    }, 200);
-
-    if ((window as any).mathVirtualKeyboard) {
-      (window as any).mathVirtualKeyboard.hide();
-    }
-
-    if (menuClickHandler) {
-      document.removeEventListener('mousedown', menuClickHandler, true);
-      menuClickHandler = null;
-    }
-  });
-
-  mathfield.addEventListener('click', () => {
-    if (!mathfield.hasFocus()) {
-      mathfield.focus();
-    }
+    mathfield.classList.remove('focused');
   });
 
   return mathfield;

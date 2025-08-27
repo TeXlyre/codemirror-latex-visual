@@ -17,7 +17,7 @@
     "prosemirror-model": "^1.19.0",
     "prosemirror-keymap": "^1.2.0",
     "prosemirror-commands": "^1.5.0",
-    "mathlive": "^0.100.0"
+    "mathlive": "^0.107.0"
   },
   "devDependencies": {
     "webpack": "^5.88.0",
