@@ -23,7 +23,7 @@
     "prosemirror-model": "^1.19.0",
     "prosemirror-keymap": "^1.2.0",
     "prosemirror-commands": "^1.5.0",
-    "katex": "^0.16.0"
+    "mathlive": "^0.98.0"
   },
   "devDependencies": {
     "@codemirror/state": "^6.0.0",
@@ -34,8 +34,8 @@
     "prosemirror-model": "^1.19.0",
     "prosemirror-keymap": "^1.2.0",
     "prosemirror-commands": "^1.5.0",
+    "mathlive": "^0.100.0",
     "katex": "^0.16.0",
-    "@types/katex": "^0.16.0",
     "@rollup/plugin-typescript": "^11.0.0",
     "rollup-plugin-dts": "^6.0.0",
     "rollup": "^3.0.0",
@@ -52,6 +52,7 @@
     "latex",
     "prosemirror",
     "visual-editor",
-    "wysiwyg"
+    "wysiwyg",
+    "mathlive"
   ]
 }

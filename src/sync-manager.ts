@@ -11,12 +11,101 @@ export class SyncManager {
   public syncing = false;
   private isListening = false;
   private originalDispatch: any;
+  private mathfieldObserver?: MutationObserver;
 
   constructor(cmEditor: EditorView, pmEditor: PMView) {
     this.cmEditor = cmEditor;
     this.pmEditor = pmEditor;
     this.positionMapper = new PositionMapper();
     this.setupCodeMirrorListener();
+    this.setupMathfieldListeners();
+  }
+
+  private setupMathfieldListeners() {
+    this.mathfieldObserver = new MutationObserver((mutations) => {
+      if (this.syncing) return;
+
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              this.attachMathfieldListeners(node as Element);
+            }
+          });
+        }
+      }
+    });
+
+    this.mathfieldObserver.observe(this.pmEditor.dom, {
+      childList: true,
+      subtree: true
+    });
+
+    setTimeout(() => {
+      this.attachMathfieldListeners(this.pmEditor.dom);
+    }, 0);
+  }
+
+  private attachMathfieldListeners(element: Element) {
+    const mathfields = element.querySelectorAll('math-field');
+    mathfields.forEach((mf: any) => {
+      if (mf.hasAttribute('data-listener-attached')) return;
+
+      mf.setAttribute('data-listener-attached', 'true');
+
+      // Listen for content changes
+      mf.addEventListener('input', (e: any) => {
+        if (!this.syncing) {
+          this.handleMathfieldChange(mf);
+        }
+      });
+
+      // Also listen for blur events to catch final changes
+      mf.addEventListener('blur', (e: any) => {
+        if (!this.syncing) {
+          this.handleMathfieldChange(mf);
+        }
+      });
+
+      // Listen for selection changes within mathfield
+      mf.addEventListener('selection-change', (e: any) => {
+        // Optional: handle selection changes if needed
+      });
+    });
+  }
+
+  private handleMathfieldChange(mathfield: any) {
+    if (this.syncing) return;
+
+    const newLatex = mathfield.getValue('latex');
+    const oldLatex = mathfield.getAttribute('data-original-latex') || '';
+
+    if (newLatex !== oldLatex) {
+      mathfield.setAttribute('data-original-latex', newLatex);
+      this.updateMathNodeFromMathfield(mathfield, newLatex);
+      setTimeout(() => this.syncToSource(), 10);
+    }
+  }
+
+  private updateMathNodeFromMathfield(mathfield: any, newLatex: string) {
+    try {
+      const pmPos = this.pmEditor.posAtDOM(mathfield, 0);
+      if (pmPos >= 0) {
+        const $pos = this.pmEditor.state.doc.resolve(pmPos);
+        const node = $pos.nodeAfter;
+
+        if (node && (node.type.name === 'math_inline' || node.type.name === 'math_display')) {
+          const tr = this.pmEditor.state.tr.setNodeMarkup(
+            pmPos,
+            undefined,
+            { ...node.attrs, latex: newLatex }
+          );
+          this.pmEditor.dispatch(tr);
+        }
+      }
+    } catch (error) {
+      console.warn('Error updating math node:', error);
+    }
   }
 
   private setupCodeMirrorListener() {
@@ -68,9 +157,22 @@ export class SyncManager {
 
       this.pmEditor.dispatch(tr);
       this.positionMapper.buildMapping(latexContent, pmDoc);
+
+      setTimeout(() => {
+        this.attachMathfieldListeners(this.pmEditor.dom);
+        this.initializeMathfieldValues();
+      }, 50);
     } finally {
       this.syncing = false;
     }
+  }
+
+  private initializeMathfieldValues() {
+    const mathfields = this.pmEditor.dom.querySelectorAll('math-field');
+    mathfields.forEach((mf: any) => {
+      const currentLatex = mf.getValue('latex');
+      mf.setAttribute('data-original-latex', currentLatex);
+    });
   }
 
   syncToSource() {
@@ -78,6 +180,7 @@ export class SyncManager {
     this.syncing = true;
 
     try {
+      this.updateMathfieldValues();
       const newLatex = renderProseMirrorToLatex(this.pmEditor.state.doc);
       const currentLatex = this.cmEditor.state.doc.toString();
 
@@ -96,12 +199,28 @@ export class SyncManager {
     }
   }
 
+  private updateMathfieldValues() {
+    const mathfields = this.pmEditor.dom.querySelectorAll('math-field');
+    mathfields.forEach((mf: any) => {
+      const currentValue = mf.getValue('latex');
+      const originalValue = mf.getAttribute('data-original-latex') || '';
+
+      if (currentValue !== originalValue) {
+        this.updateMathNodeFromMathfield(mf, currentValue);
+      }
+    });
+  }
+
   handleProseMirrorChange(tr: Transaction) {
     if (!tr.docChanged || this.syncing) return;
     setTimeout(() => this.syncToSource(), 0);
   }
 
   destroy() {
+    if (this.mathfieldObserver) {
+      this.mathfieldObserver.disconnect();
+    }
+
     if (this.isListening && this.originalDispatch) {
       this.cmEditor.dispatch = this.originalDispatch;
       this.isListening = false;
