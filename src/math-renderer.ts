@@ -19,39 +19,53 @@ export function createEditableMath(latex: string, displayMode: boolean = false):
     mathfield.setAttribute('style', 'display: inline-block; min-width: 2em;');
   }
 
+  let wasRecentlyFocused = false;
+  let menuClickHandler: ((e: MouseEvent) => void) | null = null;
+
   mathfield.addEventListener('focusin', () => {
+    wasRecentlyFocused = true;
     if ((window as any).mathVirtualKeyboard) {
       (window as any).mathVirtualKeyboard.show();
     }
+
+    if (menuClickHandler) {
+      document.removeEventListener('mousedown', menuClickHandler, true);
+    }
+
+    menuClickHandler = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (target && (target.closest('.ML__popover') || target.closest('.ML__menu') || target.classList.contains('ML__button'))) {
+        setTimeout(() => {
+          if (wasRecentlyFocused) {
+            mathfield.focus();
+          }
+        }, 50);
+      }
+    };
+
+    document.addEventListener('mousedown', menuClickHandler, true);
   });
 
   mathfield.addEventListener('focusout', () => {
+    setTimeout(() => {
+      wasRecentlyFocused = false;
+    }, 200);
+
     if ((window as any).mathVirtualKeyboard) {
       (window as any).mathVirtualKeyboard.hide();
+    }
+
+    if (menuClickHandler) {
+      document.removeEventListener('mousedown', menuClickHandler, true);
+      menuClickHandler = null;
+    }
+  });
+
+  mathfield.addEventListener('click', () => {
+    if (!mathfield.hasFocus()) {
+      mathfield.focus();
     }
   });
 
   return mathfield;
-}
-
-export function renderStaticMath(latex: string, displayMode: boolean = false): string {
-  try {
-    const mathfield = new MathfieldElement();
-    mathfield.value = latex;
-    mathfield.readOnly = true;
-    return mathfield.outerHTML;
-  } catch (error) {
-    console.warn('MathLive rendering error:', error);
-    return `<span class="math-error">${latex}</span>`;
-  }
-}
-
-export function isMathValid(latex: string): boolean {
-  try {
-    const mathfield = new MathfieldElement();
-    mathfield.value = latex;
-    return true;
-  } catch {
-    return false;
-  }
 }

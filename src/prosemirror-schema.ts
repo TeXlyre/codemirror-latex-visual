@@ -52,7 +52,9 @@ export const latexVisualSchema = new Schema({
       },
       parseDOM: [{ tag: 'math-field' }],
       toDOM: node => {
-        return createEditableMath(node.attrs.latex, false);
+        const mathfield = createEditableMath(node.attrs.latex, false);
+        mathfield.setAttribute('data-original-latex', node.attrs.latex);
+        return mathfield;
       }
     },
 
@@ -64,7 +66,9 @@ export const latexVisualSchema = new Schema({
       },
       parseDOM: [{ tag: 'math-field.math-display-field' }],
       toDOM: node => {
-        return createEditableMath(node.attrs.latex, true);
+        const mathfield = createEditableMath(node.attrs.latex, true);
+        mathfield.setAttribute('data-original-latex', node.attrs.latex);
+        return mathfield;
       }
     },
 

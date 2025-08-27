@@ -49,17 +49,10 @@ export class SyncManager {
     mathfields.forEach((mf: any) => {
       if (this.mathfieldEventMap.has(mf)) return;
 
+      const originalLatex = mf.getAttribute('data-original-latex') || mf.getValue('latex');
+      mf.setAttribute('data-original-latex', originalLatex);
+
       const handlers = {
-        input: (e: any) => {
-          if (!this.syncing) {
-            this.handleMathfieldChange(mf);
-          }
-        },
-        change: (e: any) => {
-          if (!this.syncing) {
-            this.handleMathfieldChange(mf);
-          }
-        },
         blur: (e: any) => {
           if (!this.syncing) {
             this.handleMathfieldChange(mf);
@@ -68,9 +61,6 @@ export class SyncManager {
       };
 
       this.mathfieldEventMap.set(mf, handlers);
-
-      mf.addEventListener('input', handlers.input);
-      mf.addEventListener('change', handlers.change);
       mf.addEventListener('blur', handlers.blur);
 
       mf.readOnly = false;
@@ -86,7 +76,12 @@ export class SyncManager {
 
     if (newLatex !== oldLatex) {
       mathfield.setAttribute('data-original-latex', newLatex);
-      this.updateMathNodeFromMathfield(mathfield, newLatex);
+
+      setTimeout(() => {
+        if (!this.syncing) {
+          this.updateMathNodeFromMathfield(mathfield, newLatex);
+        }
+      }, 0);
     }
   }
 
@@ -104,6 +99,10 @@ export class SyncManager {
             { ...node.attrs, latex: newLatex }
           );
           this.pmEditor.dispatch(tr);
+
+          setTimeout(() => {
+            this.attachMathfieldListeners(this.pmEditor.dom);
+          }, 50);
         }
       }
     } catch (error) {
@@ -153,6 +152,10 @@ export class SyncManager {
         const tr = this.pmEditor.state.tr.replace(diffStart, endA, newPmDoc.slice(diffStart, endB));
         this.pmEditor.dispatch(tr);
       }
+
+      setTimeout(() => {
+        this.attachMathfieldListeners(this.pmEditor.dom);
+      }, 50);
     } finally {
       this.syncing = false;
     }
@@ -218,8 +221,6 @@ export class SyncManager {
     mathfields.forEach((mf: any) => {
       const handlers = this.mathfieldEventMap.get(mf);
       if (handlers) {
-        mf.removeEventListener('input', handlers.input);
-        mf.removeEventListener('change', handlers.change);
         mf.removeEventListener('blur', handlers.blur);
         this.mathfieldEventMap.delete(mf);
       }
