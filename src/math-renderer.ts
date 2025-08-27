@@ -1,26 +1,35 @@
 import { MathfieldElement } from 'mathlive';
+MathfieldElement.soundsDirectory = null;
 
 export function createEditableMath(latex: string, displayMode: boolean = false): HTMLElement {
-  // Set the plonk sound to null globally to disable it
-  if ((window as any).MathfieldElement) {
-    (window as any).MathfieldElement.plonkSound = null;
-  }
-
   const mathfield = new MathfieldElement();
-  mathfield.value = latex;
 
-  // Configure for full editing capability
+  mathfield.value = latex;
   mathfield.readOnly = false;
-  mathfield.mathVirtualKeyboardPolicy = 'auto';
+  mathfield.mathVirtualKeyboardPolicy = 'manual';
   mathfield.smartMode = true;
+  mathfield.smartFence = true;
+  mathfield.smartSuperscript = true;
 
   if (displayMode) {
     mathfield.classList.add('math-display-field');
-    mathfield.setAttribute('style', 'display: block; text-align: center; min-height: 2em;');
+    mathfield.setAttribute('style', 'display: block; text-align: center; min-height: 2em; width: 100%;');
   } else {
     mathfield.classList.add('math-inline-field');
     mathfield.setAttribute('style', 'display: inline-block; min-width: 2em;');
   }
+
+  mathfield.addEventListener('focusin', () => {
+    if ((window as any).mathVirtualKeyboard) {
+      (window as any).mathVirtualKeyboard.show();
+    }
+  });
+
+  mathfield.addEventListener('focusout', () => {
+    if ((window as any).mathVirtualKeyboard) {
+      (window as any).mathVirtualKeyboard.hide();
+    }
+  });
 
   return mathfield;
 }

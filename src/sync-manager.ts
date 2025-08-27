@@ -12,6 +12,7 @@ export class SyncManager {
   private isListening = false;
   private originalDispatch: any;
   private mathfieldObserver?: MutationObserver;
+  private mathfieldEventMap = new WeakMap();
 
   constructor(cmEditor: EditorView, pmEditor: PMView) {
     this.cmEditor = cmEditor;
@@ -43,34 +44,40 @@ export class SyncManager {
 
     setTimeout(() => {
       this.attachMathfieldListeners(this.pmEditor.dom);
-    }, 0);
+    }, 100);
   }
 
   private attachMathfieldListeners(element: Element) {
     const mathfields = element.querySelectorAll('math-field');
     mathfields.forEach((mf: any) => {
-      if (mf.hasAttribute('data-listener-attached')) return;
+      if (this.mathfieldEventMap.has(mf)) return;
 
-      mf.setAttribute('data-listener-attached', 'true');
-
-      // Listen for content changes
-      mf.addEventListener('input', (e: any) => {
-        if (!this.syncing) {
-          this.handleMathfieldChange(mf);
+      const handlers = {
+        input: (e: any) => {
+          if (!this.syncing) {
+            setTimeout(() => this.handleMathfieldChange(mf), 10);
+          }
+        },
+        change: (e: any) => {
+          if (!this.syncing) {
+            setTimeout(() => this.handleMathfieldChange(mf), 10);
+          }
+        },
+        blur: (e: any) => {
+          if (!this.syncing) {
+            setTimeout(() => this.handleMathfieldChange(mf), 10);
+          }
         }
-      });
+      };
 
-      // Also listen for blur events to catch final changes
-      mf.addEventListener('blur', (e: any) => {
-        if (!this.syncing) {
-          this.handleMathfieldChange(mf);
-        }
-      });
+      this.mathfieldEventMap.set(mf, handlers);
 
-      // Listen for selection changes within mathfield
-      mf.addEventListener('selection-change', (e: any) => {
-        // Optional: handle selection changes if needed
-      });
+      mf.addEventListener('input', handlers.input);
+      mf.addEventListener('change', handlers.change);
+      mf.addEventListener('blur', handlers.blur);
+
+      mf.readOnly = false;
+      mf.mathVirtualKeyboardPolicy = 'manual';
     });
   }
 
@@ -83,7 +90,7 @@ export class SyncManager {
     if (newLatex !== oldLatex) {
       mathfield.setAttribute('data-original-latex', newLatex);
       this.updateMathNodeFromMathfield(mathfield, newLatex);
-      setTimeout(() => this.syncToSource(), 10);
+      setTimeout(() => this.syncToSource(), 50);
     }
   }
 
@@ -131,7 +138,7 @@ export class SyncManager {
         }
 
         if (hasDocChange) {
-          setTimeout(() => this.syncToVisual(), 0);
+          setTimeout(() => this.syncToVisual(), 50);
         }
       }
 
@@ -161,7 +168,7 @@ export class SyncManager {
       setTimeout(() => {
         this.attachMathfieldListeners(this.pmEditor.dom);
         this.initializeMathfieldValues();
-      }, 50);
+      }, 100);
     } finally {
       this.syncing = false;
     }
@@ -172,6 +179,8 @@ export class SyncManager {
     mathfields.forEach((mf: any) => {
       const currentLatex = mf.getValue('latex');
       mf.setAttribute('data-original-latex', currentLatex);
+      mf.readOnly = false;
+      mf.mathVirtualKeyboardPolicy = 'manual';
     });
   }
 
@@ -213,13 +222,24 @@ export class SyncManager {
 
   handleProseMirrorChange(tr: Transaction) {
     if (!tr.docChanged || this.syncing) return;
-    setTimeout(() => this.syncToSource(), 0);
+    setTimeout(() => this.syncToSource(), 50);
   }
 
   destroy() {
     if (this.mathfieldObserver) {
       this.mathfieldObserver.disconnect();
     }
+
+    const mathfields = this.pmEditor.dom.querySelectorAll('math-field');
+    mathfields.forEach((mf: any) => {
+      const handlers = this.mathfieldEventMap.get(mf);
+      if (handlers) {
+        mf.removeEventListener('input', handlers.input);
+        mf.removeEventListener('change', handlers.change);
+        mf.removeEventListener('blur', handlers.blur);
+        this.mathfieldEventMap.delete(mf);
+      }
+    });
 
     if (this.isListening && this.originalDispatch) {
       this.cmEditor.dispatch = this.originalDispatch;

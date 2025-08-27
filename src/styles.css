@@ -57,6 +57,8 @@ math-field.math-inline-field {
   padding: 2px 4px;
   margin: 0 1px;
   font-size: 1em;
+  cursor: text;
+  min-width: 3em;
 }
 
 math-field.math-display-field {
@@ -67,11 +69,21 @@ math-field.math-display-field {
   margin: 10px 0;
   width: 100%;
   font-size: 1.2em;
+  cursor: text;
+  min-height: 3em;
 }
 
-math-field:focus {
+math-field:hover {
+  background: rgba(0, 123, 255, 0.15);
+  border-color: rgba(0, 123, 255, 0.5);
+}
+
+math-field:focus,
+math-field:focus-within {
   outline: 2px solid #007acc;
   outline-offset: 1px;
+  background: rgba(0, 123, 255, 0.1);
+  border-color: #007acc;
 }
 
 .math-error {
@@ -168,3 +180,11 @@ h1, h2, h3 {
 h1 { font-size: 1.8em; }
 h2 { font-size: 1.5em; }
 h3 { font-size: 1.2em; }
+
+.ML__keyboard {
+  z-index: 1000;
+}
+
+.ML__popover {
+  z-index: 1001;
+}
