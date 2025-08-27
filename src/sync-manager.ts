@@ -2,12 +2,10 @@ import { EditorView } from '@codemirror/view';
 import { EditorView as PMView } from 'prosemirror-view';
 import { Transaction } from 'prosemirror-state';
 import { parseLatexToProseMirror, renderProseMirrorToLatex } from './latex-parser';
-import { PositionMapper } from './position-mapper';
 
 export class SyncManager {
   private cmEditor: EditorView;
   private pmEditor: PMView;
-  private positionMapper: PositionMapper;
   public syncing = false;
   private isListening = false;
   private originalDispatch: any;
@@ -17,7 +15,6 @@ export class SyncManager {
   constructor(cmEditor: EditorView, pmEditor: PMView) {
     this.cmEditor = cmEditor;
     this.pmEditor = pmEditor;
-    this.positionMapper = new PositionMapper();
     this.setupCodeMirrorListener();
     this.setupMathfieldListeners();
   }
@@ -90,7 +87,6 @@ export class SyncManager {
     if (newLatex !== oldLatex) {
       mathfield.setAttribute('data-original-latex', newLatex);
       this.updateMathNodeFromMathfield(mathfield, newLatex);
-      setTimeout(() => this.syncToSource(), 50);
     }
   }
 
@@ -121,28 +117,16 @@ export class SyncManager {
     this.originalDispatch = this.cmEditor.dispatch.bind(this.cmEditor);
 
     this.cmEditor.dispatch = (...args: any[]) => {
-      const result = this.originalDispatch(...args);
+      this.originalDispatch(...args);
 
       if (!this.syncing) {
-        const firstArg = args[0];
-        let hasDocChange = false;
+        const transactions = (Array.isArray(args[0]) ? args[0] : [args[0]]).filter(Boolean);
+        const docChangedTransactions = transactions.filter(tr => tr.docChanged);
 
-        if (Array.isArray(firstArg)) {
-          hasDocChange = firstArg.some((tr: any) => tr.docChanged);
-        } else if (firstArg && typeof firstArg === 'object') {
-          if ('docChanged' in firstArg) {
-            hasDocChange = firstArg.docChanged;
-          } else if ('changes' in firstArg) {
-            hasDocChange = Boolean(firstArg.changes);
-          }
-        }
-
-        if (hasDocChange) {
-          setTimeout(() => this.syncToVisual(), 50);
+        if (docChangedTransactions.length > 0) {
+          this.syncToVisual();
         }
       }
-
-      return result;
     };
 
     this.isListening = true;
@@ -154,75 +138,75 @@ export class SyncManager {
 
     try {
       const latexContent = this.cmEditor.state.doc.toString();
-      const pmDoc = parseLatexToProseMirror(latexContent);
+      const newPmDoc = parseLatexToProseMirror(latexContent);
+      const oldPmDoc = this.pmEditor.state.doc;
 
-      const tr = this.pmEditor.state.tr.replaceWith(
-        0,
-        this.pmEditor.state.doc.content.size,
-        pmDoc.content
-      );
+      const diffStart = oldPmDoc.content.findDiffStart(newPmDoc.content);
+      if (diffStart === null) {
+        this.syncing = false;
+        return;
+      }
 
-      this.pmEditor.dispatch(tr);
-      this.positionMapper.buildMapping(latexContent, pmDoc);
-
-      setTimeout(() => {
-        this.attachMathfieldListeners(this.pmEditor.dom);
-        this.initializeMathfieldValues();
-      }, 100);
+      const diffEnd = oldPmDoc.content.findDiffEnd(newPmDoc.content);
+      if (diffEnd) {
+        let { a: endA, b: endB } = diffEnd;
+        const tr = this.pmEditor.state.tr.replace(diffStart, endA, newPmDoc.slice(diffStart, endB));
+        this.pmEditor.dispatch(tr);
+      }
     } finally {
       this.syncing = false;
     }
   }
 
-  private initializeMathfieldValues() {
-    const mathfields = this.pmEditor.dom.querySelectorAll('math-field');
-    mathfields.forEach((mf: any) => {
-      const currentLatex = mf.getValue('latex');
-      mf.setAttribute('data-original-latex', currentLatex);
-      mf.readOnly = false;
-      mf.mathVirtualKeyboardPolicy = 'manual';
-    });
-  }
-
-  syncToSource() {
+  syncToSource(tr?: Transaction) {
     if (this.syncing) return;
     this.syncing = true;
 
     try {
-      this.updateMathfieldValues();
       const newLatex = renderProseMirrorToLatex(this.pmEditor.state.doc);
       const currentLatex = this.cmEditor.state.doc.toString();
 
       if (newLatex !== currentLatex) {
-        const tr = this.cmEditor.state.update({
-          changes: {
-            from: 0,
-            to: this.cmEditor.state.doc.length,
-            insert: newLatex
-          }
+        const diffStart = this.findDiffStart(currentLatex, newLatex);
+        if (diffStart === null) {
+            this.syncing = false;
+            return;
+        }
+
+        const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex);
+        const insertText = newLatex.slice(diffStart, endB);
+
+        const cmTr = this.cmEditor.state.update({
+          changes: { from: diffStart, to: endA, insert: insertText }
         });
-        this.cmEditor.dispatch(tr);
+        this.cmEditor.dispatch(cmTr);
       }
     } finally {
       this.syncing = false;
     }
   }
 
-  private updateMathfieldValues() {
-    const mathfields = this.pmEditor.dom.querySelectorAll('math-field');
-    mathfields.forEach((mf: any) => {
-      const currentValue = mf.getValue('latex');
-      const originalValue = mf.getAttribute('data-original-latex') || '';
+  private findDiffStart(a: string, b: string): number | null {
+    let i = 0;
+    while (i < a.length && i < b.length && a[i] === b[i]) {
+      i++;
+    }
+    return i === a.length && i === b.length ? null : i;
+  }
 
-      if (currentValue !== originalValue) {
-        this.updateMathNodeFromMathfield(mf, currentValue);
-      }
-    });
+  private findDiffEnd(a: string, b: string): { a: number, b: number } {
+    let i = a.length;
+    let j = b.length;
+    while (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+      i--;
+      j--;
+    }
+    return { a: i, b: j };
   }
 
   handleProseMirrorChange(tr: Transaction) {
     if (!tr.docChanged || this.syncing) return;
-    setTimeout(() => this.syncToSource(), 50);
+    this.syncToSource(tr);
   }
 
   destroy() {

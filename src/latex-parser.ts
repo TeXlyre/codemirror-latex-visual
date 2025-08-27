@@ -124,7 +124,6 @@ function tokenizeLatex(latex: string): LatexToken[] {
   let pos = 0;
 
   while (pos < latex.length) {
-    // Handle comments
     if (latex.charAt(pos) === '%') {
       const token = extractComment(latex, pos);
       tokens.push(token);
@@ -132,7 +131,6 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
-    // Handle display math
     if (latex.startsWith('$$', pos)) {
       const token = extractDisplayMath(latex, pos);
       tokens.push(token);
@@ -140,7 +138,6 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
-    // Handle inline math
     if (latex.charAt(pos) === '$' && latex.charAt(pos + 1) !== '$') {
       const token = extractInlineMath(latex, pos);
       tokens.push(token);
@@ -148,7 +145,6 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
-    // Handle commands
     if (latex.charAt(pos) === '\\') {
       if (latex.startsWith('\\section', pos) || latex.startsWith('\\subsection', pos) || latex.startsWith('\\subsubsection', pos)) {
         const token = extractSection(latex, pos);
@@ -170,7 +166,6 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
-    // Handle paragraph breaks
     if (latex.startsWith('\n\n', pos)) {
       tokens.push({
         type: 'paragraph_break',
@@ -183,7 +178,6 @@ function tokenizeLatex(latex: string): LatexToken[] {
       continue;
     }
 
-    // Handle regular text and mixed content
     const token = extractMixedParagraph(latex, pos);
     tokens.push(token);
     pos = token.end;
@@ -262,12 +256,10 @@ function extractCommandWithBraces(latex: string, start: number): { cmdName: stri
   let cmdParams = '';
   let fullCmd = cmdMatch[0];
 
-  // Skip whitespace
   while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
     pos++;
   }
 
-  // Extract braced parameter if present
   if (pos < latex.length && latex.charAt(pos) === '{') {
     const braceResult = extractBalancedBraces(latex, pos);
     if (braceResult) {
@@ -300,7 +292,6 @@ function extractMixedParagraph(latex: string, start: number): LatexToken {
       break;
     }
 
-    // Handle inline math
     if (latex.charAt(pos) === '$' && latex.charAt(pos + 1) !== '$') {
       const mathEnd = findMatchingDollar(latex, pos + 1);
       if (mathEnd !== -1) {
@@ -317,7 +308,6 @@ function extractMixedParagraph(latex: string, start: number): LatexToken {
       }
     }
 
-    // Handle commands
     if (latex.charAt(pos) === '\\') {
       const cmdResult = extractCommandWithBraces(latex, pos);
       if (cmdResult) {
@@ -345,7 +335,6 @@ function extractMixedParagraph(latex: string, start: number): LatexToken {
       }
     }
 
-    // Handle regular text
     let textEnd = pos;
     while (textEnd < latex.length &&
            latex.charAt(textEnd) !== '$' &&
@@ -577,7 +566,6 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
                 if (Array.isArray(element.content)) {
                   const innerDoc = buildProseMirrorDoc(element.content);
 
-                  // Always create editable_command nodes, but apply formatting if it's a formatting command
                   const commandNode = latexVisualSchema.nodes.editable_command.create({
                     name: element.name || '',
                     latex: element.latex
@@ -585,7 +573,6 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
 
                   currentParagraphContent.push(commandNode);
                 } else {
-                  // Handle empty commands like \textbf{}
                   currentParagraphContent.push(
                     latexVisualSchema.nodes.editable_command.create({
                       name: element.name || '',
@@ -595,7 +582,6 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
                 }
                 break;
               case 'command':
-                // Make all commands editable
                 currentParagraphContent.push(
                   latexVisualSchema.nodes.editable_command.create({
                     name: element.name || '',
@@ -654,7 +640,6 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
         break;
 
       case 'command':
-        // Make standalone commands editable too
         currentParagraphContent.push(
           latexVisualSchema.nodes.editable_command.create({
             name: token.name || '',
