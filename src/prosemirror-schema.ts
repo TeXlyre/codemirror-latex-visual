@@ -52,9 +52,29 @@ export const latexVisualSchema = new Schema({
       },
       parseDOM: [{ tag: 'math-field' }],
       toDOM: node => {
+        const container = document.createElement('div');
+        container.className = 'math-inline-container';
+
         const mathfield = createEditableMath(node.attrs.latex, false);
         mathfield.setAttribute('data-original-latex', node.attrs.latex);
-        return mathfield;
+        (mathfield as any).readOnly = true;
+
+        const indicator = document.createElement('div');
+        indicator.className = 'math-edit-indicator';
+        indicator.innerHTML = '✏️';
+
+        container.addEventListener('mouseenter', () => {
+          indicator.classList.add('visible');
+        });
+
+        container.addEventListener('mouseleave', () => {
+          indicator.classList.remove('visible');
+        });
+
+        container.appendChild(mathfield);
+        container.appendChild(indicator);
+
+        return container;
       }
     },
 
@@ -66,9 +86,29 @@ export const latexVisualSchema = new Schema({
       },
       parseDOM: [{ tag: 'math-field.math-display-field' }],
       toDOM: node => {
+        const container = document.createElement('div');
+        container.className = 'math-display-container';
+
         const mathfield = createEditableMath(node.attrs.latex, true);
         mathfield.setAttribute('data-original-latex', node.attrs.latex);
-        return mathfield;
+        (mathfield as any).readOnly = true;
+
+        const indicator = document.createElement('div');
+        indicator.className = 'math-edit-indicator math-edit-indicator-display';
+        indicator.innerHTML = '✏️';
+
+        container.addEventListener('mouseenter', () => {
+          indicator.classList.add('visible');
+        });
+
+        container.addEventListener('mouseleave', () => {
+          indicator.classList.remove('visible');
+        });
+
+        container.appendChild(mathfield);
+        container.appendChild(indicator);
+
+        return container;
       }
     },
 

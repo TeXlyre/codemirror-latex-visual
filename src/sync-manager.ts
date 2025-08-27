@@ -45,27 +45,139 @@ export class SyncManager {
   }
 
   private attachMathfieldListeners(element: Element) {
-    const mathfields = element.querySelectorAll('math-field');
-    mathfields.forEach((mf: any) => {
-      if (this.mathfieldEventMap.has(mf)) return;
+    const mathContainers = element.querySelectorAll('.math-inline-container, .math-display-container');
+    mathContainers.forEach((container: Element) => {
+      if (this.mathfieldEventMap.has(container)) return;
 
-      const originalLatex = mf.getAttribute('data-original-latex') || mf.getValue('latex');
-      mf.setAttribute('data-original-latex', originalLatex);
+      const mathfield = container.querySelector('math-field') as any;
+      if (!mathfield) return;
+
+      const originalLatex = mathfield.getAttribute('data-original-latex') || mathfield.getValue('latex');
+      mathfield.setAttribute('data-original-latex', originalLatex);
 
       const handlers = {
-        blur: (e: any) => {
-          if (!this.syncing) {
-            this.handleMathfieldChange(mf);
-          }
+        containerClick: (e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.startMathEditing(mathfield);
+        },
+        mathfieldClick: (e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.startMathEditing(mathfield);
         }
       };
 
-      this.mathfieldEventMap.set(mf, handlers);
-      mf.addEventListener('blur', handlers.blur);
+      this.mathfieldEventMap.set(container, handlers);
+      container.addEventListener('click', handlers.containerClick, true);
+      mathfield.addEventListener('click', handlers.mathfieldClick, true);
 
-      mf.readOnly = false;
-      mf.mathVirtualKeyboardPolicy = 'manual';
+      mathfield.readOnly = true;
+      mathfield.mathVirtualKeyboardPolicy = 'manual';
     });
+  }
+
+  private startMathEditing(mathfield: any) {
+    if (mathfield._editing) return;
+
+    mathfield._editing = true;
+
+    const rect = mathfield.getBoundingClientRect();
+    const currentValue = mathfield.getValue('latex');
+    const isDisplayMode = mathfield.classList.contains('math-display-field');
+
+    const floatingContainer = document.createElement('div');
+    floatingContainer.className = 'mathfield-editor-overlay';
+    floatingContainer.style.left = `${rect.left - 10}px`;
+    floatingContainer.style.top = `${rect.top - 10}px`;
+    floatingContainer.style.width = `${Math.max(rect.width + 20, 250)}px`;
+
+    const newMathfield = document.createElement('math-field');
+    newMathfield.className = isDisplayMode ? 'math-display-field editing' : 'math-inline-field editing';
+
+    (newMathfield as any).readOnly = false;
+    (newMathfield as any).mathVirtualKeyboardPolicy = 'auto';
+    (newMathfield as any).value = currentValue;
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'math-editor-buttons';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'math-editor-btn math-editor-btn-cancel';
+
+    const doneBtn = document.createElement('button');
+    doneBtn.textContent = 'Done';
+    doneBtn.className = 'math-editor-btn math-editor-btn-done';
+
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(doneBtn);
+    floatingContainer.appendChild(newMathfield);
+    floatingContainer.appendChild(buttonContainer);
+    document.body.appendChild(floatingContainer);
+
+    mathfield._floatingContainer = floatingContainer;
+    mathfield._floatingMathfield = newMathfield;
+
+    setTimeout(() => {
+      (newMathfield as any).focus();
+    }, 10);
+
+    const finishEditing = (save: boolean = true) => {
+      if (!mathfield._editing) return;
+      this.finishMathEditing(mathfield, save);
+    };
+
+    doneBtn.addEventListener('click', () => finishEditing(true));
+    cancelBtn.addEventListener('click', () => finishEditing(false));
+
+    (newMathfield as any).addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        finishEditing(false);
+        e.preventDefault();
+      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        finishEditing(true);
+        e.preventDefault();
+      }
+    });
+
+    const handleClickOutside = (e: Event) => {
+      if (!floatingContainer.contains(e.target as Node)) {
+        finishEditing(true);
+        document.removeEventListener('mousedown', handleClickOutside, true);
+      }
+    };
+
+    setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+    }, 100);
+  }
+
+  private finishMathEditing(mathfield: any, save: boolean) {
+    if (!mathfield._editing) return;
+
+    mathfield._editing = false;
+
+    const floatingMathfield = mathfield._floatingMathfield;
+    const floatingContainer = mathfield._floatingContainer;
+
+    if (floatingMathfield && floatingContainer) {
+      if (save) {
+        const oldLatex = mathfield.getAttribute('data-original-latex') || '';
+        const newValue = floatingMathfield.getValue('latex');
+
+        mathfield.value = newValue;
+        mathfield.setAttribute('data-original-latex', newValue);
+
+        if (newValue !== oldLatex) {
+          this.updateMathNodeFromMathfield(mathfield, newValue);
+        }
+      }
+
+      document.body.removeChild(floatingContainer);
+      delete mathfield._floatingContainer;
+      delete mathfield._floatingMathfield;
+    }
   }
 
   private handleMathfieldChange(mathfield: any) {
@@ -76,18 +188,23 @@ export class SyncManager {
 
     if (newLatex !== oldLatex) {
       mathfield.setAttribute('data-original-latex', newLatex);
-
-      setTimeout(() => {
-        if (!this.syncing) {
-          this.updateMathNodeFromMathfield(mathfield, newLatex);
-        }
-      }, 0);
+      this.updateMathNodeFromMathfield(mathfield, newLatex);
     }
   }
 
   private updateMathNodeFromMathfield(mathfield: any, newLatex: string) {
+    if (this.syncing) return;
+
     try {
-      const pmPos = this.pmEditor.posAtDOM(mathfield, 0);
+      this.syncing = true;
+
+      const container = mathfield.closest('.math-inline-container, .math-display-container');
+      if (!container) {
+        this.syncing = false;
+        return;
+      }
+
+      const pmPos = this.pmEditor.posAtDOM(container, 0);
       if (pmPos >= 0) {
         const $pos = this.pmEditor.state.doc.resolve(pmPos);
         const node = $pos.nodeAfter;
@@ -98,15 +215,25 @@ export class SyncManager {
             undefined,
             { ...node.attrs, latex: newLatex }
           );
-          this.pmEditor.dispatch(tr);
+
+          const newState = this.pmEditor.state.apply(tr);
+          this.pmEditor.updateState(newState);
+
+          this.syncing = false;
+          this.syncToSource(tr);
 
           setTimeout(() => {
             this.attachMathfieldListeners(this.pmEditor.dom);
           }, 50);
+        } else {
+          this.syncing = false;
         }
+      } else {
+        this.syncing = false;
       }
     } catch (error) {
       console.warn('Error updating math node:', error);
+      this.syncing = false;
     }
   }
 
@@ -172,8 +299,8 @@ export class SyncManager {
       if (newLatex !== currentLatex) {
         const diffStart = this.findDiffStart(currentLatex, newLatex);
         if (diffStart === null) {
-            this.syncing = false;
-            return;
+          this.syncing = false;
+          return;
         }
 
         const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex, diffStart);
@@ -217,12 +344,20 @@ export class SyncManager {
       this.mathfieldObserver.disconnect();
     }
 
-    const mathfields = this.pmEditor.dom.querySelectorAll('math-field');
-    mathfields.forEach((mf: any) => {
-      const handlers = this.mathfieldEventMap.get(mf);
+    const mathContainers = this.pmEditor.dom.querySelectorAll('.math-inline-container, .math-display-container');
+    mathContainers.forEach((container: Element) => {
+      const mathfield = container.querySelector('math-field') as any;
+      if (mathfield && mathfield._editing) {
+        this.finishMathEditing(mathfield, false);
+      }
+
+      const handlers = this.mathfieldEventMap.get(container);
       if (handlers) {
-        mf.removeEventListener('blur', handlers.blur);
-        this.mathfieldEventMap.delete(mf);
+        container.removeEventListener('click', handlers.containerClick, true);
+        if (mathfield) {
+          mathfield.removeEventListener('click', handlers.mathfieldClick, true);
+        }
+        this.mathfieldEventMap.delete(container);
       }
     });
 

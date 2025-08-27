@@ -50,6 +50,113 @@
   padding: 10px;
 }
 
+.math-inline-container {
+  display: inline-block;
+  position: relative;
+  min-width: 3em;
+  cursor: pointer;
+}
+
+.math-display-container {
+  display: block;
+  position: relative;
+  margin: 10px 0;
+  cursor: pointer;
+}
+
+.math-inline-container:hover,
+.math-display-container:hover {
+  background: rgba(0, 123, 255, 0.05);
+  border-radius: 4px;
+}
+
+.math-edit-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  background: #007acc;
+  color: white;
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  z-index: 10;
+  user-select: none;
+}
+
+.math-edit-indicator-display {
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+
+.math-edit-indicator.visible {
+  opacity: 1;
+}
+
+.mathfield-editor-overlay {
+  position: fixed;
+  min-width: 250px;
+  min-height: 80px;
+  z-index: 10000;
+  background: white;
+  border: 2px solid #007acc;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+}
+
+.math-editor-buttons {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.math-editor-btn {
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.math-editor-btn-cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.math-editor-btn-done {
+  background: #007acc;
+  color: white;
+}
+
+.math-inline-field.editing {
+  display: block;
+  min-width: 4em;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.math-display-field.editing {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 2em;
+  box-sizing: border-box;
+}
+
 math-field.math-inline-field {
   background: rgba(0, 123, 255, 0.1);
   border: 1px solid rgba(0, 123, 255, 0.3);
@@ -57,8 +164,9 @@ math-field.math-inline-field {
   padding: 2px 4px;
   margin: 0 1px;
   font-size: 1em;
-  cursor: text;
+  cursor: pointer;
   min-width: 3em;
+  pointer-events: auto;
 }
 
 math-field.math-display-field {
@@ -69,8 +177,10 @@ math-field.math-display-field {
   margin: 10px 0;
   width: 100%;
   font-size: 1.2em;
-  cursor: text;
+  cursor: pointer;
   min-height: 3em;
+  pointer-events: auto;
+  box-sizing: border-box;
 }
 
 math-field:hover {
@@ -79,11 +189,21 @@ math-field:hover {
 }
 
 math-field:focus,
-math-field:focus-within {
+math-field:focus-within,
+math-field.focused {
   outline: 2px solid #007acc;
   outline-offset: 1px;
   background: rgba(0, 123, 255, 0.1);
   border-color: #007acc;
+}
+
+math-field[contenteditable="false"] {
+  outline: none !important;
+}
+
+math-field:focus[contenteditable="false"] {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
 }
 
 .math-error {

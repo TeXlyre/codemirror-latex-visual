@@ -1,70 +1,83 @@
 import { MathfieldElement } from 'mathlive';
 MathfieldElement.soundsDirectory = null;
 
+// Ensure clipboard polyfill is available globally
+if (typeof window !== 'undefined' && !navigator.clipboard) {
+  (navigator as any).clipboard = {
+    writeText: function(text: string) {
+      return new Promise((resolve, reject) => {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          const result = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          if (result) {
+            resolve(undefined);
+          } else {
+            reject(new Error('Copy command failed'));
+          }
+        } catch (err) {
+          document.body.removeChild(textArea);
+          reject(err);
+        }
+      });
+    },
+
+    readText: function() {
+      return new Promise((resolve, reject) => {
+        const textArea = document.createElement('textarea');
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+
+        try {
+          document.execCommand('paste');
+          const text = textArea.value;
+          document.body.removeChild(textArea);
+          resolve(text);
+        } catch (err) {
+          document.body.removeChild(textArea);
+          reject(new Error('Paste operation not supported or blocked'));
+        }
+      });
+    }
+  };
+}
+
 export function createEditableMath(latex: string, displayMode: boolean = false): HTMLElement {
   const mathfield = new MathfieldElement();
 
   mathfield.value = latex;
   mathfield.readOnly = false;
-  mathfield.mathVirtualKeyboardPolicy = 'manual';
+
+  mathfield.mathVirtualKeyboardPolicy = 'auto';
+
   mathfield.smartMode = true;
   mathfield.smartFence = true;
   mathfield.smartSuperscript = true;
+  mathfield.letterShapeStyle = 'tex';
 
   if (displayMode) {
     mathfield.classList.add('math-display-field');
-    mathfield.setAttribute('style', 'display: block; text-align: center; min-height: 2em; width: 100%;');
   } else {
     mathfield.classList.add('math-inline-field');
-    mathfield.setAttribute('style', 'display: inline-block; min-width: 2em;');
   }
 
-  let wasRecentlyFocused = false;
-  let menuClickHandler: ((e: MouseEvent) => void) | null = null;
-
   mathfield.addEventListener('focusin', () => {
-    wasRecentlyFocused = true;
-    if ((window as any).mathVirtualKeyboard) {
-      (window as any).mathVirtualKeyboard.show();
-    }
-
-    if (menuClickHandler) {
-      document.removeEventListener('mousedown', menuClickHandler, true);
-    }
-
-    menuClickHandler = (e: MouseEvent) => {
-      const target = e.target as Element;
-      if (target && (target.closest('.ML__popover') || target.closest('.ML__menu') || target.classList.contains('ML__button'))) {
-        setTimeout(() => {
-          if (wasRecentlyFocused) {
-            mathfield.focus();
-          }
-        }, 50);
-      }
-    };
-
-    document.addEventListener('mousedown', menuClickHandler, true);
+    mathfield.classList.add('focused');
   });
 
   mathfield.addEventListener('focusout', () => {
-    setTimeout(() => {
-      wasRecentlyFocused = false;
-    }, 200);
-
-    if ((window as any).mathVirtualKeyboard) {
-      (window as any).mathVirtualKeyboard.hide();
-    }
-
-    if (menuClickHandler) {
-      document.removeEventListener('mousedown', menuClickHandler, true);
-      menuClickHandler = null;
-    }
-  });
-
-  mathfield.addEventListener('click', () => {
-    if (!mathfield.hasFocus()) {
-      mathfield.focus();
-    }
+    mathfield.classList.remove('focused');
   });
 
   return mathfield;
