@@ -1,5 +1,5 @@
 import { Schema } from 'prosemirror-model';
-import { renderMath } from './math-renderer';
+import { createEditableMath } from './math-renderer';
 
 export const latexVisualSchema = new Schema({
   nodes: {
@@ -48,24 +48,11 @@ export const latexVisualSchema = new Schema({
       inline: true,
       atom: true,
       attrs: {
-        latex: { default: '' },
-        rendered: { default: '' }
+        latex: { default: '' }
       },
-      parseDOM: [{ tag: 'span.math-inline' }],
+      parseDOM: [{ tag: 'math-field' }],
       toDOM: node => {
-        const span = document.createElement('span');
-        span.className = 'math-inline';
-        span.setAttribute('data-latex', node.attrs.latex);
-
-        try {
-          const rendered = renderMath(node.attrs.latex, false);
-          span.innerHTML = rendered;
-        } catch (error) {
-          span.textContent = `$${node.attrs.latex}$`;
-          span.classList.add('math-error');
-        }
-
-        return span;
+        return createEditableMath(node.attrs.latex, false);
       }
     },
 
@@ -73,24 +60,11 @@ export const latexVisualSchema = new Schema({
       group: 'block',
       atom: true,
       attrs: {
-        latex: { default: '' },
-        rendered: { default: '' }
+        latex: { default: '' }
       },
-      parseDOM: [{ tag: 'div.math-display' }],
+      parseDOM: [{ tag: 'math-field.math-display-field' }],
       toDOM: node => {
-        const div = document.createElement('div');
-        div.className = 'math-display';
-        div.setAttribute('data-latex', node.attrs.latex);
-
-        try {
-          const rendered = renderMath(node.attrs.latex, true);
-          div.innerHTML = rendered;
-        } catch (error) {
-          div.textContent = `$$${node.attrs.latex}$$`;
-          div.classList.add('math-error');
-        }
-
-        return div;
+        return createEditableMath(node.attrs.latex, true);
       }
     },
 

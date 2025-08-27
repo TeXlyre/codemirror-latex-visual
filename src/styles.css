@@ -50,22 +50,36 @@
   padding: 10px;
 }
 
-.math-inline {
+math-field.math-inline-field {
   background: rgba(0, 123, 255, 0.1);
   border: 1px solid rgba(0, 123, 255, 0.3);
   border-radius: 3px;
-  padding: 1px 3px;
-  font-family: 'Computer Modern', 'Latin Modern Math', serif;
+  padding: 2px 4px;
+  margin: 0 1px;
+  font-size: 1em;
 }
 
-.math-display {
+math-field.math-display-field {
   background: rgba(0, 123, 255, 0.05);
   border: 1px solid rgba(0, 123, 255, 0.2);
   border-radius: 4px;
   padding: 10px;
   margin: 10px 0;
-  text-align: center;
-  font-family: 'Computer Modern', 'Latin Modern Math', serif;
+  width: 100%;
+  font-size: 1.2em;
+}
+
+math-field:focus {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
+}
+
+.math-error {
+  background: #ffe6e6;
+  color: #cc0000;
+  border: 1px solid #ff9999;
+  border-radius: 3px;
+  padding: 2px 4px;
 }
 
 .latex-env {

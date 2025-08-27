@@ -12,8 +12,8 @@ import { EditorView as PMView } from 'prosemirror-view';
 import { EditorState as PMState } from 'prosemirror-state';
 
 import '../../../dist/styles.css';
-import 'katex/dist/katex.min.css';
 import './styles.css';
+import 'katex/dist/katex.min.css';
 
 const initialLatex = `\\section{Introduction}
 This is a sample document demonstrating the visual LaTeX editor.
@@ -67,7 +67,6 @@ function setupSideBySideDemo() {
       const newState = pmEditor.state.apply(tr);
       pmEditor.updateState(newState);
 
-      // Sync changes back to CodeMirror
       if (tr.docChanged && !syncManager.syncing) {
         syncManager.handleProseMirrorChange(tr);
       }
