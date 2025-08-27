@@ -52,17 +52,17 @@ export class SyncManager {
       const handlers = {
         input: (e: any) => {
           if (!this.syncing) {
-            setTimeout(() => this.handleMathfieldChange(mf), 10);
+            this.handleMathfieldChange(mf);
           }
         },
         change: (e: any) => {
           if (!this.syncing) {
-            setTimeout(() => this.handleMathfieldChange(mf), 10);
+            this.handleMathfieldChange(mf);
           }
         },
         blur: (e: any) => {
           if (!this.syncing) {
-            setTimeout(() => this.handleMathfieldChange(mf), 10);
+            this.handleMathfieldChange(mf);
           }
         }
       };
@@ -173,7 +173,7 @@ export class SyncManager {
             return;
         }
 
-        const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex);
+        const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex, diffStart);
         const insertText = newLatex.slice(diffStart, endB);
 
         const cmTr = this.cmEditor.state.update({
@@ -194,10 +194,10 @@ export class SyncManager {
     return i === a.length && i === b.length ? null : i;
   }
 
-  private findDiffEnd(a: string, b: string): { a: number, b: number } {
+  private findDiffEnd(a: string, b: string, diffStart: number): { a: number, b: number } {
     let i = a.length;
     let j = b.length;
-    while (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+    while (i > diffStart && j > diffStart && a[i - 1] === b[j - 1]) {
       i--;
       j--;
     }
