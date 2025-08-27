@@ -50,15 +50,18 @@ export class SyncManager {
       if (this.mathfieldEventMap.has(container)) return;
 
       const mathfield = container.querySelector('math-field') as any;
-      const editBtn = container.querySelector('.math-edit-btn') as HTMLButtonElement;
-
-      if (!mathfield || !editBtn) return;
+      if (!mathfield) return;
 
       const originalLatex = mathfield.getAttribute('data-original-latex') || mathfield.getValue('latex');
       mathfield.setAttribute('data-original-latex', originalLatex);
 
       const handlers = {
-        click: (e: Event) => {
+        containerClick: (e: Event) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.startMathEditing(mathfield);
+        },
+        mathfieldClick: (e: Event) => {
           e.preventDefault();
           e.stopPropagation();
           this.startMathEditing(mathfield);
@@ -66,7 +69,8 @@ export class SyncManager {
       };
 
       this.mathfieldEventMap.set(container, handlers);
-      editBtn.addEventListener('click', handlers.click);
+      container.addEventListener('click', handlers.containerClick, true);
+      mathfield.addEventListener('click', handlers.mathfieldClick, true);
 
       mathfield.readOnly = true;
       mathfield.mathVirtualKeyboardPolicy = 'manual';
@@ -84,60 +88,27 @@ export class SyncManager {
 
     const floatingContainer = document.createElement('div');
     floatingContainer.className = 'mathfield-editor-overlay';
-    floatingContainer.style.cssText = `
-      position: fixed;
-      left: ${rect.left - 10}px;
-      top: ${rect.top - 10}px;
-      width: ${Math.max(rect.width + 20, 120)}px;
-      min-height: ${rect.height + 20}px;
-      z-index: 10000;
-      background: white;
-      border: 2px solid #007acc;
-      border-radius: 6px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-      padding: 10px;
-    `;
+    floatingContainer.style.left = `${rect.left - 10}px`;
+    floatingContainer.style.top = `${rect.top - 10}px`;
+    floatingContainer.style.width = `${Math.max(rect.width + 20, 250)}px`;
 
     const newMathfield = document.createElement('math-field');
-    if (isDisplayMode) {
-      newMathfield.className = 'math-display-field';
-      newMathfield.style.cssText = 'display: block; width: 100%; min-height: 2em;';
-    } else {
-      newMathfield.className = 'math-inline-field';
-      newMathfield.style.cssText = 'display: inline-block; min-width: 4em; width: 100%;';
-    }
+    newMathfield.className = isDisplayMode ? 'math-display-field editing' : 'math-inline-field editing';
 
     (newMathfield as any).readOnly = false;
     (newMathfield as any).mathVirtualKeyboardPolicy = 'auto';
     (newMathfield as any).value = currentValue;
 
     const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = 'margin-top: 8px; text-align: right;';
-
-    const doneBtn = document.createElement('button');
-    doneBtn.textContent = 'Done';
-    doneBtn.style.cssText = `
-      background: #007acc;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 12px;
-      margin-left: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    `;
+    buttonContainer.className = 'math-editor-buttons';
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.cssText = `
-      background: #6c757d;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 12px;
-      cursor: pointer;
-      font-size: 12px;
-    `;
+    cancelBtn.className = 'math-editor-btn math-editor-btn-cancel';
+
+    const doneBtn = document.createElement('button');
+    doneBtn.textContent = 'Done';
+    doneBtn.className = 'math-editor-btn math-editor-btn-done';
 
     buttonContainer.appendChild(cancelBtn);
     buttonContainer.appendChild(doneBtn);
@@ -382,9 +353,9 @@ export class SyncManager {
 
       const handlers = this.mathfieldEventMap.get(container);
       if (handlers) {
-        const editBtn = container.querySelector('.math-edit-btn') as HTMLButtonElement;
-        if (editBtn) {
-          editBtn.removeEventListener('click', handlers.click);
+        container.removeEventListener('click', handlers.containerClick, true);
+        if (mathfield) {
+          mathfield.removeEventListener('click', handlers.mathfieldClick, true);
         }
         this.mathfieldEventMap.delete(container);
       }

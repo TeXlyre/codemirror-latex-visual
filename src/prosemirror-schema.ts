@@ -54,42 +54,25 @@ export const latexVisualSchema = new Schema({
       toDOM: node => {
         const container = document.createElement('div');
         container.className = 'math-inline-container';
-        container.style.cssText = 'display: inline-block; position: relative;';
 
         const mathfield = createEditableMath(node.attrs.latex, false);
         mathfield.setAttribute('data-original-latex', node.attrs.latex);
         (mathfield as any).readOnly = true;
 
-        const editBtn = document.createElement('button');
-        editBtn.className = 'math-edit-btn';
-        editBtn.innerHTML = '✏️';
-        editBtn.style.cssText = `
-          position: absolute;
-          top: -8px;
-          right: -8px;
-          width: 16px;
-          height: 16px;
-          border: none;
-          border-radius: 50%;
-          background: #007acc;
-          color: white;
-          font-size: 10px;
-          cursor: pointer;
-          opacity: 0;
-          transition: opacity 0.2s;
-          z-index: 100;
-        `;
+        const indicator = document.createElement('div');
+        indicator.className = 'math-edit-indicator';
+        indicator.innerHTML = '✏️';
 
         container.addEventListener('mouseenter', () => {
-          editBtn.style.opacity = '1';
+          indicator.classList.add('visible');
         });
 
         container.addEventListener('mouseleave', () => {
-          editBtn.style.opacity = '0';
+          indicator.classList.remove('visible');
         });
 
         container.appendChild(mathfield);
-        container.appendChild(editBtn);
+        container.appendChild(indicator);
 
         return container;
       }
@@ -105,42 +88,25 @@ export const latexVisualSchema = new Schema({
       toDOM: node => {
         const container = document.createElement('div');
         container.className = 'math-display-container';
-        container.style.cssText = 'display: block; position: relative; margin: 10px 0;';
 
         const mathfield = createEditableMath(node.attrs.latex, true);
         mathfield.setAttribute('data-original-latex', node.attrs.latex);
         (mathfield as any).readOnly = true;
 
-        const editBtn = document.createElement('button');
-        editBtn.className = 'math-edit-btn';
-        editBtn.innerHTML = '✏️';
-        editBtn.style.cssText = `
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 20px;
-          height: 20px;
-          border: none;
-          border-radius: 50%;
-          background: #007acc;
-          color: white;
-          font-size: 12px;
-          cursor: pointer;
-          opacity: 0;
-          transition: opacity 0.2s;
-          z-index: 100;
-        `;
+        const indicator = document.createElement('div');
+        indicator.className = 'math-edit-indicator math-edit-indicator-display';
+        indicator.innerHTML = '✏️';
 
         container.addEventListener('mouseenter', () => {
-          editBtn.style.opacity = '1';
+          indicator.classList.add('visible');
         });
 
         container.addEventListener('mouseleave', () => {
-          editBtn.style.opacity = '0';
+          indicator.classList.remove('visible');
         });
 
         container.appendChild(mathfield);
-        container.appendChild(editBtn);
+        container.appendChild(indicator);
 
         return container;
       }
