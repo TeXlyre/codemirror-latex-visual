@@ -192,25 +192,21 @@ export class SyncManager {
 
     if (floatingMathfield && floatingContainer) {
       if (save) {
+        const oldLatex = mathfield.getAttribute('data-original-latex') || '';
         const newValue = floatingMathfield.getValue('latex');
+
         mathfield.value = newValue;
         mathfield.setAttribute('data-original-latex', newValue);
 
-        setTimeout(() => {
-          if (!this.syncing) {
-            this.handleMathfieldChange(mathfield);
-          }
-        }, 10);
+        if (newValue !== oldLatex) {
+          this.updateMathNodeFromMathfield(mathfield, newValue);
+        }
       }
 
       document.body.removeChild(floatingContainer);
       delete mathfield._floatingContainer;
       delete mathfield._floatingMathfield;
     }
-
-    setTimeout(() => {
-      this.syncing = false;
-    }, 100);
   }
 
   private handleMathfieldChange(mathfield: any) {
@@ -232,7 +228,10 @@ export class SyncManager {
       this.syncing = true;
 
       const container = mathfield.closest('.math-inline-container, .math-display-container');
-      if (!container) return;
+      if (!container) {
+        this.syncing = false;
+        return;
+      }
 
       const pmPos = this.pmEditor.posAtDOM(container, 0);
       if (pmPos >= 0) {
@@ -246,15 +245,20 @@ export class SyncManager {
             { ...node.attrs, latex: newLatex }
           );
 
-          // Use the same dispatch mechanism that triggers the original sync flow
-          this.pmEditor.dispatch(tr);
+          const newState = this.pmEditor.state.apply(tr);
+          this.pmEditor.updateState(newState);
 
-          // Let the normal transaction handling take care of syncing
+          this.syncing = false;
+          this.syncToSource(tr);
+
           setTimeout(() => {
-            this.syncing = false;
             this.attachMathfieldListeners(this.pmEditor.dom);
-          }, 100);
+          }, 50);
+        } else {
+          this.syncing = false;
         }
+      } else {
+        this.syncing = false;
       }
     } catch (error) {
       console.warn('Error updating math node:', error);
@@ -321,13 +325,11 @@ export class SyncManager {
       const newLatex = renderProseMirrorToLatex(this.pmEditor.state.doc);
       const currentLatex = this.cmEditor.state.doc.toString();
 
-      console.log('Syncing to source:', { newLatex, currentLatex, different: newLatex !== currentLatex });
-
       if (newLatex !== currentLatex) {
         const diffStart = this.findDiffStart(currentLatex, newLatex);
         if (diffStart === null) {
-            this.syncing = false;
-            return;
+          this.syncing = false;
+          return;
         }
 
         const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex, diffStart);
