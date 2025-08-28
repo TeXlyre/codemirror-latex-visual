@@ -7,6 +7,8 @@ import { keymap as pmKeymap } from 'prosemirror-keymap';
 import { SyncManager } from './sync-manager';
 import { latexVisualSchema } from './prosemirror-schema';
 import { parseLatexToProseMirror } from './latex-parser';
+import { createLatexInputRules } from './prosemirror-input-rules';
+import { VisualToolbar } from './visual-toolbar';
 
 export interface DualEditorOptions {
   initialMode?: 'source' | 'visual';
@@ -24,6 +26,8 @@ export class DualLatexEditor {
   private options: DualEditorOptions;
   private pmContainer!: HTMLElement;
   private toolbar!: HTMLElement;
+  private visualToolbar!: VisualToolbar;
+  private visualToolbarContainer!: HTMLElement;
   private showCommands: boolean;
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: DualEditorOptions = {}) {
@@ -78,6 +82,9 @@ export class DualLatexEditor {
       <button class="toggle-cmd-btn" title="Toggle Command Visibility (Ctrl+Shift+C)">Show Commands</button>
     `;
 
+    const visualToolbarContainer = document.createElement('div');
+    visualToolbarContainer.className = 'visual-toolbar-container';
+
     const editorsContainer = document.createElement('div');
     editorsContainer.className = 'latex-editors-container';
 
@@ -90,6 +97,7 @@ export class DualLatexEditor {
     editorsContainer.appendChild(cmContainer);
     editorsContainer.appendChild(pmContainer);
     wrapper.appendChild(toolbar);
+    wrapper.appendChild(visualToolbarContainer);
     wrapper.appendChild(editorsContainer);
 
     this.container.appendChild(wrapper);
@@ -98,6 +106,7 @@ export class DualLatexEditor {
 
     this.pmContainer = pmContainer;
     this.toolbar = toolbar;
+    this.visualToolbarContainer = visualToolbarContainer;
 
     toolbar.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -127,6 +136,7 @@ export class DualLatexEditor {
       schema: latexVisualSchema,
       doc: parseLatexToProseMirror(''),
       plugins: [
+        createLatexInputRules(latexVisualSchema),
         pmKeymap({
           ...baseKeymap,
           'Ctrl-e': toggleCommand,
@@ -148,6 +158,8 @@ export class DualLatexEditor {
         }
       }
     });
+
+    this.visualToolbar = new VisualToolbar(this.visualToolbarContainer, this.pmEditor);
   }
 
   private setupSyncManager() {
@@ -189,10 +201,12 @@ export class DualLatexEditor {
         parentElement.style.display = 'none';
       }
       this.pmContainer.style.display = 'block';
+      this.visualToolbarContainer.style.display = 'block';
       this.pmEditor.focus();
     } else {
       this.syncManager.syncToSource();
       this.pmContainer.style.display = 'none';
+      this.visualToolbarContainer.style.display = 'none';
       const parentElement = this.cmEditor.dom.parentElement;
       if (parentElement) {
         parentElement.style.display = 'block';

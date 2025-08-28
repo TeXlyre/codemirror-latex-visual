@@ -12,6 +12,7 @@
     "@codemirror/view": "^6.0.0",
     "@codemirror/language": "^6.0.0",
     "@codemirror/commands": "^6.0.0",
+    "prosemirror-inputrules": "^1.2.1",
     "prosemirror-state": "^1.4.0",
     "prosemirror-view": "^1.32.0",
     "prosemirror-model": "^1.19.0",

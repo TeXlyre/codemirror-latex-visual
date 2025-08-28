@@ -38,7 +38,8 @@ module.exports = {
       '@codemirror/language': path.resolve(__dirname, '../../node_modules/@codemirror/language'),
       'prosemirror-state': path.resolve(__dirname, '../../node_modules/prosemirror-state'),
       'prosemirror-view': path.resolve(__dirname, '../../node_modules/prosemirror-view'),
-      'prosemirror-model': path.resolve(__dirname, '../../node_modules/prosemirror-model')
+      'prosemirror-model': path.resolve(__dirname, '../../node_modules/prosemirror-model'),
+      'prosemirror-inputrules': path.resolve(__dirname, '../../node_modules/prosemirror-inputrules'),
     }
   }
 };

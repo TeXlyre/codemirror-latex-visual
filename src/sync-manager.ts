@@ -12,6 +12,8 @@ export class SyncManager {
   private mathfieldObserver?: MutationObserver;
   private mathfieldEventMap = new WeakMap();
   private showCommands: boolean;
+  private syncTimeout?: number;
+  private pendingSync = false;
 
   constructor(cmEditor: EditorView, pmEditor: PMView, showCommands: boolean = false) {
     this.cmEditor = cmEditor;
@@ -29,7 +31,6 @@ export class SyncManager {
       const currentDoc = this.pmEditor.state.doc;
       const tr = this.pmEditor.state.tr.setMeta('forceRefresh', true);
 
-      // Force recreation of the entire document
       const latexContent = this.cmEditor.state.doc.toString();
       const newPmDoc = parseLatexToProseMirror(latexContent);
 
@@ -263,17 +264,32 @@ export class SyncManager {
     this.cmEditor.dispatch = (...args: any[]) => {
       this.originalDispatch(...args);
 
-      if (!this.syncing) {
+      if (!this.syncing && !this.pendingSync) {
         const transactions = (Array.isArray(args[0]) ? args[0] : [args[0]]).filter(Boolean);
-        const docChangedTransactions = transactions.filter(tr => tr.docChanged);
+        const docChangedTransactions = transactions.filter(tr => tr && tr.docChanged);
 
         if (docChangedTransactions.length > 0) {
-          this.syncToVisual();
+          this.debouncedSyncToVisual();
         }
       }
     };
 
     this.isListening = true;
+  }
+
+  private debouncedSyncToVisual() {
+    this.pendingSync = true;
+
+    if (this.syncTimeout) {
+      clearTimeout(this.syncTimeout);
+    }
+
+    this.syncTimeout = window.setTimeout(() => {
+      this.pendingSync = false;
+      if (!this.syncing) {
+        this.syncToVisual();
+      }
+    }, 150);
   }
 
   syncToVisualWithCommandToggle() {
@@ -306,8 +322,30 @@ export class SyncManager {
 
     try {
       const latexContent = this.cmEditor.state.doc.toString();
+
+      if (!latexContent.trim()) {
+        const emptyDoc = this.pmEditor.state.schema.nodes.doc.create({}, [
+          this.pmEditor.state.schema.nodes.paragraph.create()
+        ]);
+
+        const tr = this.pmEditor.state.tr.replaceWith(
+          0,
+          this.pmEditor.state.doc.content.size,
+          emptyDoc.content
+        );
+
+        this.pmEditor.dispatch(tr);
+        this.syncing = false;
+        return;
+      }
+
       const newPmDoc = parseLatexToProseMirror(latexContent, this.showCommands);
       const oldPmDoc = this.pmEditor.state.doc;
+
+      if (newPmDoc.eq(oldPmDoc)) {
+        this.syncing = false;
+        return;
+      }
 
       const diffStart = oldPmDoc.content.findDiffStart(newPmDoc.content);
       if (diffStart === null) {
@@ -325,6 +363,8 @@ export class SyncManager {
       setTimeout(() => {
         this.attachMathfieldListeners(this.pmEditor.dom);
       }, 50);
+    } catch (error) {
+      console.warn('Error syncing to visual:', error);
     } finally {
       this.syncing = false;
     }
@@ -340,19 +380,18 @@ export class SyncManager {
 
       if (newLatex !== currentLatex) {
         const diffStart = this.findDiffStart(currentLatex, newLatex);
-        if (diffStart === null) {
-          this.syncing = false;
-          return;
+        if (diffStart !== null) {
+          const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex, diffStart);
+          const insertText = newLatex.slice(diffStart, endB);
+
+          const cmTr = this.cmEditor.state.update({
+            changes: { from: diffStart, to: endA, insert: insertText }
+          });
+          this.cmEditor.dispatch(cmTr);
         }
-
-        const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex, diffStart);
-        const insertText = newLatex.slice(diffStart, endB);
-
-        const cmTr = this.cmEditor.state.update({
-          changes: { from: diffStart, to: endA, insert: insertText }
-        });
-        this.cmEditor.dispatch(cmTr);
       }
+    } catch (error) {
+      console.warn('Error syncing to source:', error);
     } finally {
       this.syncing = false;
     }
@@ -382,6 +421,10 @@ export class SyncManager {
   }
 
   destroy() {
+    if (this.syncTimeout) {
+      clearTimeout(this.syncTimeout);
+    }
+
     if (this.mathfieldObserver) {
       this.mathfieldObserver.disconnect();
     }
