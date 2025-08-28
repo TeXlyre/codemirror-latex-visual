@@ -118,7 +118,8 @@ export const latexVisualSchema = new Schema({
       attrs: {
         level: { default: 1 },
         latex: { default: '' },
-        name: { default: '' }
+        name: { default: '' },
+        showCommands: { default: false }
       },
       parseDOM: [
         { tag: 'h1', attrs: { level: 1 } },
@@ -126,7 +127,7 @@ export const latexVisualSchema = new Schema({
         { tag: 'h3', attrs: { level: 3 } }
       ],
       toDOM: node => {
-        const showCommands = (window as any).latexEditorShowCommands;
+        const showCommands = node.attrs.showCommands;
 
         if (showCommands) {
           return [
@@ -159,11 +160,12 @@ export const latexVisualSchema = new Schema({
       attrs: {
         name: { default: '' },
         latex: { default: '' },
-        params: { default: '' }
+        params: { default: '' },
+        showCommands: { default: false }
       },
       parseDOM: [{ tag: 'div.latex-env' }],
       toDOM: node => {
-        const showCommands = (window as any).latexEditorShowCommands;
+        const showCommands = node.attrs.showCommands;
 
         if (showCommands) {
           return [
@@ -198,12 +200,13 @@ export const latexVisualSchema = new Schema({
       content: 'inline*',
       attrs: {
         name: { default: '' },
-        latex: { default: '' }
+        latex: { default: '' },
+        showCommands: { default: false }
       },
       parseDOM: [{ tag: 'span.latex-editable-command' }],
       toDOM: node => {
         const cmdName = node.attrs.name;
-        const showCommands = (window as any).latexEditorShowCommands;
+        const showCommands = node.attrs.showCommands;
 
         if (showCommands) {
           return [

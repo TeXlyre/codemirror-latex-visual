@@ -21,6 +21,29 @@ export class SyncManager {
     this.setupMathfieldListeners();
   }
 
+  forceVisualRefresh() {
+    if (this.syncing) return;
+    this.syncing = true;
+
+    try {
+      const currentDoc = this.pmEditor.state.doc;
+      const tr = this.pmEditor.state.tr.setMeta('forceRefresh', true);
+
+      // Force recreation of the entire document
+      const latexContent = this.cmEditor.state.doc.toString();
+      const newPmDoc = parseLatexToProseMirror(latexContent);
+
+      const fullReplace = tr.replaceWith(0, currentDoc.content.size, newPmDoc.content);
+      this.pmEditor.dispatch(fullReplace);
+
+      setTimeout(() => {
+        this.attachMathfieldListeners(this.pmEditor.dom);
+      }, 50);
+    } finally {
+      this.syncing = false;
+    }
+  }
+
   updateCommandVisibility(showCommands: boolean) {
     this.showCommands = showCommands;
     (window as any).latexEditorShowCommands = showCommands;
@@ -253,13 +276,37 @@ export class SyncManager {
     this.isListening = true;
   }
 
+  syncToVisualWithCommandToggle() {
+    if (this.syncing) return;
+    this.syncing = true;
+
+    try {
+      const latexContent = this.cmEditor.state.doc.toString();
+      const newPmDoc = parseLatexToProseMirror(latexContent, this.showCommands);
+
+      const tr = this.pmEditor.state.tr.replaceWith(
+        0,
+        this.pmEditor.state.doc.content.size,
+        newPmDoc.content
+      );
+
+      this.pmEditor.dispatch(tr);
+
+      setTimeout(() => {
+        this.attachMathfieldListeners(this.pmEditor.dom);
+      }, 50);
+    } finally {
+      this.syncing = false;
+    }
+  }
+
   syncToVisual() {
     if (this.syncing) return;
     this.syncing = true;
 
     try {
       const latexContent = this.cmEditor.state.doc.toString();
-      const newPmDoc = parseLatexToProseMirror(latexContent);
+      const newPmDoc = parseLatexToProseMirror(latexContent, this.showCommands);
       const oldPmDoc = this.pmEditor.state.doc;
 
       const diffStart = oldPmDoc.content.findDiffStart(newPmDoc.content);

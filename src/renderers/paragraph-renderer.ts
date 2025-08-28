@@ -27,12 +27,16 @@ export class ParagraphRenderer extends BaseLatexRenderer {
           result += node.text || '';
           return false;
         case 'math_inline':
-          result += `${node.attrs.latex}`;
+          result += `$${node.attrs.latex}$`;
           return false;
         case 'editable_command':
-          const cmdName = node.attrs.name;
-          const innerContent = node.textContent;
-          result += `\\${cmdName}{${innerContent}}`;
+          if (this.options.showCommands) {
+            result += node.attrs.latex;
+          } else {
+            const cmdName = node.attrs.name;
+            const innerContent = node.textContent;
+            result += `\\${cmdName}{${innerContent}}`;
+          }
           return false;
         case 'command':
           result += node.attrs.latex;

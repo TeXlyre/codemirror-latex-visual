@@ -7,9 +7,9 @@ import { LatexToken } from './parsers/base-parser';
 const tokenizer = new LatexTokenizer();
 const renderer = new LatexRenderer();
 
-export function parseLatexToProseMirror(latex: string): PMNode {
+export function parseLatexToProseMirror(latex: string, showCommands: boolean = false): PMNode {
   const tokens = tokenizer.tokenize(latex);
-  return buildProseMirrorDoc(tokens);
+  return buildProseMirrorDoc(tokens, showCommands);
 }
 
 export function renderProseMirrorToLatex(pmDoc: PMNode, showCommands: boolean = false): string {
@@ -17,7 +17,7 @@ export function renderProseMirrorToLatex(pmDoc: PMNode, showCommands: boolean = 
   return renderer.render(pmDoc);
 }
 
-function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
+function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false): PMNode {
   const nodes: PMNode[] = [];
   let currentParagraphContent: any[] = [];
 
@@ -62,11 +62,12 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
                 break;
               case 'editable_command':
                 if (Array.isArray(element.content)) {
-                  const innerDoc = buildProseMirrorDoc(element.content);
+                  const innerDoc = buildProseMirrorDoc(element.content, showCommands);
 
                   const commandNode = latexVisualSchema.nodes.editable_command.create({
                     name: element.name || '',
-                    latex: element.latex
+                    latex: element.latex,
+                    showCommands
                   }, innerDoc.content);
 
                   currentParagraphContent.push(commandNode);
@@ -74,7 +75,8 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
                   currentParagraphContent.push(
                     latexVisualSchema.nodes.editable_command.create({
                       name: element.name || '',
-                      latex: element.latex
+                      latex: element.latex,
+                      showCommands
                     })
                   );
                 }
@@ -83,7 +85,8 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
                 currentParagraphContent.push(
                   latexVisualSchema.nodes.editable_command.create({
                     name: element.name || '',
-                    latex: element.latex
+                    latex: element.latex,
+                    showCommands
                   }, typeof element.content === 'string' && element.content ?
                     [latexVisualSchema.text(element.content)] : []
                   )
@@ -120,7 +123,8 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
             {
               level: token.level || 1,
               latex: token.latex,
-              name: token.name || ''
+              name: token.name || '',
+              showCommands
             },
             latexVisualSchema.text(token.content)
           )
@@ -129,11 +133,12 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
 
       case 'environment':
         flushParagraph();
-        const envContent = token.content ? parseLatexToProseMirror(token.content) : null;
+        const envContent = token.content ? parseLatexToProseMirror(token.content, showCommands) : null;
         nodes.push(
           latexVisualSchema.nodes.environment.create({
             name: token.name || '',
-            latex: token.latex
+            latex: token.latex,
+            showCommands
           }, envContent ? envContent.content : undefined)
         );
         break;
@@ -142,7 +147,8 @@ function buildProseMirrorDoc(tokens: LatexToken[]): PMNode {
         currentParagraphContent.push(
           latexVisualSchema.nodes.editable_command.create({
             name: token.name || '',
-            latex: token.latex
+            latex: token.latex,
+            showCommands
           }, token.content ? [latexVisualSchema.text(token.content)] : [])
         );
         break;

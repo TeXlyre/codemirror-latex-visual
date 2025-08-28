@@ -165,7 +165,7 @@ export class DualLatexEditor {
     this.syncManager.updateCommandVisibility(this.showCommands);
 
     if (this.currentMode === 'visual') {
-      this.syncManager.syncToVisual();
+      this.syncManager.syncToVisualWithCommandToggle();
     }
   }
 
@@ -174,7 +174,7 @@ export class DualLatexEditor {
 
     const cmdBtn = this.toolbar.querySelector('.toggle-cmd-btn') as HTMLButtonElement;
     if (cmdBtn) {
-      cmdBtn.textContent = this.showCommands ? 'Hide Commands' : 'Show Commands';
+      cmdBtn.textContent = this.showCommands ? 'Hide LaTeX' : 'Show LaTeX';
       cmdBtn.classList.toggle('active', this.showCommands);
     }
   }
