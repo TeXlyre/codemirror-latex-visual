@@ -7,10 +7,6 @@ export class CommandRenderer extends BaseLatexRenderer {
   }
 
   render(node: PMNode): string {
-    if (this.options.showCommands) {
-      return node.attrs.latex || '';
-    }
-
     if (node.type.name === 'editable_command') {
       const cmdName = node.attrs.name;
       const innerContent = node.textContent || '';
