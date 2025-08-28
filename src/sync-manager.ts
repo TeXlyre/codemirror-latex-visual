@@ -11,12 +11,19 @@ export class SyncManager {
   private originalDispatch: any;
   private mathfieldObserver?: MutationObserver;
   private mathfieldEventMap = new WeakMap();
+  private showCommands: boolean;
 
-  constructor(cmEditor: EditorView, pmEditor: PMView) {
+  constructor(cmEditor: EditorView, pmEditor: PMView, showCommands: boolean = false) {
     this.cmEditor = cmEditor;
     this.pmEditor = pmEditor;
+    this.showCommands = showCommands;
     this.setupCodeMirrorListener();
     this.setupMathfieldListeners();
+  }
+
+  updateCommandVisibility(showCommands: boolean) {
+    this.showCommands = showCommands;
+    (window as any).latexEditorShowCommands = showCommands;
   }
 
   private setupMathfieldListeners() {
@@ -180,18 +187,6 @@ export class SyncManager {
     }
   }
 
-  private handleMathfieldChange(mathfield: any) {
-    if (this.syncing) return;
-
-    const newLatex = mathfield.getValue('latex');
-    const oldLatex = mathfield.getAttribute('data-original-latex') || '';
-
-    if (newLatex !== oldLatex) {
-      mathfield.setAttribute('data-original-latex', newLatex);
-      this.updateMathNodeFromMathfield(mathfield, newLatex);
-    }
-  }
-
   private updateMathNodeFromMathfield(mathfield: any, newLatex: string) {
     if (this.syncing) return;
 
@@ -293,7 +288,7 @@ export class SyncManager {
     this.syncing = true;
 
     try {
-      const newLatex = renderProseMirrorToLatex(this.pmEditor.state.doc);
+      const newLatex = renderProseMirrorToLatex(this.pmEditor.state.doc, this.showCommands);
       const currentLatex = this.cmEditor.state.doc.toString();
 
       if (newLatex !== currentLatex) {

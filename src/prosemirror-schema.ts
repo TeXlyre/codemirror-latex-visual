@@ -1,5 +1,5 @@
 import { Schema } from 'prosemirror-model';
-import { createEditableMath } from './math-renderer';
+import { createEditableMath } from './math-field-utils';
 
 export const latexVisualSchema = new Schema({
   nodes: {
@@ -117,18 +117,40 @@ export const latexVisualSchema = new Schema({
       content: 'inline*',
       attrs: {
         level: { default: 1 },
-        latex: { default: '' }
+        latex: { default: '' },
+        name: { default: '' }
       },
       parseDOM: [
         { tag: 'h1', attrs: { level: 1 } },
         { tag: 'h2', attrs: { level: 2 } },
         { tag: 'h3', attrs: { level: 3 } }
       ],
-      toDOM: node => [
-        `h${node.attrs.level}`,
-        { 'data-latex': node.attrs.latex },
-        0
-      ]
+      toDOM: node => {
+        const showCommands = (window as any).latexEditorShowCommands;
+
+        if (showCommands) {
+          return [
+            'div',
+            {
+              class: `latex-section-command latex-section-level-${node.attrs.level}`,
+              'data-latex': node.attrs.latex,
+              'data-level': node.attrs.level
+            },
+            ['span', { class: 'cmd-prefix' }, `\\${node.attrs.name || `${'sub'.repeat(node.attrs.level - 1)}section`}{`],
+            ['span', { class: 'cmd-content' }, 0],
+            ['span', { class: 'cmd-suffix' }, '}']
+          ];
+        }
+
+        return [
+          `h${node.attrs.level}`,
+          {
+            'data-latex': node.attrs.latex,
+            class: 'latex-section'
+          },
+          0
+        ];
+      }
     },
 
     environment: {
@@ -140,16 +162,34 @@ export const latexVisualSchema = new Schema({
         params: { default: '' }
       },
       parseDOM: [{ tag: 'div.latex-env' }],
-      toDOM: node => [
-        'div',
-        {
-          class: `latex-env latex-env-${node.attrs.name}`,
-          'data-latex': node.attrs.latex,
-          'data-env': node.attrs.name
-        },
-        ['div', { class: 'env-header' }, `${node.attrs.name}`],
-        ['div', { class: 'env-content' }, 0]
-      ]
+      toDOM: node => {
+        const showCommands = (window as any).latexEditorShowCommands;
+
+        if (showCommands) {
+          return [
+            'div',
+            {
+              class: 'latex-env-command',
+              'data-latex': node.attrs.latex,
+              'data-env': node.attrs.name
+            },
+            ['div', { class: 'env-begin' }, `\\begin{${node.attrs.name}}`],
+            ['div', { class: 'env-content' }, 0],
+            ['div', { class: 'env-end' }, `\\end{${node.attrs.name}}`]
+          ];
+        }
+
+        return [
+          'div',
+          {
+            class: `latex-env latex-env-${node.attrs.name}`,
+            'data-latex': node.attrs.latex,
+            'data-env': node.attrs.name
+          },
+          ['div', { class: 'env-header' }, `${node.attrs.name}`],
+          ['div', { class: 'env-content' }, 0]
+        ];
+      }
     },
 
     editable_command: {
@@ -163,6 +203,20 @@ export const latexVisualSchema = new Schema({
       parseDOM: [{ tag: 'span.latex-editable-command' }],
       toDOM: node => {
         const cmdName = node.attrs.name;
+        const showCommands = (window as any).latexEditorShowCommands;
+
+        if (showCommands) {
+          return [
+            'span',
+            {
+              class: `latex-editable-command-raw latex-cmd-${cmdName}`,
+              'data-latex': node.attrs.latex,
+              'data-cmd': cmdName
+            },
+            node.attrs.latex
+          ];
+        }
+
         return [
           'span',
           {

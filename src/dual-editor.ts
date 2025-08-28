@@ -12,6 +12,7 @@ export interface DualEditorOptions {
   initialMode?: 'source' | 'visual';
   onModeChange?: (mode: 'source' | 'visual') => void;
   className?: string;
+  showCommands?: boolean;
 }
 
 export class DualLatexEditor {
@@ -23,18 +24,21 @@ export class DualLatexEditor {
   private options: DualEditorOptions;
   private pmContainer!: HTMLElement;
   private toolbar!: HTMLElement;
+  private showCommands: boolean;
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: DualEditorOptions = {}) {
     this.container = container;
     this.cmEditor = cmEditor;
     this.options = options;
     this.currentMode = options.initialMode || 'source';
+    this.showCommands = options.showCommands || false;
 
     this.setupLayout();
     this.addCodeMirrorKeymap();
     this.createProseMirrorEditor();
     this.setupSyncManager();
     this.setMode(this.currentMode);
+    this.updateCommandVisibility();
   }
 
   private addCodeMirrorKeymap() {
@@ -44,6 +48,14 @@ export class DualLatexEditor {
         mac: 'Cmd-e',
         run: () => {
           this.toggleMode();
+          return true;
+        }
+      },
+      {
+        key: 'Ctrl-Shift-c',
+        mac: 'Cmd-Shift-c',
+        run: () => {
+          this.toggleCommandVisibility();
           return true;
         }
       }
@@ -63,6 +75,7 @@ export class DualLatexEditor {
     toolbar.innerHTML = `
       <button class="mode-btn" data-mode="source">LaTeX Source</button>
       <button class="mode-btn" data-mode="visual">Visual</button>
+      <button class="toggle-cmd-btn" title="Toggle Command Visibility (Ctrl+Shift+C)">Show Commands</button>
     `;
 
     const editorsContainer = document.createElement('div');
@@ -89,8 +102,12 @@ export class DualLatexEditor {
     toolbar.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       const btn = target.closest('.mode-btn') as HTMLButtonElement;
+      const cmdBtn = target.closest('.toggle-cmd-btn') as HTMLButtonElement;
+
       if (btn) {
         this.setMode(btn.dataset.mode as 'source' | 'visual');
+      } else if (cmdBtn) {
+        this.toggleCommandVisibility();
       }
     });
   }
@@ -101,6 +118,11 @@ export class DualLatexEditor {
       return true;
     };
 
+    const toggleCommandsVisibility = (state: any, dispatch: any) => {
+      this.toggleCommandVisibility();
+      return true;
+    };
+
     const pmState = PMState.create({
       schema: latexVisualSchema,
       doc: parseLatexToProseMirror(''),
@@ -108,7 +130,9 @@ export class DualLatexEditor {
         pmKeymap({
           ...baseKeymap,
           'Ctrl-e': toggleCommand,
-          'Cmd-e': toggleCommand
+          'Cmd-e': toggleCommand,
+          'Ctrl-Shift-c': toggleCommandsVisibility,
+          'Cmd-Shift-c': toggleCommandsVisibility
         })
       ]
     });
@@ -127,12 +151,32 @@ export class DualLatexEditor {
   }
 
   private setupSyncManager() {
-    this.syncManager = new SyncManager(this.cmEditor, this.pmEditor);
+    this.syncManager = new SyncManager(this.cmEditor, this.pmEditor, this.showCommands);
   }
 
   public toggleMode() {
     const newMode = this.currentMode === 'source' ? 'visual' : 'source';
     this.setMode(newMode);
+  }
+
+  public toggleCommandVisibility() {
+    this.showCommands = !this.showCommands;
+    this.updateCommandVisibility();
+    this.syncManager.updateCommandVisibility(this.showCommands);
+
+    if (this.currentMode === 'visual') {
+      this.syncManager.syncToVisual();
+    }
+  }
+
+  private updateCommandVisibility() {
+    (window as any).latexEditorShowCommands = this.showCommands;
+
+    const cmdBtn = this.toolbar.querySelector('.toggle-cmd-btn') as HTMLButtonElement;
+    if (cmdBtn) {
+      cmdBtn.textContent = this.showCommands ? 'Hide Commands' : 'Show Commands';
+      cmdBtn.classList.toggle('active', this.showCommands);
+    }
   }
 
   setMode(mode: 'source' | 'visual') {
@@ -181,6 +225,14 @@ export function latexVisualKeymap(dualEditor: DualLatexEditor) {
       mac: 'Cmd-e',
       run: () => {
         dualEditor.toggleMode();
+        return true;
+      }
+    },
+    {
+      key: 'Ctrl-Shift-c',
+      mac: 'Cmd-Shift-c',
+      run: () => {
+        dualEditor.toggleCommandVisibility();
         return true;
       }
     }
