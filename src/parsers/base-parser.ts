@@ -7,12 +7,14 @@ export interface LatexToken {
   level?: number;
   name?: string;
   params?: string;
+  colorArg?: string;
   children?: LatexToken[];
   elements?: Array<{
     type: 'text' | 'command' | 'math_inline' | 'editable_command';
     content: string | LatexToken[];
     latex: string;
     name?: string;
+    colorArg?: string;
   }>;
 }
 

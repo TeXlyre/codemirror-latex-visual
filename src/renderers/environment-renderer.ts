@@ -7,12 +7,9 @@ export class EnvironmentRenderer extends BaseLatexRenderer {
   }
 
   render(node: PMNode): string {
-    if (this.options.showCommands) {
-      return node.attrs.latex || '';
-    }
+    const envName = node.attrs.name;
 
     if (node.content.size > 0) {
-      const envName = node.attrs.name;
       const innerLatex = this.renderContentWithMath(node);
       return `\\begin{${envName}}\n${innerLatex}\n\\end{${envName}}`;
     } else {

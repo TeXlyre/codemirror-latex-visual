@@ -7,10 +7,6 @@ export class SectionRenderer extends BaseLatexRenderer {
   }
 
   render(node: PMNode): string {
-    if (this.options.showCommands) {
-      return node.attrs.latex || '';
-    }
-
     const level = node.attrs.level || 1;
     const sectionType = level === 1 ? 'section' : level === 2 ? 'subsection' : 'subsubsection';
     const content = node.textContent || '';

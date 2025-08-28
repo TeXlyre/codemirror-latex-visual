@@ -30,13 +30,9 @@ export class ParagraphRenderer extends BaseLatexRenderer {
           result += `$${node.attrs.latex}$`;
           return false;
         case 'editable_command':
-          if (this.options.showCommands) {
-            result += node.attrs.latex;
-          } else {
-            const cmdName = node.attrs.name;
-            const innerContent = node.textContent;
-            result += `\\${cmdName}{${innerContent}}`;
-          }
+          const cmdName = node.attrs.name;
+          const innerContent = node.textContent;
+          result += `\\${cmdName}{${innerContent}}`;
           return false;
         case 'command':
           result += node.attrs.latex;

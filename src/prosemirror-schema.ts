@@ -154,85 +154,81 @@ export const latexVisualSchema = new Schema({
       }
     },
 
-    environment: {
-      group: 'block',
-      content: 'block*',
-      attrs: {
-        name: { default: '' },
-        latex: { default: '' },
-        params: { default: '' },
-        showCommands: { default: false }
-      },
-      parseDOM: [{ tag: 'div.latex-env' }],
-      toDOM: node => {
-        const showCommands = node.attrs.showCommands;
+  environment: {
+    group: 'block',
+    content: 'block*',
+    attrs: {
+      name: { default: '' },
+      latex: { default: '' },
+      params: { default: '' },
+      showCommands: { default: false }
+    },
+    parseDOM: [{ tag: 'div.latex-env' }],
+    toDOM: node => {
+      const showCommands = node.attrs.showCommands;
 
-        if (showCommands) {
-          return [
-            'div',
-            {
-              class: 'latex-env-command',
-              'data-latex': node.attrs.latex,
-              'data-env': node.attrs.name
-            },
-            ['div', { class: 'env-begin' }, `\\begin{${node.attrs.name}}`],
-            ['div', { class: 'env-content' }, 0],
-            ['div', { class: 'env-end' }, `\\end{${node.attrs.name}}`]
-          ];
-        }
-
+      if (showCommands) {
         return [
           'div',
           {
-            class: `latex-env latex-env-${node.attrs.name}`,
+            class: 'latex-env-command',
             'data-latex': node.attrs.latex,
             'data-env': node.attrs.name
           },
-          ['div', { class: 'env-header' }, `${node.attrs.name}`],
-          ['div', { class: 'env-content' }, 0]
+          ['div', { class: 'env-begin' }, `\\begin{${node.attrs.name}}`],
+          ['div', { class: 'env-content' }, 0],
+          ['div', { class: 'env-end' }, `\\end{${node.attrs.name}}`]
         ];
       }
+
+      return [
+        'div',
+        {
+          class: `latex-env latex-env-${node.attrs.name}`,
+          'data-latex': node.attrs.latex,
+          'data-env': node.attrs.name
+        },
+        ['div', { class: 'env-header' }, `${node.attrs.name}`],
+        ['div', { class: 'env-content' }, 0]
+      ];
+    }
+  },
+
+  editable_command: {
+    group: 'inline',
+    inline: true,
+    content: 'inline*',
+    attrs: {
+      name: { default: '' },
+      latex: { default: '' },
+      showCommands: { default: false },
+      colorArg: { default: '' }
     },
+    parseDOM: [{ tag: 'span.latex-editable-command' }],
+    toDOM: node => {
+      const cmdName = node.attrs.name;
+      const showCommands = node.attrs.showCommands;
+      const colorArg = node.attrs.colorArg;
 
-    editable_command: {
-      group: 'inline',
-      inline: true,
-      content: 'inline*',
-      attrs: {
-        name: { default: '' },
-        latex: { default: '' },
-        showCommands: { default: false }
-      },
-      parseDOM: [{ tag: 'span.latex-editable-command' }],
-      toDOM: node => {
-        const cmdName = node.attrs.name;
-        const showCommands = node.attrs.showCommands;
-
-        if (showCommands) {
-          return [
-            'span',
-            {
-              class: `latex-editable-command-raw latex-cmd-${cmdName}`,
-              'data-latex': node.attrs.latex,
-              'data-cmd': cmdName
-            },
-            node.attrs.latex
-          ];
-        }
-
-        return [
-          'span',
-          {
-            class: `latex-editable-command latex-cmd-${cmdName}`,
-            'data-latex': node.attrs.latex,
-            'data-cmd': cmdName
-          },
-          ['span', { class: 'cmd-label' }, `\\${cmdName}{`],
-          ['span', { class: 'cmd-content' }, 0],
-          ['span', { class: 'cmd-label' }, '}']
-        ];
+      let style = '';
+      if ((cmdName === 'textcolor' || cmdName === 'color') && colorArg) {
+        style = `color: ${colorArg};`;
       }
-    },
+
+      return [
+        'span',
+        {
+          class: `latex-editable-command latex-cmd-${cmdName} ${showCommands ? 'show-commands' : 'hide-commands'}`,
+          'data-latex': node.attrs.latex,
+          'data-cmd': cmdName,
+          style: style
+        },
+        ['span', { class: 'cmd-label' }, `\\${cmdName}{`],
+        ['span', { class: 'cmd-content' }, 0],
+        ['span', { class: 'cmd-label' }, '}']
+      ];
+    }
+  },
 
     command: {
       group: 'inline',

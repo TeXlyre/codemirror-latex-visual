@@ -116,6 +116,70 @@
   color: #dc3545;
 }
 
+.latex-editable-command-raw .cmd-prefix,
+.latex-editable-command-raw .cmd-suffix {
+  color: #dc3545;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9em;
+  font-weight: 600;
+  user-select: none;
+}
+
+.latex-editable-command-raw .cmd-content-raw {
+  font-family: inherit;
+  color: inherit;
+}
+
+.latex-editable-command.hide-commands .cmd-label {
+  display: none;
+}
+
+.latex-editable-command.hide-commands {
+  display: inline;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  transition: none;
+  position: static;
+}
+
+.latex-editable-command.hide-commands:hover {
+  background: transparent;
+  border: none;
+}
+.latex-editable-command-visual {
+  display: inline;
+}
+
+.latex-editable-command-visual.latex-cmd-textbf {
+  font-weight: bold;
+}
+
+.latex-editable-command-visual.latex-cmd-textit,
+.latex-editable-command-visual.latex-cmd-emph {
+  font-style: italic;
+}
+
+.latex-editable-command-visual.latex-cmd-underline {
+  text-decoration: underline;
+}
+
+.latex-editable-command-visual.latex-cmd-textsc {
+  font-variant: small-caps;
+}
+
+.latex-editable-command-visual.latex-cmd-textsf {
+  font-family: sans-serif;
+}
+
+.latex-editable-command-visual.latex-cmd-texttt {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+
 .math-inline-container {
   display: inline-block;
   position: relative;

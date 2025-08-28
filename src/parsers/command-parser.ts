@@ -3,7 +3,8 @@ import { BaseLatexParser, LatexToken } from './base-parser';
 export const EDITABLE_COMMANDS = new Set([
   'textbf', 'textit', 'emph', 'underline', 'textsc', 'textsf', 'texttt',
   'section', 'subsection', 'subsubsection', 'title', 'author', 'date',
-  'footnote', 'cite', 'ref', 'label', 'url', 'href'
+  'footnote', 'cite', 'citeyear', 'citep', 'citey', 'ref', 'label', 'url', 'href',
+  'textcolor', 'color'
 ]);
 
 export const FORMATTING_COMMANDS = new Map([
@@ -19,6 +20,11 @@ export class CommandParser extends BaseLatexParser {
 
   parse(latex: string, position: number): LatexToken | null {
     if (!this.canParse(latex, position)) return null;
+
+    // Handle textcolor specifically (has two arguments)
+    if (latex.startsWith('\\textcolor', position)) {
+      return this.parseTextColorCommand(latex, position);
+    }
 
     const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, position);
     if (!cmdResult) {
@@ -40,7 +46,47 @@ export class CommandParser extends BaseLatexParser {
       start: position,
       end: cmdResult.end,
       name: cmdResult.name,
-      params: ''
+      params: '',
+      colorArg: cmdResult.name === 'color' ? cmdResult.params : undefined
+    };
+  }
+
+  private parseTextColorCommand(latex: string, start: number): LatexToken | null {
+    let pos = start + 10; // length of '\textcolor'
+
+    // Skip whitespace
+    while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
+      pos++;
+    }
+
+    // Extract color argument
+    if (latex.charAt(pos) !== '{') return null;
+    const colorResult = BaseLatexParser.extractBalancedBraces(latex, pos);
+    if (!colorResult) return null;
+
+    pos = colorResult.end;
+
+    // Skip whitespace
+    while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
+      pos++;
+    }
+
+    // Extract content argument
+    if (latex.charAt(pos) !== '{') return null;
+    const contentResult = BaseLatexParser.extractBalancedBraces(latex, pos);
+    if (!contentResult) return null;
+
+    const fullCommand = latex.slice(start, contentResult.end);
+
+    return {
+      type: 'editable_command',
+      content: contentResult.content,
+      latex: fullCommand,
+      start,
+      end: contentResult.end,
+      name: 'textcolor',
+      params: '',
+      colorArg: colorResult.content
     };
   }
 }
