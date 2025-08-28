@@ -1,5 +1,5 @@
 import { Schema } from 'prosemirror-model';
-import { createEditableMath } from './math-renderer';
+import { createEditableMath } from './math-field-utils';
 
 export const latexVisualSchema = new Schema({
   nodes: {
@@ -117,30 +117,71 @@ export const latexVisualSchema = new Schema({
       content: 'inline*',
       attrs: {
         level: { default: 1 },
-        latex: { default: '' }
+        latex: { default: '' },
+        name: { default: '' },
+        showCommands: { default: false }
       },
       parseDOM: [
         { tag: 'h1', attrs: { level: 1 } },
         { tag: 'h2', attrs: { level: 2 } },
         { tag: 'h3', attrs: { level: 3 } }
       ],
-      toDOM: node => [
-        `h${node.attrs.level}`,
-        { 'data-latex': node.attrs.latex },
-        0
-      ]
+      toDOM: node => {
+        const showCommands = node.attrs.showCommands;
+
+        if (showCommands) {
+          return [
+            'div',
+            {
+              class: `latex-section-command latex-section-level-${node.attrs.level}`,
+              'data-latex': node.attrs.latex,
+              'data-level': node.attrs.level
+            },
+            ['span', { class: 'cmd-prefix' }, `\\${node.attrs.name || `${'sub'.repeat(node.attrs.level - 1)}section`}{`],
+            ['span', { class: 'cmd-content' }, 0],
+            ['span', { class: 'cmd-suffix' }, '}']
+          ];
+        }
+
+        return [
+          `h${node.attrs.level}`,
+          {
+            'data-latex': node.attrs.latex,
+            class: 'latex-section'
+          },
+          0
+        ];
+      }
     },
 
-    environment: {
-      group: 'block',
-      content: 'block*',
-      attrs: {
-        name: { default: '' },
-        latex: { default: '' },
-        params: { default: '' }
-      },
-      parseDOM: [{ tag: 'div.latex-env' }],
-      toDOM: node => [
+  environment: {
+    group: 'block',
+    content: 'block*',
+    attrs: {
+      name: { default: '' },
+      latex: { default: '' },
+      params: { default: '' },
+      showCommands: { default: false }
+    },
+    parseDOM: [{ tag: 'div.latex-env' }],
+    toDOM: node => {
+      const showCommands = node.attrs.showCommands;
+
+      if (showCommands) {
+        return [
+          'div',
+          {
+            class: 'latex-env-command',
+            'data-latex': node.attrs.latex,
+            'data-env': node.attrs.name
+          },
+          ['div', { class: 'env-begin' }, `\\begin{${node.attrs.name}}`],
+          ['div', { class: 'env-content' }, 0],
+          ['div', { class: 'env-end' }, `\\end{${node.attrs.name}}`]
+        ];
+      }
+
+      return [
         'div',
         {
           class: `latex-env latex-env-${node.attrs.name}`,
@@ -149,33 +190,45 @@ export const latexVisualSchema = new Schema({
         },
         ['div', { class: 'env-header' }, `${node.attrs.name}`],
         ['div', { class: 'env-content' }, 0]
-      ]
-    },
+      ];
+    }
+  },
 
-    editable_command: {
-      group: 'inline',
-      inline: true,
-      content: 'inline*',
-      attrs: {
-        name: { default: '' },
-        latex: { default: '' }
-      },
-      parseDOM: [{ tag: 'span.latex-editable-command' }],
-      toDOM: node => {
-        const cmdName = node.attrs.name;
-        return [
-          'span',
-          {
-            class: `latex-editable-command latex-cmd-${cmdName}`,
-            'data-latex': node.attrs.latex,
-            'data-cmd': cmdName
-          },
-          ['span', { class: 'cmd-label' }, `\\${cmdName}{`],
-          ['span', { class: 'cmd-content' }, 0],
-          ['span', { class: 'cmd-label' }, '}']
-        ];
-      }
+  editable_command: {
+    group: 'inline',
+    inline: true,
+    content: 'inline*',
+    attrs: {
+      name: { default: '' },
+      latex: { default: '' },
+      showCommands: { default: false },
+      colorArg: { default: '' }
     },
+    parseDOM: [{ tag: 'span.latex-editable-command' }],
+    toDOM: node => {
+      const cmdName = node.attrs.name;
+      const showCommands = node.attrs.showCommands;
+      const colorArg = node.attrs.colorArg;
+
+      let style = '';
+      if ((cmdName === 'textcolor' || cmdName === 'color') && colorArg) {
+        style = `color: ${colorArg};`;
+      }
+
+      return [
+        'span',
+        {
+          class: `latex-editable-command latex-cmd-${cmdName} ${showCommands ? 'show-commands' : 'hide-commands'}`,
+          'data-latex': node.attrs.latex,
+          'data-cmd': cmdName,
+          style: style
+        },
+        ['span', { class: 'cmd-label' }, `\\${cmdName}{`],
+        ['span', { class: 'cmd-content' }, 0],
+        ['span', { class: 'cmd-label' }, '}']
+      ];
+    }
+  },
 
     command: {
       group: 'inline',

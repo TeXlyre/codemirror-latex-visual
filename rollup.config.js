@@ -13,6 +13,7 @@ export default [
       '@codemirror/state',
       '@codemirror/view',
       '@codemirror/language',
+      'prosemirror-inputrules',
       'prosemirror-state',
       'prosemirror-view',
       'prosemirror-model',
