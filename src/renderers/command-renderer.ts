@@ -9,10 +9,50 @@ export class CommandRenderer extends BaseLatexRenderer {
   render(node: PMNode): string {
     if (node.type.name === 'editable_command') {
       const cmdName = node.attrs.name;
-      const innerContent = node.textContent || '';
+
+      if (cmdName === 'textcolor' && node.attrs.colorArg) {
+        const innerContent = this.renderContent(node);
+        return `\\textcolor{${node.attrs.colorArg}}{${innerContent}}`;
+      }
+
+      const innerContent = this.renderContent(node);
       return `\\${cmdName}{${innerContent}}`;
     } else {
       return node.attrs.latex || '';
     }
+  }
+
+  private renderContent(node: PMNode): string {
+    const parts: string[] = [];
+
+    node.descendants((child, pos) => {
+      if (child === node) return true;
+
+      switch (child.type.name) {
+        case 'text':
+          if (child.text) parts.push(child.text);
+          return false;
+        case 'math_inline':
+          parts.push(`$${child.attrs.latex}$`);
+          return false;
+        case 'editable_command':
+          const cmdName = child.attrs.name;
+          if (cmdName === 'textcolor' && child.attrs.colorArg) {
+            const innerContent = this.renderContent(child);
+            parts.push(`\\textcolor{${child.attrs.colorArg}}{${innerContent}}`);
+          } else {
+            const innerContent = this.renderContent(child);
+            parts.push(`\\${cmdName}{${innerContent}}`);
+          }
+          return false;
+        case 'command':
+          parts.push(child.attrs.latex || '');
+          return false;
+        default:
+          return true;
+      }
+    });
+
+    return parts.join('');
   }
 }

@@ -31,12 +31,17 @@ export class ParagraphRenderer extends BaseLatexRenderer {
           result += node.text || '';
           return false;
         case 'math_inline':
-          result += `$${node.attrs.latex}$`;
+          result += `${node.attrs.latex}`;
           return false;
         case 'editable_command':
           const cmdName = node.attrs.name;
-          const innerContent = node.textContent;
-          result += `\\${cmdName}{${innerContent}}`;
+          if (cmdName === 'textcolor' && node.attrs.colorArg) {
+            const innerContent = this.renderCommandContent(node);
+            result += `\\textcolor{${node.attrs.colorArg}}{${innerContent}}`;
+          } else {
+            const innerContent = this.renderCommandContent(node);
+            result += `\\${cmdName}{${innerContent}}`;
+          }
           return false;
         case 'command':
           result += node.attrs.latex;
@@ -47,5 +52,39 @@ export class ParagraphRenderer extends BaseLatexRenderer {
     });
 
     return result;
+  }
+
+  private renderCommandContent(node: PMNode): string {
+    const parts: string[] = [];
+
+    node.descendants((child, pos) => {
+      if (child === node) return true;
+
+      switch (child.type.name) {
+        case 'text':
+          if (child.text) parts.push(child.text);
+          return false;
+        case 'math_inline':
+          parts.push(`${child.attrs.latex}`);
+          return false;
+        case 'editable_command':
+          const cmdName = child.attrs.name;
+          if (cmdName === 'textcolor' && child.attrs.colorArg) {
+            const innerContent = this.renderCommandContent(child);
+            parts.push(`\\textcolor{${child.attrs.colorArg}}{${innerContent}}`);
+          } else {
+            const innerContent = this.renderCommandContent(child);
+            parts.push(`\\${cmdName}{${innerContent}}`);
+          }
+          return false;
+        case 'command':
+          parts.push(child.attrs.latex || '');
+          return false;
+        default:
+          return true;
+      }
+    });
+
+    return parts.join('');
   }
 }
