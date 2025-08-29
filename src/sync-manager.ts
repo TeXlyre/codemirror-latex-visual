@@ -28,14 +28,15 @@ export class SyncManager {
     this.syncing = true;
 
     try {
-      const currentDoc = this.pmEditor.state.doc;
-      const tr = this.pmEditor.state.tr.setMeta('forceRefresh', true);
-
       const latexContent = this.cmEditor.state.doc.toString();
-      const newPmDoc = parseLatexToProseMirror(latexContent);
+      const newPmDoc = parseLatexToProseMirror(latexContent, this.showCommands);
 
-      const fullReplace = tr.replaceWith(0, currentDoc.content.size, newPmDoc.content);
-      this.pmEditor.dispatch(fullReplace);
+      const tr = this.pmEditor.state.tr.replaceWith(
+        0,
+        this.pmEditor.state.doc.content.size,
+        newPmDoc.content
+      );
+      this.pmEditor.dispatch(tr);
 
       setTimeout(() => {
         this.attachMathfieldListeners(this.pmEditor.dom);
@@ -335,30 +336,14 @@ export class SyncManager {
       }
 
       const newPmDoc = parseLatexToProseMirror(latexContent, this.showCommands);
-      const oldPmDoc = this.pmEditor.state.doc;
 
-      if (newPmDoc.eq(oldPmDoc)) return;
+      const tr = this.pmEditor.state.tr.replaceWith(
+        0,
+        this.pmEditor.state.doc.content.size,
+        newPmDoc.content
+      );
 
-      try {
-        const diffStart = oldPmDoc.content.findDiffStart(newPmDoc.content);
-        if (diffStart !== null) {
-          const diffEnd = oldPmDoc.content.findDiffEnd(newPmDoc.content);
-          if (diffEnd && diffStart <= diffEnd.a && diffStart <= diffEnd.b) {
-            let { a: endA, b: endB } = diffEnd;
-            const tr = this.pmEditor.state.tr.replace(diffStart, endA, newPmDoc.slice(diffStart, endB));
-            this.pmEditor.dispatch(tr);
-          } else {
-            throw new Error('Invalid diff boundaries');
-          }
-        }
-      } catch (diffError) {
-        const tr = this.pmEditor.state.tr.replaceWith(
-          0,
-          this.pmEditor.state.doc.content.size,
-          newPmDoc.content
-        );
-        this.pmEditor.dispatch(tr);
-      }
+      this.pmEditor.dispatch(tr);
 
       setTimeout(() => {
         this.attachMathfieldListeners(this.pmEditor.dom);

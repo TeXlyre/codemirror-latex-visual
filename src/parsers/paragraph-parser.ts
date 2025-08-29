@@ -55,55 +55,30 @@ export class ParagraphParser extends BaseLatexParser {
       }
 
       if (latex.charAt(pos) === '\\') {
-        if (latex.startsWith('\\textcolor', pos)) {
-          const cmdToken = this.commandParser.parse(latex, pos);
-          if (cmdToken) {
-            if (EDITABLE_COMMANDS.has(cmdToken.name || '')) {
-              const innerTokens = cmdToken.content ? this.tokenizeLatex(cmdToken.content) : [];
-              elements.push({
-                type: 'editable_command',
-                content: innerTokens,
-                latex: cmdToken.latex,
-                name: cmdToken.name,
-                colorArg: cmdToken.colorArg
-              });
-            } else {
-              elements.push({
-                type: 'command',
-                content: cmdToken.content,
-                latex: cmdToken.latex,
-                name: cmdToken.name,
-                colorArg: cmdToken.colorArg
-              });
-            }
-            fullContent += cmdToken.latex;
-            pos = cmdToken.end;
-            continue;
-          }
-        }
+        const cmdToken = this.commandParser.parse(latex, pos);
+        if (cmdToken) {
+          const isEditable = EDITABLE_COMMANDS.has(cmdToken.name || '');
 
-        const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, pos);
-        if (cmdResult) {
-          const { name, params, fullCommand } = cmdResult;
-
-          if (EDITABLE_COMMANDS.has(name)) {
-            const innerTokens = params ? this.tokenizeLatex(params) : [];
+          if (isEditable && cmdToken.content) {
+            const innerTokens = this.tokenizeLatex(cmdToken.content);
             elements.push({
               type: 'editable_command',
               content: innerTokens,
-              latex: fullCommand,
-              name
+              latex: cmdToken.latex,
+              name: cmdToken.name,
+              colorArg: cmdToken.colorArg
             });
           } else {
             elements.push({
-              type: 'command',
-              content: params,
-              latex: fullCommand,
-              name
+              type: isEditable ? 'editable_command' : 'command',
+              content: cmdToken.content || '',
+              latex: cmdToken.latex,
+              name: cmdToken.name,
+              colorArg: cmdToken.colorArg
             });
           }
-          fullContent += fullCommand;
-          pos += fullCommand.length;
+          fullContent += cmdToken.latex;
+          pos = cmdToken.end;
           continue;
         }
       }

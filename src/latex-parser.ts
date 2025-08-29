@@ -61,39 +61,16 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
                 );
                 break;
               case 'editable_command':
-                if (Array.isArray(element.content)) {
-                  const innerDoc = buildProseMirrorDoc(element.content, showCommands);
-                  const commandNode = latexVisualSchema.nodes.editable_command.create({
-                    name: element.name || '',
-                    latex: element.latex,
-                    showCommands,
-                    colorArg: element.colorArg || ''
-                  }, innerDoc.content);
+                const commandNode = createCommandNode(element, showCommands);
+                if (commandNode) {
                   currentParagraphContent.push(commandNode);
-                } else {
-                  currentParagraphContent.push(
-                    latexVisualSchema.nodes.editable_command.create({
-                      name: element.name || '',
-                      latex: element.latex,
-                      showCommands,
-                      colorArg: element.colorArg || ''
-                    }, typeof element.content === 'string' && element.content ?
-                      [latexVisualSchema.text(element.content)] : []
-                    )
-                  );
                 }
                 break;
               case 'command':
-                currentParagraphContent.push(
-                  latexVisualSchema.nodes.editable_command.create({
-                    name: element.name || '',
-                    latex: element.latex,
-                    showCommands,
-                    colorArg: element.colorArg || ''
-                  }, typeof element.content === 'string' && element.content ?
-                    [latexVisualSchema.text(element.content)] : []
-                  )
-                );
+                const regularCommandNode = createCommandNode(element, showCommands);
+                if (regularCommandNode) {
+                  currentParagraphContent.push(regularCommandNode);
+                }
                 break;
             }
           }
@@ -148,24 +125,15 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
         break;
 
       case 'command':
-        if (token.name === 'textcolor') {
-          currentParagraphContent.push(
-            latexVisualSchema.nodes.editable_command.create({
-              name: token.name,
-              latex: token.latex,
-              showCommands,
-              colorArg: token.colorArg || ''
-            }, token.content ? [latexVisualSchema.text(token.content)] : [])
-          );
-        } else {
-          currentParagraphContent.push(
-            latexVisualSchema.nodes.editable_command.create({
-              name: token.name || '',
-              latex: token.latex,
-              showCommands,
-              colorArg: token.colorArg || ''
-            }, token.content ? [latexVisualSchema.text(token.content)] : [])
-          );
+        const commandNode = createCommandNode({
+          type: 'editable_command',
+          content: token.content,
+          latex: token.latex,
+          name: token.name,
+          colorArg: token.colorArg
+        }, showCommands);
+        if (commandNode) {
+          currentParagraphContent.push(commandNode);
         }
         break;
 
@@ -179,7 +147,7 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
         break;
 
       default:
-        if (token.content.trim()) {
+        if (token.content && token.content.trim()) {
           currentParagraphContent.push(
             latexVisualSchema.text(token.content)
           );
@@ -194,4 +162,24 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
   }
 
   return latexVisualSchema.nodes.doc.create({}, nodes);
+}
+
+function createCommandNode(element: any, showCommands: boolean): any {
+  if (!element.name) return null;
+
+  let content: any[] = [];
+
+  if (typeof element.content === 'string' && element.content) {
+    content = [latexVisualSchema.text(element.content)];
+  } else if (Array.isArray(element.content)) {
+    const innerDoc = buildProseMirrorDoc(element.content, showCommands);
+    content = Array.from(innerDoc.content.content);
+  }
+
+  return latexVisualSchema.nodes.editable_command.create({
+    name: element.name,
+    latex: element.latex,
+    showCommands,
+    colorArg: element.colorArg || ''
+  }, content);
 }
