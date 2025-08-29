@@ -1,7 +1,7 @@
 {
   "name": "codemirror-latex-visual",
   "version": "0.1.0",
-  "description": "Non-lossy visual LaTeX editing for CodeMirror 6",
+  "description": "Visual LaTeX editing for CodeMirror 6",
   "author": "Fares Abawi <fares@abawi.me>",
   "license": "MIT",
   "type": "module",

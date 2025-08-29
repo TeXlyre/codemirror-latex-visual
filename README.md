@@ -4,10 +4,10 @@
 
 ## Features
 
-- Non-lossy visual editing - LaTeX source remains authoritative
+- Visual editing - LaTeX source remains authoritative
 - Real-time bidirectional synchronization between source and visual editors
 - Visual representation of LaTeX structures (sections, math blocks, environments)
-- KaTeX rendering for math content
+- Mathlive rendering and editing for math content
 - Mode switching between source and visual editing
 - Works with any existing CodeMirror 6 setup
 - Preserves LaTeX formatting and commands exactly as written
