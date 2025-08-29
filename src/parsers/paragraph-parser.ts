@@ -104,6 +104,13 @@ export class ParagraphParser extends BaseLatexParser {
         fullContent += textContent;
         pos = textEnd;
       } else {
+        const char = latex.charAt(pos);
+        elements.push({
+          type: 'text',
+          content: char,
+          latex: char
+        });
+        fullContent += char;
         pos++;
       }
     }

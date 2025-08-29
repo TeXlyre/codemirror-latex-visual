@@ -24,20 +24,19 @@ export class LatexRenderer {
   render(pmDoc: PMNode): string {
     const parts: string[] = [];
 
-    pmDoc.descendants((node, pos) => {
+    pmDoc.content.forEach((node, offset) => {
       for (const renderer of this.renderers) {
         if (renderer.canRender(node)) {
           const rendered = renderer.render(node);
-          if (rendered) {
+          if (rendered !== undefined && rendered !== null) {
             parts.push(rendered);
           }
-          return false;
+          return;
         }
       }
-      return true;
     });
 
-    return parts.join('\n\n').replace(/\n\n\n+/g, '\n\n').trim();
+    return parts.join('');
   }
 
   updateOptions(options: RenderingOptions) {

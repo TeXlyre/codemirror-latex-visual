@@ -14,6 +14,23 @@ export const latexVisualSchema = new Schema({
       toDOM: () => ['p', 0]
     },
 
+
+  paragraph_break: {
+    group: 'block',
+    atom: true,
+    attrs: {
+      latex: { default: '\n\n' }
+    },
+    parseDOM: [{ tag: 'div.latex-paragraph-break' }],
+    toDOM: node => [
+      'div',
+      {
+        class: 'latex-paragraph-break',
+        'data-latex': node.attrs.latex
+      }
+    ]
+  },
+
     text: {
       group: 'inline'
     },

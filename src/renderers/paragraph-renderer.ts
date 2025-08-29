@@ -3,12 +3,16 @@ import { BaseLatexRenderer } from './base-renderer';
 
 export class ParagraphRenderer extends BaseLatexRenderer {
   canRender(node: PMNode): boolean {
-    return node.type.name === 'paragraph' || node.type.name === 'hard_break';
+    return node.type.name === 'paragraph' || node.type.name === 'hard_break' || node.type.name === 'paragraph_break';
   }
 
   render(node: PMNode): string {
     if (node.type.name === 'hard_break') {
       return '\n';
+    }
+
+    if (node.type.name === 'paragraph_break') {
+      return node.attrs.latex || '\n\n';
     }
 
     if (node.content.size > 0) {

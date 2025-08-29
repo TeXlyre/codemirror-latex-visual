@@ -48,7 +48,7 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
           for (const element of token.elements) {
             switch (element.type) {
               case 'text':
-                if (typeof element.content === 'string' && element.content) {
+                if (typeof element.content === 'string') {
                   currentParagraphContent.push(latexVisualSchema.text(element.content));
                 }
                 break;
@@ -94,6 +94,7 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
                 break;
             }
           }
+          flushParagraph();
         }
         break;
 
@@ -155,6 +156,11 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
 
       case 'paragraph_break':
         flushParagraph();
+        nodes.push(
+          latexVisualSchema.nodes.paragraph_break.create({
+            latex: token.latex
+          })
+        );
         break;
 
       default:

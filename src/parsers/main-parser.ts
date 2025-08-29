@@ -21,15 +21,16 @@ export class LatexTokenizer {
     let pos = 0;
 
     while (pos < latex.length) {
-      if (latex.startsWith('\n\n', pos)) {
+      const paragraphBreakMatch = latex.slice(pos).match(/^(\n{2,})/);
+      if (paragraphBreakMatch) {
         tokens.push({
           type: 'paragraph_break',
-          content: '',
-          latex: '\n\n',
+          content: paragraphBreakMatch[1],
+          latex: paragraphBreakMatch[1],
           start: pos,
-          end: pos + 2
+          end: pos + paragraphBreakMatch[1].length
         });
-        pos += 2;
+        pos += paragraphBreakMatch[1].length;
         continue;
       }
 
