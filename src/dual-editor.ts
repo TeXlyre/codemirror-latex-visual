@@ -121,7 +121,6 @@ export class DualLatexEditor {
     wrapper.appendChild(editorsContainer);
 
     this.container.appendChild(wrapper);
-
     cmContainer.appendChild(this.cmEditor.dom);
 
     this.pmContainer = pmContainer;
@@ -143,6 +142,13 @@ export class DualLatexEditor {
         this.toggleToolbar();
       }
     });
+
+    // Initially hide the non-active editor
+    if (this.currentMode === 'source') {
+      pmContainer.style.display = 'none';
+    } else {
+      cmContainer.style.display = 'none';
+    }
 
     setTimeout(() => {
       this.cmEditor.requestMeasure();
@@ -246,20 +252,20 @@ export class DualLatexEditor {
   setMode(mode: 'source' | 'visual') {
     if (mode === this.currentMode) return;
 
+    const cmContainer = this.cmEditor.dom.parentElement;
+
     if (mode === 'visual') {
       this.syncManager.syncToVisual();
-      const parentElement = this.cmEditor.dom.parentElement;
-      if (parentElement) {
-        parentElement.style.display = 'none';
+      if (cmContainer) {
+        cmContainer.style.display = 'none';
       }
       this.pmContainer.style.display = 'block';
       this.pmEditor.focus();
     } else {
       this.syncManager.syncToSource();
       this.pmContainer.style.display = 'none';
-      const parentElement = this.cmEditor.dom.parentElement;
-      if (parentElement) {
-        parentElement.style.display = 'block';
+      if (cmContainer) {
+        cmContainer.style.display = 'block';
       }
       this.cmEditor.requestMeasure();
       this.cmEditor.focus();
