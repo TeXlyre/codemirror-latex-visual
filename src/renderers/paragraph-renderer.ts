@@ -15,10 +15,13 @@ export class ParagraphRenderer extends BaseLatexRenderer {
       return node.attrs.latex || '\n\n';
     }
 
+    // Only render content, don't add extra newlines
     if (node.content.size > 0) {
       return this.renderParagraphContent(node);
     }
 
+    // For empty paragraphs (new ones created by Enter), return empty string
+    // The main renderer will handle spacing
     return '';
   }
 
@@ -31,7 +34,7 @@ export class ParagraphRenderer extends BaseLatexRenderer {
           result += node.text || '';
           return false;
         case 'math_inline':
-          result += `${node.attrs.latex}`;
+          result += `$${node.attrs.latex}$`;
           return false;
         case 'editable_command':
           const cmdName = node.attrs.name;
@@ -65,7 +68,7 @@ export class ParagraphRenderer extends BaseLatexRenderer {
           if (child.text) parts.push(child.text);
           return false;
         case 'math_inline':
-          parts.push(`${child.attrs.latex}`);
+          parts.push(`$${child.attrs.latex}$`);
           return false;
         case 'editable_command':
           const cmdName = child.attrs.name;

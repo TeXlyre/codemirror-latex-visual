@@ -24,12 +24,21 @@ export class LatexRenderer {
   render(pmDoc: PMNode): string {
     const parts: string[] = [];
 
-    pmDoc.content.forEach((node, offset) => {
+    pmDoc.content.forEach((node, offset, index) => {
       for (const renderer of this.renderers) {
         if (renderer.canRender(node)) {
           const rendered = renderer.render(node);
           if (rendered !== undefined && rendered !== null) {
-            parts.push(rendered);
+            // Only add newlines between paragraphs if the current paragraph is empty
+            // (indicating it was created by pressing Enter in the visual editor)
+            if (node.type.name === 'paragraph' && rendered === '' && index > 0) {
+              const prevPart = parts[parts.length - 1];
+              if (prevPart && prevPart.trim() && !prevPart.endsWith('\n')) {
+                parts.push('\n\n');
+              }
+            } else {
+              parts.push(rendered);
+            }
           }
           return;
         }
