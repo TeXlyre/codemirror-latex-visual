@@ -4,7 +4,7 @@ export const EDITABLE_COMMANDS = new Set([
   'textbf', 'textit', 'emph', 'underline', 'textsc', 'textsf', 'texttt',
   'section', 'subsection', 'subsubsection', 'title', 'author', 'date',
   'footnote', 'cite', 'citeyear', 'citep', 'citey', 'ref', 'label', 'url', 'href',
-  'textcolor', 'color'
+  'textcolor', 'color', 'colorbox'
 ]);
 
 export const FORMATTING_COMMANDS = new Map([
@@ -21,9 +21,8 @@ export class CommandParser extends BaseLatexParser {
   parse(latex: string, position: number): LatexToken | null {
     if (!this.canParse(latex, position)) return null;
 
-    // Handle textcolor specifically (has two arguments)
-    if (latex.startsWith('\\textcolor', position)) {
-      return this.parseTextColorCommand(latex, position);
+    if (latex.startsWith('\\textcolor', position) || latex.startsWith('\\colorbox', position)) {
+      return this.parseColorCommand(latex, position);
     }
 
     const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, position);
@@ -51,27 +50,28 @@ export class CommandParser extends BaseLatexParser {
     };
   }
 
-  private parseTextColorCommand(latex: string, start: number): LatexToken | null {
-    let pos = start + 10; // length of '\textcolor'
+  private parseColorCommand(latex: string, start: number): LatexToken | null {
+    const isTextColor = latex.startsWith('\\textcolor', start);
+    const isColorBox = latex.startsWith('\\colorbox', start);
 
-    // Skip whitespace
+    if (!isTextColor && !isColorBox) return null;
+
+    let pos = start + (isTextColor ? 10 : 9);
+
     while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
       pos++;
     }
 
-    // Extract color argument
     if (latex.charAt(pos) !== '{') return null;
     const colorResult = BaseLatexParser.extractBalancedBraces(latex, pos);
     if (!colorResult) return null;
 
     pos = colorResult.end;
 
-    // Skip whitespace
     while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
       pos++;
     }
 
-    // Extract content argument
     if (latex.charAt(pos) !== '{') return null;
     const contentResult = BaseLatexParser.extractBalancedBraces(latex, pos);
     if (!contentResult) return null;
@@ -84,8 +84,8 @@ export class CommandParser extends BaseLatexParser {
       latex: fullCommand,
       start,
       end: contentResult.end,
-      name: 'textcolor',
-      params: '',
+      name: isTextColor ? 'textcolor' : 'colorbox',
+      params: contentResult.content,
       colorArg: colorResult.content
     };
   }

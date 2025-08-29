@@ -24,20 +24,28 @@ export class LatexRenderer {
   render(pmDoc: PMNode): string {
     const parts: string[] = [];
 
-    pmDoc.descendants((node, pos) => {
+    pmDoc.content.forEach((node, offset, index) => {
       for (const renderer of this.renderers) {
         if (renderer.canRender(node)) {
           const rendered = renderer.render(node);
-          if (rendered) {
-            parts.push(rendered);
+          if (rendered !== undefined && rendered !== null) {
+            // Only add newlines between paragraphs if the current paragraph is empty
+            // (indicating it was created by pressing Enter in the visual editor)
+            if (node.type.name === 'paragraph' && rendered === '' && index > 0) {
+              const prevPart = parts[parts.length - 1];
+              if (prevPart && prevPart.trim() && !prevPart.endsWith('\n')) {
+                parts.push('\n\n');
+              }
+            } else {
+              parts.push(rendered);
+            }
           }
-          return false;
+          return;
         }
       }
-      return true;
     });
 
-    return parts.join('\n\n').replace(/\n\n\n+/g, '\n\n').trim();
+    return parts.join('');
   }
 
   updateOptions(options: RenderingOptions) {

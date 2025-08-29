@@ -9,12 +9,14 @@ import { latexVisualSchema } from './prosemirror-schema';
 import { parseLatexToProseMirror } from './latex-parser';
 import { createLatexInputRules } from './prosemirror-input-rules';
 import { VisualToolbar } from './visual-toolbar';
+import { SourceToolbar } from './source-toolbar';
 
 export interface DualEditorOptions {
   initialMode?: 'source' | 'visual';
   onModeChange?: (mode: 'source' | 'visual') => void;
   className?: string;
   showCommands?: boolean;
+  showToolbar?: boolean;
 }
 
 export class DualLatexEditor {
@@ -27,8 +29,11 @@ export class DualLatexEditor {
   private pmContainer!: HTMLElement;
   private toolbar!: HTMLElement;
   private visualToolbar!: VisualToolbar;
+  private sourceToolbar!: SourceToolbar;
   private visualToolbarContainer!: HTMLElement;
+  private sourceToolbarContainer!: HTMLElement;
   private showCommands: boolean;
+  private showToolbar: boolean;
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: DualEditorOptions = {}) {
     this.container = container;
@@ -36,6 +41,7 @@ export class DualLatexEditor {
     this.options = options;
     this.currentMode = options.initialMode || 'source';
     this.showCommands = options.showCommands || false;
+    this.showToolbar = options.showToolbar !== false;
 
     this.setupLayout();
     this.addCodeMirrorKeymap();
@@ -43,6 +49,7 @@ export class DualLatexEditor {
     this.setupSyncManager();
     this.setMode(this.currentMode);
     this.updateCommandVisibility();
+    this.updateToolbarVisibility();
   }
 
   private addCodeMirrorKeymap() {
@@ -60,6 +67,14 @@ export class DualLatexEditor {
         mac: 'Cmd-Shift-c',
         run: () => {
           this.toggleCommandVisibility();
+          return true;
+        }
+      },
+      {
+        key: 'Ctrl-Shift-t',
+        mac: 'Cmd-Shift-t',
+        run: () => {
+          this.toggleToolbar();
           return true;
         }
       }
@@ -80,10 +95,14 @@ export class DualLatexEditor {
       <button class="mode-btn" data-mode="source">LaTeX Source</button>
       <button class="mode-btn" data-mode="visual">Visual</button>
       <button class="toggle-cmd-btn" title="Toggle Command Visibility (Ctrl+Shift+C)">Show Commands</button>
+      <button class="toggle-toolbar-btn" title="Toggle Toolbar (Ctrl+Shift+T)">Hide Toolbar</button>
     `;
 
     const visualToolbarContainer = document.createElement('div');
     visualToolbarContainer.className = 'visual-toolbar-container';
+
+    const sourceToolbarContainer = document.createElement('div');
+    sourceToolbarContainer.className = 'source-toolbar-container';
 
     const editorsContainer = document.createElement('div');
     editorsContainer.className = 'latex-editors-container';
@@ -98,6 +117,7 @@ export class DualLatexEditor {
     editorsContainer.appendChild(pmContainer);
     wrapper.appendChild(toolbar);
     wrapper.appendChild(visualToolbarContainer);
+    wrapper.appendChild(sourceToolbarContainer);
     wrapper.appendChild(editorsContainer);
 
     this.container.appendChild(wrapper);
@@ -107,18 +127,26 @@ export class DualLatexEditor {
     this.pmContainer = pmContainer;
     this.toolbar = toolbar;
     this.visualToolbarContainer = visualToolbarContainer;
+    this.sourceToolbarContainer = sourceToolbarContainer;
 
     toolbar.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       const btn = target.closest('.mode-btn') as HTMLButtonElement;
       const cmdBtn = target.closest('.toggle-cmd-btn') as HTMLButtonElement;
+      const toolbarBtn = target.closest('.toggle-toolbar-btn') as HTMLButtonElement;
 
       if (btn) {
         this.setMode(btn.dataset.mode as 'source' | 'visual');
       } else if (cmdBtn) {
         this.toggleCommandVisibility();
+      } else if (toolbarBtn) {
+        this.toggleToolbar();
       }
     });
+
+    setTimeout(() => {
+      this.cmEditor.requestMeasure();
+    }, 0);
   }
 
   private createProseMirrorEditor() {
@@ -132,6 +160,11 @@ export class DualLatexEditor {
       return true;
     };
 
+    const toggleToolbarVisibility = (state: any, dispatch: any) => {
+      this.toggleToolbar();
+      return true;
+    };
+
     const pmState = PMState.create({
       schema: latexVisualSchema,
       doc: parseLatexToProseMirror(''),
@@ -142,7 +175,9 @@ export class DualLatexEditor {
           'Ctrl-e': toggleCommand,
           'Cmd-e': toggleCommand,
           'Ctrl-Shift-c': toggleCommandsVisibility,
-          'Cmd-Shift-c': toggleCommandsVisibility
+          'Cmd-Shift-c': toggleCommandsVisibility,
+          'Ctrl-Shift-t': toggleToolbarVisibility,
+          'Cmd-Shift-t': toggleToolbarVisibility
         })
       ]
     });
@@ -160,6 +195,7 @@ export class DualLatexEditor {
     });
 
     this.visualToolbar = new VisualToolbar(this.visualToolbarContainer, this.pmEditor);
+    this.sourceToolbar = new SourceToolbar(this.sourceToolbarContainer, this.cmEditor);
   }
 
   private setupSyncManager() {
@@ -181,6 +217,11 @@ export class DualLatexEditor {
     }
   }
 
+  public toggleToolbar() {
+    this.showToolbar = !this.showToolbar;
+    this.updateToolbarVisibility();
+  }
+
   private updateCommandVisibility() {
     (window as any).latexEditorShowCommands = this.showCommands;
 
@@ -189,6 +230,17 @@ export class DualLatexEditor {
       cmdBtn.textContent = this.showCommands ? 'Hide LaTeX' : 'Show LaTeX';
       cmdBtn.classList.toggle('active', this.showCommands);
     }
+  }
+
+  private updateToolbarVisibility() {
+    const toolbarBtn = this.toolbar.querySelector('.toggle-toolbar-btn') as HTMLButtonElement;
+    if (toolbarBtn) {
+      toolbarBtn.textContent = this.showToolbar ? 'Hide Toolbar' : 'Show Toolbar';
+      toolbarBtn.classList.toggle('active', !this.showToolbar);
+    }
+
+    this.visualToolbarContainer.style.display = this.showToolbar && this.currentMode === 'visual' ? 'block' : 'none';
+    this.sourceToolbarContainer.style.display = this.showToolbar && this.currentMode === 'source' ? 'block' : 'none';
   }
 
   setMode(mode: 'source' | 'visual') {
@@ -201,21 +253,21 @@ export class DualLatexEditor {
         parentElement.style.display = 'none';
       }
       this.pmContainer.style.display = 'block';
-      this.visualToolbarContainer.style.display = 'block';
       this.pmEditor.focus();
     } else {
       this.syncManager.syncToSource();
       this.pmContainer.style.display = 'none';
-      this.visualToolbarContainer.style.display = 'none';
       const parentElement = this.cmEditor.dom.parentElement;
       if (parentElement) {
         parentElement.style.display = 'block';
       }
+      this.cmEditor.requestMeasure();
       this.cmEditor.focus();
     }
 
     this.currentMode = mode;
     this.updateToolbar();
+    this.updateToolbarVisibility();
     this.options.onModeChange?.(mode);
   }
 
@@ -247,6 +299,14 @@ export function latexVisualKeymap(dualEditor: DualLatexEditor) {
       mac: 'Cmd-Shift-c',
       run: () => {
         dualEditor.toggleCommandVisibility();
+        return true;
+      }
+    },
+    {
+      key: 'Ctrl-Shift-t',
+      mac: 'Cmd-Shift-t',
+      run: () => {
+        dualEditor.toggleToolbar();
         return true;
       }
     }

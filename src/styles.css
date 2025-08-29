@@ -41,13 +41,15 @@
   border-color: #28a745;
 }
 
-.visual-toolbar-container {
+.visual-toolbar-container,
+.source-toolbar-container {
   display: none;
   border-bottom: 1px solid #ddd;
   flex-shrink: 0;
 }
 
-.visual-toolbar {
+.visual-toolbar,
+.source-toolbar {
   display: flex;
   background-color: #fafafa;
   padding: 8px;
@@ -112,24 +114,25 @@
 
 .latex-editors-container {
   flex: 1;
-  position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
 .codemirror-container,
 .prosemirror-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.codemirror-container .cm-editor {
   height: 100%;
-  overflow: auto;
 }
 
 .prosemirror-container {
   padding: 10px;
   box-sizing: border-box;
+  overflow: auto;
 }
 
 .prosemirror-container .ProseMirror {
@@ -513,6 +516,33 @@ math-field:focus[contenteditable="false"] {
   border-radius: 2px;
 }
 
+.latex-editable-command.latex-cmd-textcolor.hide-commands {
+  display: inline;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.latex-editable-command.latex-cmd-textcolor.hide-commands .cmd-content {
+  color: inherit;
+}
+
+.latex-editable-command.latex-cmd-colorbox.hide-commands {
+  display: inline;
+  margin: 0;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  padding: 2px 4px;
+}
+
+.latex-editable-command.latex-cmd-colorbox.hide-commands .cmd-content {
+  background-color: inherit;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
 h1, h2, h3 {
   margin: 20px 0 10px 0;
 }
@@ -527,72 +557,4 @@ h3 { font-size: 1.2em; }
 
 .ML__popover {
   z-index: 1001;
-}
-
-.visual-toolbar-container {
-  display: none;
-  border-bottom: 1px solid #ddd;
-}
-
-.visual-toolbar {
-  display: flex;
-  background-color: #fafafa;
-  padding: 8px;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.toolbar-group {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  border-right: 1px solid #ddd;
-  padding-right: 12px;
-}
-
-.toolbar-group:last-child {
-  border-right: none;
-  padding-right: 0;
-}
-
-.toolbar-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #ccc;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.toolbar-btn:hover {
-  background: #f0f0f0;
-  border-color: #007acc;
-}
-
-.toolbar-btn:active {
-  background: #e0e0e0;
-}
-
-.toolbar-select {
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.toolbar-color {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 2px;
 }

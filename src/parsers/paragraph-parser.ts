@@ -7,13 +7,34 @@ export class ParagraphParser extends BaseLatexParser {
   private commandParser = new CommandParser();
 
   canParse(latex: string, position: number): boolean {
-    return !latex.startsWith('\n\n', position) &&
-           !latex.startsWith('$$', position) &&
-           !latex.startsWith('\\section', position) &&
-           !latex.startsWith('\\subsection', position) &&
-           !latex.startsWith('\\subsubsection', position) &&
-           !latex.startsWith('\\begin{', position) &&
-           latex.charAt(position) !== '%';
+    // Don't parse if we're at a double newline (paragraph break)
+    if (latex.startsWith('\n\n', position)) {
+      return false;
+    }
+
+    // Don't parse if we're at display math
+    if (latex.startsWith('$$', position)) {
+      return false;
+    }
+
+    // Don't parse if we're at block-level commands
+    if (latex.startsWith('\\section', position) ||
+        latex.startsWith('\\subsection', position) ||
+        latex.startsWith('\\subsubsection', position)) {
+      return false;
+    }
+
+    // Don't parse if we're at environments
+    if (latex.startsWith('\\begin{', position)) {
+      return false;
+    }
+
+    // Don't parse if we're at comments
+    if (latex.charAt(position) === '%') {
+      return false;
+    }
+
+    return true;
   }
 
   parse(latex: string, position: number): LatexToken | null {
@@ -24,21 +45,40 @@ export class ParagraphParser extends BaseLatexParser {
       content: string | LatexToken[];
       latex: string;
       name?: string;
+      colorArg?: string;
     }> = [];
     let pos = position;
     let fullContent = '';
 
     while (pos < latex.length) {
-      if (latex.startsWith('\n\n', pos) ||
-          latex.startsWith('$$', pos) ||
-          latex.startsWith('\\section', pos) ||
-          latex.startsWith('\\subsection', pos) ||
-          latex.startsWith('\\subsubsection', pos) ||
-          latex.startsWith('\\begin{', pos) ||
-          latex.charAt(pos) === '%') {
+      // Stop at paragraph breaks
+      if (latex.startsWith('\n\n', pos)) {
         break;
       }
 
+      // Stop at display math
+      if (latex.startsWith('$$', pos)) {
+        break;
+      }
+
+      // Stop at block-level commands
+      if (latex.startsWith('\\section', pos) ||
+          latex.startsWith('\\subsection', pos) ||
+          latex.startsWith('\\subsubsection', pos)) {
+        break;
+      }
+
+      // Stop at environments
+      if (latex.startsWith('\\begin{', pos)) {
+        break;
+      }
+
+      // Stop at comments
+      if (latex.charAt(pos) === '%') {
+        break;
+      }
+
+      // Handle inline math
       if (this.mathParser.canParse(latex, pos)) {
         const mathToken = this.mathParser.parse(latex, pos);
         if (mathToken && mathToken.type === 'math_inline') {
@@ -53,33 +93,37 @@ export class ParagraphParser extends BaseLatexParser {
         }
       }
 
+      // Handle commands (including those at start of lines)
       if (latex.charAt(pos) === '\\') {
-        const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, pos);
-        if (cmdResult) {
-          const { name, params, fullCommand } = cmdResult;
+        const cmdToken = this.commandParser.parse(latex, pos);
+        if (cmdToken) {
+          const isEditable = EDITABLE_COMMANDS.has(cmdToken.name || '');
 
-          if (EDITABLE_COMMANDS.has(name)) {
-            const innerTokens = params ? this.tokenizeLatex(params) : [];
+          if (isEditable && cmdToken.content) {
+            const innerTokens = this.tokenizeLatex(cmdToken.content);
             elements.push({
               type: 'editable_command',
               content: innerTokens,
-              latex: fullCommand,
-              name
+              latex: cmdToken.latex,
+              name: cmdToken.name,
+              colorArg: cmdToken.colorArg
             });
           } else {
             elements.push({
-              type: 'command',
-              content: params,
-              latex: fullCommand,
-              name
+              type: isEditable ? 'editable_command' : 'command',
+              content: cmdToken.content || '',
+              latex: cmdToken.latex,
+              name: cmdToken.name,
+              colorArg: cmdToken.colorArg
             });
           }
-          fullContent += fullCommand;
-          pos += fullCommand.length;
+          fullContent += cmdToken.latex;
+          pos = cmdToken.end;
           continue;
         }
       }
 
+      // Handle regular text (including single newlines)
       let textEnd = pos;
       while (textEnd < latex.length &&
              latex.charAt(textEnd) !== '$' &&
@@ -104,6 +148,13 @@ export class ParagraphParser extends BaseLatexParser {
         fullContent += textContent;
         pos = textEnd;
       } else {
+        const char = latex.charAt(pos);
+        elements.push({
+          type: 'text',
+          content: char,
+          latex: char
+        });
+        fullContent += char;
         pos++;
       }
     }

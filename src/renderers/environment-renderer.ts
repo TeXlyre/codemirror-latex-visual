@@ -11,7 +11,7 @@ export class EnvironmentRenderer extends BaseLatexRenderer {
 
     if (node.content.size > 0) {
       const innerLatex = this.renderContentWithMath(node);
-      return `\\begin{${envName}}\n${innerLatex}\n\\end{${envName}}`;
+      return `\\begin{${envName}}${innerLatex}\\end{${envName}}`;
     } else {
       return node.attrs.latex || '';
     }
@@ -41,6 +41,9 @@ export class EnvironmentRenderer extends BaseLatexRenderer {
           return false;
         case 'paragraph':
           return true;
+        case 'paragraph_break':
+          parts.push(child.attrs.latex || '\n\n');
+          return false;
         default:
           return true;
       }
