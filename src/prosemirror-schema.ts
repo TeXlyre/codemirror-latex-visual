@@ -229,6 +229,8 @@ export const latexVisualSchema = new Schema({
         let style = '';
         if ((cmdName === 'textcolor' || cmdName === 'color') && colorArg) {
           style = `color: ${colorArg};`;
+        } else if (cmdName === 'colorbox' && colorArg) {
+          style = `background-color: ${colorArg}; padding: 2px 4px; border-radius: 2px;`;
         }
 
         const baseClasses = `latex-editable-command latex-cmd-${cmdName}`;

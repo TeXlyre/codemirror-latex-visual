@@ -4,7 +4,7 @@ export const EDITABLE_COMMANDS = new Set([
   'textbf', 'textit', 'emph', 'underline', 'textsc', 'textsf', 'texttt',
   'section', 'subsection', 'subsubsection', 'title', 'author', 'date',
   'footnote', 'cite', 'citeyear', 'citep', 'citey', 'ref', 'label', 'url', 'href',
-  'textcolor', 'color'
+  'textcolor', 'color', 'colorbox'
 ]);
 
 export const FORMATTING_COMMANDS = new Map([
@@ -21,8 +21,8 @@ export class CommandParser extends BaseLatexParser {
   parse(latex: string, position: number): LatexToken | null {
     if (!this.canParse(latex, position)) return null;
 
-    if (latex.startsWith('\\textcolor', position)) {
-      return this.parseTextColorCommand(latex, position);
+    if (latex.startsWith('\\textcolor', position) || latex.startsWith('\\colorbox', position)) {
+      return this.parseColorCommand(latex, position);
     }
 
     const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, position);
@@ -50,8 +50,13 @@ export class CommandParser extends BaseLatexParser {
     };
   }
 
-  private parseTextColorCommand(latex: string, start: number): LatexToken | null {
-    let pos = start + 10;
+  private parseColorCommand(latex: string, start: number): LatexToken | null {
+    const isTextColor = latex.startsWith('\\textcolor', start);
+    const isColorBox = latex.startsWith('\\colorbox', start);
+
+    if (!isTextColor && !isColorBox) return null;
+
+    let pos = start + (isTextColor ? 10 : 9);
 
     while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
       pos++;
@@ -79,7 +84,7 @@ export class CommandParser extends BaseLatexParser {
       latex: fullCommand,
       start,
       end: contentResult.end,
-      name: 'textcolor',
+      name: isTextColor ? 'textcolor' : 'colorbox',
       params: contentResult.content,
       colorArg: colorResult.content
     };

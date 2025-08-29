@@ -10,9 +10,9 @@ export class CommandRenderer extends BaseLatexRenderer {
     if (node.type.name === 'editable_command') {
       const cmdName = node.attrs.name;
 
-      if (cmdName === 'textcolor' && node.attrs.colorArg) {
+      if ((cmdName === 'textcolor' || cmdName === 'colorbox') && node.attrs.colorArg) {
         const innerContent = this.renderContent(node);
-        return `\\textcolor{${node.attrs.colorArg}}{${innerContent}}`;
+        return `\\${cmdName}{${node.attrs.colorArg}}{${innerContent}}`;
       }
 
       const innerContent = this.renderContent(node);
@@ -37,9 +37,9 @@ export class CommandRenderer extends BaseLatexRenderer {
           return false;
         case 'editable_command':
           const cmdName = child.attrs.name;
-          if (cmdName === 'textcolor' && child.attrs.colorArg) {
+          if ((cmdName === 'textcolor' || cmdName === 'colorbox') && child.attrs.colorArg) {
             const innerContent = this.renderContent(child);
-            parts.push(`\\textcolor{${child.attrs.colorArg}}{${innerContent}}`);
+            parts.push(`\\${cmdName}{${child.attrs.colorArg}}{${innerContent}}`);
           } else {
             const innerContent = this.renderContent(child);
             parts.push(`\\${cmdName}{${innerContent}}`);

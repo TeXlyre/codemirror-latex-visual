@@ -51,6 +51,7 @@ export class VisualToolbar {
         </div>
         <div class="toolbar-group">
           <input type="color" class="toolbar-color" data-command="textcolor" title="Text Color (\\textcolor)" value="#000000">
+          <input type="color" class="toolbar-color" data-command="colorbox" title="Background Color (\\colorbox)" value="#ffff00">
         </div>
       </div>
     `;
@@ -65,7 +66,7 @@ export class VisualToolbar {
 
       if (btn) {
         const command = btn.dataset.command;
-        if (command !== 'textcolor') {
+        if (command !== 'textcolor' && command !== 'colorbox') {
           e.preventDefault();
           this.executeCommand(command!, btn);
         }
@@ -81,7 +82,7 @@ export class VisualToolbar {
 
     this.container.addEventListener('input', (e) => {
       const target = e.target as HTMLElement;
-      if (target.dataset.command === 'textcolor') {
+      if (target.dataset.command === 'textcolor' || target.dataset.command === 'colorbox') {
         this.executeCommand(target.dataset.command, target);
       }
     });
@@ -111,12 +112,16 @@ export class VisualToolbar {
         const select = element as HTMLSelectElement;
         if (select.value) {
           this.insertSection(select.value);
-          select.value = '\n\n';
+          select.value = '';
         }
         break;
       case 'textcolor':
         const colorInput = element as HTMLInputElement;
-        this.insertColorCommand(colorInput.value);
+        this.insertColorCommand('textcolor', colorInput.value);
+        break;
+      case 'colorbox':
+        const colorboxInput = element as HTMLInputElement;
+        this.insertColorCommand('colorbox', colorboxInput.value);
         break;
     }
   }
@@ -144,7 +149,7 @@ export class VisualToolbar {
     this.pmEditor.focus();
   }
 
-  private insertColorCommand(color: string) {
+  private insertColorCommand(cmdType: string, color: string) {
     const { state, dispatch } = this.pmEditor;
     const { from, to } = state.selection;
     const showCommands = (window as any).latexEditorShowCommands || false;
@@ -152,8 +157,8 @@ export class VisualToolbar {
     const selectedText = state.doc.textBetween(from, to);
 
     const node = latexVisualSchema.nodes.editable_command.create({
-      name: 'textcolor',
-      latex: `\\textcolor{${color}}{${selectedText}}`,
+      name: cmdType,
+      latex: `\\${cmdType}{${color}}{${selectedText}}`,
       showCommands,
       colorArg: color
     }, selectedText ? [latexVisualSchema.text(selectedText)] : []);

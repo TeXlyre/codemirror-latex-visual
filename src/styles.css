@@ -41,13 +41,15 @@
   border-color: #28a745;
 }
 
-.visual-toolbar-container {
+.visual-toolbar-container,
+.source-toolbar-container {
   display: none;
   border-bottom: 1px solid #ddd;
   flex-shrink: 0;
 }
 
-.visual-toolbar {
+.visual-toolbar,
+.source-toolbar {
   display: flex;
   background-color: #fafafa;
   padding: 8px;
@@ -514,7 +516,6 @@ math-field:focus[contenteditable="false"] {
   border-radius: 2px;
 }
 
-/* Special styling for textcolor commands */
 .latex-editable-command.latex-cmd-textcolor.hide-commands {
   display: inline;
   margin: 0;
@@ -525,6 +526,21 @@ math-field:focus[contenteditable="false"] {
 
 .latex-editable-command.latex-cmd-textcolor.hide-commands .cmd-content {
   color: inherit;
+}
+
+.latex-editable-command.latex-cmd-colorbox.hide-commands {
+  display: inline;
+  margin: 0;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  padding: 2px 4px;
+}
+
+.latex-editable-command.latex-cmd-colorbox.hide-commands .cmd-content {
+  background-color: inherit;
+  padding: 2px 4px;
+  border-radius: 2px;
 }
 
 h1, h2, h3 {

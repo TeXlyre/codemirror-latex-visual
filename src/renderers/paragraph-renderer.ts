@@ -15,13 +15,10 @@ export class ParagraphRenderer extends BaseLatexRenderer {
       return node.attrs.latex || '\n\n';
     }
 
-    // Only render content, don't add extra newlines
     if (node.content.size > 0) {
       return this.renderParagraphContent(node);
     }
 
-    // For empty paragraphs (new ones created by Enter), return empty string
-    // The main renderer will handle spacing
     return '';
   }
 
@@ -38,9 +35,9 @@ export class ParagraphRenderer extends BaseLatexRenderer {
           return false;
         case 'editable_command':
           const cmdName = node.attrs.name;
-          if (cmdName === 'textcolor' && node.attrs.colorArg) {
+          if ((cmdName === 'textcolor' || cmdName === 'colorbox') && node.attrs.colorArg) {
             const innerContent = this.renderCommandContent(node);
-            result += `\\textcolor{${node.attrs.colorArg}}{${innerContent}}`;
+            result += `\\${cmdName}{${node.attrs.colorArg}}{${innerContent}}`;
           } else {
             const innerContent = this.renderCommandContent(node);
             result += `\\${cmdName}{${innerContent}}`;
@@ -72,9 +69,9 @@ export class ParagraphRenderer extends BaseLatexRenderer {
           return false;
         case 'editable_command':
           const cmdName = child.attrs.name;
-          if (cmdName === 'textcolor' && child.attrs.colorArg) {
+          if ((cmdName === 'textcolor' || cmdName === 'colorbox') && child.attrs.colorArg) {
             const innerContent = this.renderCommandContent(child);
-            parts.push(`\\textcolor{${child.attrs.colorArg}}{${innerContent}}`);
+            parts.push(`\\${cmdName}{${child.attrs.colorArg}}{${innerContent}}`);
           } else {
             const innerContent = this.renderCommandContent(child);
             parts.push(`\\${cmdName}{${innerContent}}`);

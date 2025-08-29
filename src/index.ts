@@ -4,6 +4,7 @@ export { latexVisualSchema } from './prosemirror-schema';
 export { SyncManager } from './sync-manager';
 export { createLatexInputRules } from './prosemirror-input-rules';
 export { VisualToolbar } from './visual-toolbar';
+export { SourceToolbar } from './source-toolbar';
 
 export * from './parsers/base-parser';
 export { LatexTokenizer } from './parsers/main-parser';
