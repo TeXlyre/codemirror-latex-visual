@@ -14,22 +14,21 @@ export const latexVisualSchema = new Schema({
       toDOM: () => ['p', 0]
     },
 
-
-  paragraph_break: {
-    group: 'block',
-    atom: true,
-    attrs: {
-      latex: { default: '\n\n' }
+    paragraph_break: {
+      group: 'block',
+      atom: true,
+      attrs: {
+        latex: { default: '\n\n' }
+      },
+      parseDOM: [{ tag: 'div.latex-paragraph-break' }],
+      toDOM: node => [
+        'div',
+        {
+          class: 'latex-paragraph-break',
+          'data-latex': node.attrs.latex
+        }
+      ]
     },
-    parseDOM: [{ tag: 'div.latex-paragraph-break' }],
-    toDOM: node => [
-      'div',
-      {
-        class: 'latex-paragraph-break',
-        'data-latex': node.attrs.latex
-      }
-    ]
-  },
 
     text: {
       group: 'inline'
@@ -171,81 +170,85 @@ export const latexVisualSchema = new Schema({
       }
     },
 
-  environment: {
-    group: 'block',
-    content: 'block*',
-    attrs: {
-      name: { default: '' },
-      latex: { default: '' },
-      params: { default: '' },
-      showCommands: { default: false }
-    },
-    parseDOM: [{ tag: 'div.latex-env' }],
-    toDOM: node => {
-      const showCommands = node.attrs.showCommands;
+    environment: {
+      group: 'block',
+      content: 'block*',
+      attrs: {
+        name: { default: '' },
+        latex: { default: '' },
+        params: { default: '' },
+        showCommands: { default: false }
+      },
+      parseDOM: [{ tag: 'div.latex-env' }],
+      toDOM: node => {
+        const showCommands = node.attrs.showCommands;
 
-      if (showCommands) {
+        if (showCommands) {
+          return [
+            'div',
+            {
+              class: 'latex-env-command',
+              'data-latex': node.attrs.latex,
+              'data-env': node.attrs.name
+            },
+            ['div', { class: 'env-begin' }, `\\begin{${node.attrs.name}}`],
+            ['div', { class: 'env-content' }, 0],
+            ['div', { class: 'env-end' }, `\\end{${node.attrs.name}}`]
+          ];
+        }
+
         return [
           'div',
           {
-            class: 'latex-env-command',
+            class: `latex-env latex-env-${node.attrs.name}`,
             'data-latex': node.attrs.latex,
             'data-env': node.attrs.name
           },
-          ['div', { class: 'env-begin' }, `\\begin{${node.attrs.name}}`],
-          ['div', { class: 'env-content' }, 0],
-          ['div', { class: 'env-end' }, `\\end{${node.attrs.name}}`]
+          ['div', { class: 'env-header' }, `${node.attrs.name}`],
+          ['div', { class: 'env-content' }, 0]
         ];
       }
-
-      return [
-        'div',
-        {
-          class: `latex-env latex-env-${node.attrs.name}`,
-          'data-latex': node.attrs.latex,
-          'data-env': node.attrs.name
-        },
-        ['div', { class: 'env-header' }, `${node.attrs.name}`],
-        ['div', { class: 'env-content' }, 0]
-      ];
-    }
-  },
-
-  editable_command: {
-    group: 'inline',
-    inline: true,
-    content: 'inline*',
-    attrs: {
-      name: { default: '' },
-      latex: { default: '' },
-      showCommands: { default: false },
-      colorArg: { default: '' }
     },
-    parseDOM: [{ tag: 'span.latex-editable-command' }],
-    toDOM: node => {
-      const cmdName = node.attrs.name;
-      const showCommands = node.attrs.showCommands;
-      const colorArg = node.attrs.colorArg;
 
-      let style = '';
-      if ((cmdName === 'textcolor' || cmdName === 'color') && colorArg) {
-        style = `color: ${colorArg};`;
+    editable_command: {
+      group: 'inline',
+      inline: true,
+      content: 'inline*',
+      attrs: {
+        name: { default: '' },
+        latex: { default: '' },
+        showCommands: { default: false },
+        colorArg: { default: '' }
+      },
+      parseDOM: [{ tag: 'span.latex-editable-command' }],
+      toDOM: node => {
+        const cmdName = node.attrs.name;
+        const showCommands = node.attrs.showCommands;
+        const colorArg = node.attrs.colorArg;
+
+        let style = '';
+        if ((cmdName === 'textcolor' || cmdName === 'color') && colorArg) {
+          style = `color: ${colorArg};`;
+        }
+
+        const baseClasses = `latex-editable-command latex-cmd-${cmdName}`;
+        const modeClasses = showCommands ? 'show-commands' : 'hide-commands';
+        const className = `${baseClasses} ${modeClasses}`;
+
+        return [
+          'span',
+          {
+            class: className,
+            'data-latex': node.attrs.latex,
+            'data-cmd': cmdName,
+            style: style
+          },
+          ['span', { class: 'cmd-label' }, `\\${cmdName}{`],
+          ['span', { class: 'cmd-content', style: style }, 0],
+          ['span', { class: 'cmd-label' }, '}']
+        ];
       }
-
-      return [
-        'span',
-        {
-          class: `latex-editable-command latex-cmd-${cmdName} ${showCommands ? 'show-commands' : 'hide-commands'}`,
-          'data-latex': node.attrs.latex,
-          'data-cmd': cmdName,
-          style: style
-        },
-        ['span', { class: 'cmd-label' }, `\\${cmdName}{`],
-        ['span', { class: 'cmd-content' }, 0],
-        ['span', { class: 'cmd-label' }, '}']
-      ];
-    }
-  },
+    },
 
     command: {
       group: 'inline',

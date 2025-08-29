@@ -24,6 +24,7 @@ export class ParagraphParser extends BaseLatexParser {
       content: string | LatexToken[];
       latex: string;
       name?: string;
+      colorArg?: string;
     }> = [];
     let pos = position;
     let fullContent = '';
@@ -54,6 +55,33 @@ export class ParagraphParser extends BaseLatexParser {
       }
 
       if (latex.charAt(pos) === '\\') {
+        if (latex.startsWith('\\textcolor', pos)) {
+          const cmdToken = this.commandParser.parse(latex, pos);
+          if (cmdToken) {
+            if (EDITABLE_COMMANDS.has(cmdToken.name || '')) {
+              const innerTokens = cmdToken.content ? this.tokenizeLatex(cmdToken.content) : [];
+              elements.push({
+                type: 'editable_command',
+                content: innerTokens,
+                latex: cmdToken.latex,
+                name: cmdToken.name,
+                colorArg: cmdToken.colorArg
+              });
+            } else {
+              elements.push({
+                type: 'command',
+                content: cmdToken.content,
+                latex: cmdToken.latex,
+                name: cmdToken.name,
+                colorArg: cmdToken.colorArg
+              });
+            }
+            fullContent += cmdToken.latex;
+            pos = cmdToken.end;
+            continue;
+          }
+        }
+
         const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, pos);
         if (cmdResult) {
           const { name, params, fullCommand } = cmdResult;

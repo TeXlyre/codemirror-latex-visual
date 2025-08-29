@@ -514,6 +514,19 @@ math-field:focus[contenteditable="false"] {
   border-radius: 2px;
 }
 
+/* Special styling for textcolor commands */
+.latex-editable-command.latex-cmd-textcolor.hide-commands {
+  display: inline;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.latex-editable-command.latex-cmd-textcolor.hide-commands .cmd-content {
+  color: inherit;
+}
+
 h1, h2, h3 {
   margin: 20px 0 10px 0;
 }
@@ -528,72 +541,4 @@ h3 { font-size: 1.2em; }
 
 .ML__popover {
   z-index: 1001;
-}
-
-.visual-toolbar-container {
-  display: none;
-  border-bottom: 1px solid #ddd;
-}
-
-.visual-toolbar {
-  display: flex;
-  background-color: #fafafa;
-  padding: 8px;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.toolbar-group {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  border-right: 1px solid #ddd;
-  padding-right: 12px;
-}
-
-.toolbar-group:last-child {
-  border-right: none;
-  padding-right: 0;
-}
-
-.toolbar-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #ccc;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.toolbar-btn:hover {
-  background: #f0f0f0;
-  border-color: #007acc;
-}
-
-.toolbar-btn:active {
-  background: #e0e0e0;
-}
-
-.toolbar-select {
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.toolbar-color {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 2px;
 }

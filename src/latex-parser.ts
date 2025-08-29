@@ -63,21 +63,23 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
               case 'editable_command':
                 if (Array.isArray(element.content)) {
                   const innerDoc = buildProseMirrorDoc(element.content, showCommands);
-
                   const commandNode = latexVisualSchema.nodes.editable_command.create({
                     name: element.name || '',
                     latex: element.latex,
-                    showCommands
+                    showCommands,
+                    colorArg: element.colorArg || ''
                   }, innerDoc.content);
-
                   currentParagraphContent.push(commandNode);
                 } else {
                   currentParagraphContent.push(
                     latexVisualSchema.nodes.editable_command.create({
                       name: element.name || '',
                       latex: element.latex,
-                      showCommands
-                    })
+                      showCommands,
+                      colorArg: element.colorArg || ''
+                    }, typeof element.content === 'string' && element.content ?
+                      [latexVisualSchema.text(element.content)] : []
+                    )
                   );
                 }
                 break;
@@ -86,7 +88,8 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
                   latexVisualSchema.nodes.editable_command.create({
                     name: element.name || '',
                     latex: element.latex,
-                    showCommands
+                    showCommands,
+                    colorArg: element.colorArg || ''
                   }, typeof element.content === 'string' && element.content ?
                     [latexVisualSchema.text(element.content)] : []
                   )
@@ -145,13 +148,25 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
         break;
 
       case 'command':
-        currentParagraphContent.push(
-          latexVisualSchema.nodes.editable_command.create({
-            name: token.name || '',
-            latex: token.latex,
-            showCommands
-          }, token.content ? [latexVisualSchema.text(token.content)] : [])
-        );
+        if (token.name === 'textcolor') {
+          currentParagraphContent.push(
+            latexVisualSchema.nodes.editable_command.create({
+              name: token.name,
+              latex: token.latex,
+              showCommands,
+              colorArg: token.colorArg || ''
+            }, token.content ? [latexVisualSchema.text(token.content)] : [])
+          );
+        } else {
+          currentParagraphContent.push(
+            latexVisualSchema.nodes.editable_command.create({
+              name: token.name || '',
+              latex: token.latex,
+              showCommands,
+              colorArg: token.colorArg || ''
+            }, token.content ? [latexVisualSchema.text(token.content)] : [])
+          );
+        }
         break;
 
       case 'paragraph_break':
