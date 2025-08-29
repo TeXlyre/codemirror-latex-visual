@@ -112,24 +112,25 @@
 
 .latex-editors-container {
   flex: 1;
-  position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
 .codemirror-container,
 .prosemirror-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.codemirror-container .cm-editor {
   height: 100%;
-  overflow: auto;
 }
 
 .prosemirror-container {
   padding: 10px;
   box-sizing: border-box;
+  overflow: auto;
 }
 
 .prosemirror-container .ProseMirror {

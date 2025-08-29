@@ -119,6 +119,10 @@ export class DualLatexEditor {
         this.toggleCommandVisibility();
       }
     });
+
+    setTimeout(() => {
+      this.cmEditor.requestMeasure();
+    }, 0);
   }
 
   private createProseMirrorEditor() {
@@ -211,6 +215,7 @@ export class DualLatexEditor {
       if (parentElement) {
         parentElement.style.display = 'block';
       }
+      this.cmEditor.requestMeasure();
       this.cmEditor.focus();
     }
 

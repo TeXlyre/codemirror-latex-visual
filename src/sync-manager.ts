@@ -328,43 +328,41 @@ export class SyncManager {
           this.pmEditor.state.schema.nodes.paragraph.create()
         ]);
 
-        const tr = this.pmEditor.state.tr.replaceWith(
-          0,
-          this.pmEditor.state.doc.content.size,
-          emptyDoc.content
+        this.pmEditor.dispatch(
+          this.pmEditor.state.tr.replaceWith(0, this.pmEditor.state.doc.content.size, emptyDoc.content)
         );
-
-        this.pmEditor.dispatch(tr);
-        this.syncing = false;
         return;
       }
 
       const newPmDoc = parseLatexToProseMirror(latexContent, this.showCommands);
       const oldPmDoc = this.pmEditor.state.doc;
 
-      if (newPmDoc.eq(oldPmDoc)) {
-        this.syncing = false;
-        return;
-      }
+      if (newPmDoc.eq(oldPmDoc)) return;
 
-      const diffStart = oldPmDoc.content.findDiffStart(newPmDoc.content);
-      if (diffStart === null) {
-        this.syncing = false;
-        return;
-      }
-
-      const diffEnd = oldPmDoc.content.findDiffEnd(newPmDoc.content);
-      if (diffEnd) {
-        let { a: endA, b: endB } = diffEnd;
-        const tr = this.pmEditor.state.tr.replace(diffStart, endA, newPmDoc.slice(diffStart, endB));
+      try {
+        const diffStart = oldPmDoc.content.findDiffStart(newPmDoc.content);
+        if (diffStart !== null) {
+          const diffEnd = oldPmDoc.content.findDiffEnd(newPmDoc.content);
+          if (diffEnd && diffStart <= diffEnd.a && diffStart <= diffEnd.b) {
+            let { a: endA, b: endB } = diffEnd;
+            const tr = this.pmEditor.state.tr.replace(diffStart, endA, newPmDoc.slice(diffStart, endB));
+            this.pmEditor.dispatch(tr);
+          } else {
+            throw new Error('Invalid diff boundaries');
+          }
+        }
+      } catch (diffError) {
+        const tr = this.pmEditor.state.tr.replaceWith(
+          0,
+          this.pmEditor.state.doc.content.size,
+          newPmDoc.content
+        );
         this.pmEditor.dispatch(tr);
       }
 
       setTimeout(() => {
         this.attachMathfieldListeners(this.pmEditor.dom);
       }, 50);
-    } catch (error) {
-      console.warn('Error syncing to visual:', error);
     } finally {
       this.syncing = false;
     }
@@ -379,13 +377,23 @@ export class SyncManager {
       const currentLatex = this.cmEditor.state.doc.toString();
 
       if (newLatex !== currentLatex) {
-        const diffStart = this.findDiffStart(currentLatex, newLatex);
-        if (diffStart !== null) {
-          const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex, diffStart);
-          const insertText = newLatex.slice(diffStart, endB);
-
+        try {
+          const diffStart = this.findDiffStart(currentLatex, newLatex);
+          if (diffStart !== null) {
+            const { a: endA, b: endB } = this.findDiffEnd(currentLatex, newLatex, diffStart);
+            if (diffStart <= endA && diffStart <= endB) {
+              const insertText = newLatex.slice(diffStart, endB);
+              const cmTr = this.cmEditor.state.update({
+                changes: { from: diffStart, to: endA, insert: insertText }
+              });
+              this.cmEditor.dispatch(cmTr);
+            } else {
+              throw new Error('Invalid diff boundaries');
+            }
+          }
+        } catch (diffError) {
           const cmTr = this.cmEditor.state.update({
-            changes: { from: diffStart, to: endA, insert: insertText }
+            changes: { from: 0, to: this.cmEditor.state.doc.length, insert: newLatex }
           });
           this.cmEditor.dispatch(cmTr);
         }
