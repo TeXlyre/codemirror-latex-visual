@@ -64,14 +64,24 @@ export class VisualToolbar {
       const btn = target.closest('[data-command]') as HTMLElement;
 
       if (btn) {
-        e.preventDefault();
-        this.executeCommand(btn.dataset.command!, btn);
+        const command = btn.dataset.command;
+        if (command !== 'textcolor') {
+          e.preventDefault();
+          this.executeCommand(command!, btn);
+        }
       }
     });
 
     this.container.addEventListener('change', (e) => {
       const target = e.target as HTMLElement;
       if (target.dataset.command) {
+        this.executeCommand(target.dataset.command, target);
+      }
+    });
+
+    this.container.addEventListener('input', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.dataset.command === 'textcolor') {
         this.executeCommand(target.dataset.command, target);
       }
     });
