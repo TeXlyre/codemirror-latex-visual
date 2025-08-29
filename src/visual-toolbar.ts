@@ -111,7 +111,7 @@ export class VisualToolbar {
         const select = element as HTMLSelectElement;
         if (select.value) {
           this.insertSection(select.value);
-          select.value = '';
+          select.value = '\n\n';
         }
         break;
       case 'textcolor':
