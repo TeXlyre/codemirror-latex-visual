@@ -14,6 +14,7 @@ export { SectionParser } from './parsers/section-parser';
 export { EnvironmentParser } from './parsers/environment-parser';
 export { CommandParser, EDITABLE_COMMANDS, FORMATTING_COMMANDS } from './parsers/command-parser';
 export { ParagraphParser } from './parsers/paragraph-parser';
+export { TableParser } from './parsers/table-parser';
 
 export * from './renderers/base-renderer';
 export { LatexRenderer } from './renderers/main-renderer';
@@ -23,3 +24,6 @@ export { SectionRenderer } from './renderers/section-renderer';
 export { EnvironmentRenderer } from './renderers/environment-renderer';
 export { CommandRenderer } from './renderers/command-renderer';
 export { ParagraphRenderer } from './renderers/paragraph-renderer';
+export { TableRenderer } from './renderers/table-renderer';
+
+export { TableSelector, TableDimensions } from './components/table-selector';

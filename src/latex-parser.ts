@@ -114,14 +114,22 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
 
       case 'environment':
         flushParagraph();
-        const envContent = token.content ? parseLatexToProseMirror(token.content, showCommands) : null;
-        nodes.push(
-          latexVisualSchema.nodes.environment.create({
-            name: token.name || '',
-            latex: token.latex,
-            showCommands
-          }, envContent ? envContent.content : undefined)
-        );
+
+        if (token.name === 'tabular') {
+          const tableNode = parseTabularEnvironment(token, showCommands);
+          if (tableNode) {
+            nodes.push(tableNode);
+          }
+        } else {
+          const envContent = token.content ? parseLatexToProseMirror(token.content, showCommands) : null;
+          nodes.push(
+            latexVisualSchema.nodes.environment.create({
+              name: token.name || '',
+              latex: token.latex,
+              showCommands
+            }, envContent ? envContent.content : undefined)
+          );
+        }
         break;
 
       case 'command':
@@ -162,6 +170,57 @@ function buildProseMirrorDoc(tokens: LatexToken[], showCommands: boolean = false
   }
 
   return latexVisualSchema.nodes.doc.create({}, nodes);
+}
+
+function parseTabularEnvironment(token: any, showCommands: boolean): any {
+  const alignment = token.params || '';
+  const content = token.content || '';
+
+  const rows = content.split('\\\\').map((row: string) => row.trim()).filter((row: string) => row);
+  const tableRows: any[] = [];
+
+  for (const rowContent of rows) {
+    const cells = rowContent.split('&').map((cell: string) => cell.trim());
+    const tableCells: any[] = [];
+
+    for (let i = 0; i < cells.length; i++) {
+      const cellContent = cells[i];
+      const align = alignment.charAt(i) || 'l';
+
+      let cellNodes: any[] = [];
+      if (cellContent) {
+        const cellTokens = new LatexTokenizer().tokenize(cellContent);
+        const cellDoc = buildProseMirrorDoc(cellTokens, showCommands);
+
+        cellDoc.content.forEach((node: any) => {
+          if (node.type.name === 'paragraph') {
+            cellNodes.push(...node.content.content);
+          } else {
+            cellNodes.push(node);
+          }
+        });
+      }
+
+      tableCells.push(
+        latexVisualSchema.nodes.table_cell.create(
+          { alignment: align },
+          cellNodes
+        )
+      );
+    }
+
+    if (tableCells.length > 0) {
+      tableRows.push(
+        latexVisualSchema.nodes.table_row.create({}, tableCells)
+      );
+    }
+  }
+
+  return latexVisualSchema.nodes.table.create({
+    alignment,
+    latex: token.latex,
+    showCommands
+  }, tableRows);
 }
 
 function createCommandNode(element: any, showCommands: boolean): any {

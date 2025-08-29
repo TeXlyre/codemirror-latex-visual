@@ -210,6 +210,66 @@ export const latexVisualSchema = new Schema({
       }
     },
 
+    table: {
+      group: 'block',
+      content: 'table_row+',
+      isolating: true,
+      attrs: {
+        alignment: { default: '' },
+        latex: { default: '' },
+        showCommands: { default: false }
+      },
+      parseDOM: [{ tag: 'table.latex-table' }],
+      toDOM: node => {
+        const showCommands = node.attrs.showCommands;
+
+        if (showCommands) {
+          return [
+            'div',
+            {
+              class: 'latex-table-command',
+              'data-latex': node.attrs.latex,
+              'data-alignment': node.attrs.alignment
+            },
+            ['div', { class: 'table-begin' }, `\\begin{tabular}{${node.attrs.alignment}}`],
+            ['table', { class: 'latex-table-content' }, ['tbody', 0]],
+            ['div', { class: 'table-end' }, '\\end{tabular}']
+          ];
+        }
+
+        return [
+          'table',
+          {
+            class: 'latex-table',
+            'data-latex': node.attrs.latex,
+            'data-alignment': node.attrs.alignment
+          },
+          ['tbody', 0]
+        ];
+      }
+    },
+
+    table_row: {
+      content: 'table_cell+',
+      parseDOM: [{ tag: 'tr' }],
+      toDOM: () => ['tr', 0]
+    },
+
+    table_cell: {
+      content: 'inline*',
+      attrs: {
+        alignment: { default: 'l' }
+      },
+      parseDOM: [{ tag: 'td' }, { tag: 'th' }],
+      toDOM: node => [
+        'td',
+        {
+          class: `latex-table-cell align-${node.attrs.alignment}`
+        },
+        0
+      ]
+    },
+
     editable_command: {
       group: 'inline',
       inline: true,

@@ -6,6 +6,7 @@ import { SectionRenderer } from './section-renderer';
 import { EnvironmentRenderer } from './environment-renderer';
 import { CommandRenderer } from './command-renderer';
 import { ParagraphRenderer } from './paragraph-renderer';
+import { TableRenderer } from './table-renderer';
 
 export class LatexRenderer {
   private renderers: BaseLatexRenderer[];
@@ -15,6 +16,7 @@ export class LatexRenderer {
       new CommentRenderer(options),
       new MathRenderer(options),
       new SectionRenderer(options),
+      new TableRenderer(options),
       new EnvironmentRenderer(options),
       new CommandRenderer(options),
       new ParagraphRenderer(options)

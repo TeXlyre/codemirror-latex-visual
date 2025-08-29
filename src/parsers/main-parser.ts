@@ -5,12 +5,14 @@ import { SectionParser } from './section-parser';
 import { EnvironmentParser } from './environment-parser';
 import { CommandParser } from './command-parser';
 import { ParagraphParser } from './paragraph-parser';
+import { TableParser } from './table-parser';
 
 export class LatexTokenizer {
   private parsers = [
     new CommentParser(),
     new MathParser(),
     new SectionParser(),
+    new TableParser(),
     new EnvironmentParser(),
     new CommandParser(),
     new ParagraphParser()

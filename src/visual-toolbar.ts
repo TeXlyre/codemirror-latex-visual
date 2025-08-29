@@ -2,6 +2,7 @@ import { EditorView } from 'prosemirror-view';
 import { Selection } from 'prosemirror-state';
 import { toggleMark, wrapIn, setBlockType } from 'prosemirror-commands';
 import { latexVisualSchema } from './prosemirror-schema';
+import { TableSelector, TableDimensions } from './components/table-selector';
 
 export interface ToolbarOptions {
   showLatexCommands?: boolean;
@@ -11,6 +12,7 @@ export class VisualToolbar {
   private container: HTMLElement;
   private pmEditor: EditorView;
   private options: ToolbarOptions;
+  private tableSelector?: TableSelector;
 
   constructor(container: HTMLElement, pmEditor: EditorView, options: ToolbarOptions = {}) {
     this.container = container;
@@ -42,6 +44,14 @@ export class VisualToolbar {
           </button>
         </div>
         <div class="toolbar-group">
+          <div class="toolbar-table-container">
+            <button class="toolbar-btn" data-command="table" title="Insert Table">
+              <span>⊞</span>
+            </button>
+            <div class="table-selector-dropdown"></div>
+          </div>
+        </div>
+        <div class="toolbar-group">
           <select class="toolbar-select" data-command="section">
             <option value="">Heading</option>
             <option value="section">Section</option>
@@ -57,6 +67,16 @@ export class VisualToolbar {
     `;
 
     this.attachEventListeners();
+    this.setupTableSelector();
+  }
+
+  private setupTableSelector() {
+    const dropdown = this.container.querySelector('.table-selector-dropdown') as HTMLElement;
+    if (dropdown) {
+      this.tableSelector = new TableSelector(dropdown, (dimensions) => {
+        this.insertTable(dimensions);
+      });
+    }
   }
 
   private attachEventListeners() {
@@ -66,7 +86,10 @@ export class VisualToolbar {
 
       if (btn) {
         const command = btn.dataset.command;
-        if (command !== 'textcolor' && command !== 'colorbox') {
+        if (command === 'table') {
+          e.preventDefault();
+          this.toggleTableSelector();
+        } else if (command !== 'textcolor' && command !== 'colorbox') {
           e.preventDefault();
           this.executeCommand(command!, btn);
         }
@@ -123,6 +146,23 @@ export class VisualToolbar {
         const colorboxInput = element as HTMLInputElement;
         this.insertColorCommand('colorbox', colorboxInput.value);
         break;
+    }
+  }
+
+  private toggleTableSelector() {
+    if (!this.tableSelector) return;
+
+    const dropdown = this.container.querySelector('.table-selector-dropdown') as HTMLElement;
+    if (!dropdown) return;
+
+    const computedStyle = window.getComputedStyle(dropdown);
+    const isVisible = dropdown.style.display === 'block' ||
+                     (dropdown.style.display !== 'none' && computedStyle.display === 'block');
+
+    if (isVisible) {
+      this.tableSelector.hide();
+    } else {
+      this.tableSelector.show();
     }
   }
 
@@ -208,6 +248,37 @@ export class VisualToolbar {
 
     const tr = state.tr.insert(from, node);
     tr.setSelection(Selection.near(tr.doc.resolve(from + 1)));
+    dispatch(tr);
+    this.pmEditor.focus();
+  }
+
+  private insertTable(dimensions: TableDimensions) {
+    const { state, dispatch } = this.pmEditor;
+    const { from } = state.selection;
+    const showCommands = (window as any).latexEditorShowCommands || false;
+
+    const alignment = 'l'.repeat(dimensions.cols);
+    const rows: any[] = [];
+
+    for (let r = 0; r < dimensions.rows; r++) {
+      const cells: any[] = [];
+      for (let c = 0; c < dimensions.cols; c++) {
+        cells.push(
+          latexVisualSchema.nodes.table_cell.create({ alignment: 'l' }, [])
+        );
+      }
+      rows.push(latexVisualSchema.nodes.table_row.create({}, cells));
+    }
+
+    const tableLatex = `\\begin{tabular}{${alignment}}\n${Array(dimensions.rows).fill(Array(dimensions.cols).fill('').join(' & ')).join(' \\\\\n')}\n\\end{tabular}`;
+
+    const node = latexVisualSchema.nodes.table.create({
+      alignment,
+      latex: tableLatex,
+      showCommands
+    }, rows);
+
+    const tr = state.tr.insert(from, node);
     dispatch(tr);
     this.pmEditor.focus();
   }

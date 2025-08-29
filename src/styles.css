@@ -112,6 +112,117 @@
   padding: 2px;
 }
 
+.toolbar-table-container {
+  position: relative;
+}
+
+.table-selector-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  min-width: 180px;
+  max-height: 300px;
+  overflow: visible;
+}
+
+.table-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.table-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 16px);
+  grid-template-rows: repeat(8, 16px);
+  gap: 1px;
+  margin-bottom: 8px;
+  border: 1px solid #ddd;
+  padding: 2px;
+  background: white;
+}
+
+.table-grid-cell {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  background: #f8f8f8;
+  transition: background-color 0.1s ease;
+}
+
+.table-grid-cell.highlighted {
+  background: #007acc;
+  border-color: #005c99;
+}
+
+.table-selector-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.latex-table {
+  border-collapse: collapse;
+  margin: 10px 0;
+  width: 100%;
+}
+
+.latex-table-content {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.latex-table-cell {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  min-width: 60px;
+}
+
+.latex-table-cell.align-l {
+  text-align: left;
+}
+
+.latex-table-cell.align-c {
+  text-align: center;
+}
+
+.latex-table-cell.align-r {
+  text-align: right;
+}
+
+.latex-table-command {
+  margin: 10px 0;
+  padding: 10px;
+  background: rgba(111, 66, 193, 0.1);
+  border: 1px solid rgba(111, 66, 193, 0.3);
+  border-radius: 4px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.latex-table-command .table-begin,
+.latex-table-command .table-end {
+  color: #6f42c1;
+  font-weight: 600;
+  margin: 5px 0;
+  font-size: 0.9em;
+}
+
+.latex-table-command .latex-table-content {
+  margin: 10px 0;
+  border: 1px solid rgba(111, 66, 193, 0.2);
+}
+
 .latex-editors-container {
   flex: 1;
   display: flex;
