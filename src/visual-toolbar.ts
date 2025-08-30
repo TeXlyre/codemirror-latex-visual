@@ -1,7 +1,4 @@
-import { EditorView } from 'prosemirror-view';
-import { Selection } from 'prosemirror-state';
-import { toggleMark, wrapIn, setBlockType } from 'prosemirror-commands';
-import { latexVisualSchema } from './prosemirror-schema';
+import { EditorView } from '@codemirror/view';
 import { TableSelector, TableDimensions } from './components/table-selector';
 
 export interface ToolbarOptions {
@@ -10,13 +7,13 @@ export interface ToolbarOptions {
 
 export class VisualToolbar {
   private container: HTMLElement;
-  private pmEditor: EditorView;
+  private cmEditor: EditorView;
   private options: ToolbarOptions;
   private tableSelector?: TableSelector;
 
-  constructor(container: HTMLElement, pmEditor: EditorView, options: ToolbarOptions = {}) {
+  constructor(container: HTMLElement, cmEditor: EditorView, options: ToolbarOptions = {}) {
     this.container = container;
-    this.pmEditor = pmEditor;
+    this.cmEditor = cmEditor;
     this.options = options;
     this.render();
   }
@@ -112,24 +109,25 @@ export class VisualToolbar {
   }
 
   private executeCommand(command: string, element: HTMLElement) {
-    const { state, dispatch } = this.pmEditor;
-    const showCommands = (window as any).latexEditorShowCommands || false;
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
+    const selectedText = state.doc.sliceString(from, to);
 
     switch (command) {
       case 'bold':
-        this.insertCommand('textbf');
+        this.insertLatexCommand('textbf', selectedText);
         break;
       case 'italic':
-        this.insertCommand('textit');
+        this.insertLatexCommand('textit', selectedText);
         break;
       case 'underline':
-        this.insertCommand('underline');
+        this.insertLatexCommand('underline', selectedText);
         break;
       case 'math-inline':
-        this.insertMath(false);
+        this.insertMath(false, selectedText);
         break;
       case 'math-display':
-        this.insertMath(true);
+        this.insertMath(true, selectedText);
         break;
       case 'section':
         const select = element as HTMLSelectElement;
@@ -140,11 +138,11 @@ export class VisualToolbar {
         break;
       case 'textcolor':
         const colorInput = element as HTMLInputElement;
-        this.insertColorCommand('textcolor', colorInput.value);
+        this.insertColorCommand('textcolor', colorInput.value, selectedText);
         break;
       case 'colorbox':
         const colorboxInput = element as HTMLInputElement;
-        this.insertColorCommand('colorbox', colorboxInput.value);
+        this.insertColorCommand('colorbox', colorboxInput.value, selectedText);
         break;
     }
   }
@@ -166,121 +164,89 @@ export class VisualToolbar {
     }
   }
 
-  private insertCommand(cmdName: string) {
-    const { state, dispatch } = this.pmEditor;
-    const { from, to } = state.selection;
-    const showCommands = (window as any).latexEditorShowCommands || false;
+  private insertLatexCommand(cmdName: string, selectedText: string = '') {
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
 
-    const selectedText = state.doc.textBetween(from, to);
+    const latexCommand = `\\${cmdName}{${selectedText}}`;
+    const cursorPos = from + latexCommand.length - (selectedText ? selectedText.length + 1 : 1);
 
-    const node = latexVisualSchema.nodes.editable_command.create({
-      name: cmdName,
-      latex: `\\${cmdName}{${selectedText}}`,
-      showCommands
-    }, selectedText ? [latexVisualSchema.text(selectedText)] : []);
-
-    const tr = state.tr.replaceWith(from, to, node);
-
-    if (!selectedText) {
-      tr.setSelection(Selection.near(tr.doc.resolve(from + 1)));
-    }
-
-    dispatch(tr);
-    this.pmEditor.focus();
-  }
-
-  private insertColorCommand(cmdType: string, color: string) {
-    const { state, dispatch } = this.pmEditor;
-    const { from, to } = state.selection;
-    const showCommands = (window as any).latexEditorShowCommands || false;
-
-    const selectedText = state.doc.textBetween(from, to);
-
-    const node = latexVisualSchema.nodes.editable_command.create({
-      name: cmdType,
-      latex: `\\${cmdType}{${color}}{${selectedText}}`,
-      showCommands,
-      colorArg: color
-    }, selectedText ? [latexVisualSchema.text(selectedText)] : []);
-
-    const tr = state.tr.replaceWith(from, to, node);
-
-    if (!selectedText) {
-      tr.setSelection(Selection.near(tr.doc.resolve(from + 1)));
-    }
-
-    dispatch(tr);
-    this.pmEditor.focus();
-  }
-
-  private insertMath(displayMode: boolean) {
-    const { state, dispatch } = this.pmEditor;
-    const { from } = state.selection;
-
-    const nodeType = displayMode ?
-      latexVisualSchema.nodes.math_display :
-      latexVisualSchema.nodes.math_inline;
-
-    const node = nodeType.create({
-      latex: '',
-      rendered: ''
+    const transaction = state.update({
+      changes: { from, to, insert: latexCommand },
+      selection: { anchor: cursorPos }
     });
 
-    const tr = state.tr.insert(from, node);
-    dispatch(tr);
-    this.pmEditor.focus();
+    this.cmEditor.dispatch(transaction);
+    this.cmEditor.focus();
+  }
+
+  private insertColorCommand(cmdType: string, color: string, selectedText: string = '') {
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
+
+    const latexCommand = `\\${cmdType}{${color}}{${selectedText}}`;
+    const cursorPos = from + latexCommand.length - (selectedText ? selectedText.length + 1 : 1);
+
+    const transaction = state.update({
+      changes: { from, to, insert: latexCommand },
+      selection: { anchor: cursorPos }
+    });
+
+    this.cmEditor.dispatch(transaction);
+    this.cmEditor.focus();
+  }
+
+  private insertMath(displayMode: boolean, selectedText: string = '') {
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
+
+    const mathDelimiter = displayMode ? '$$' : '$';
+    const mathCommand = `${mathDelimiter}${selectedText}${mathDelimiter}`;
+    const cursorPos = from + mathDelimiter.length + (selectedText ? selectedText.length : 0);
+
+    const transaction = state.update({
+      changes: { from, to, insert: mathCommand },
+      selection: { anchor: cursorPos }
+    });
+
+    this.cmEditor.dispatch(transaction);
+    this.cmEditor.focus();
   }
 
   private insertSection(sectionType: string) {
-    const { state, dispatch } = this.pmEditor;
-    const { from } = state.selection;
-    const showCommands = (window as any).latexEditorShowCommands || false;
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
 
-    const level = sectionType === 'section' ? 1 :
-                  sectionType === 'subsection' ? 2 : 3;
+    const latexCommand = `\\${sectionType}{}`;
+    const cursorPos = from + latexCommand.length - 1;
 
-    const node = latexVisualSchema.nodes.section.create({
-      level,
-      latex: `\\${sectionType}{}`,
-      name: sectionType,
-      showCommands
-    }, []);
+    const transaction = state.update({
+      changes: { from, to, insert: latexCommand },
+      selection: { anchor: cursorPos }
+    });
 
-    const tr = state.tr.insert(from, node);
-    tr.setSelection(Selection.near(tr.doc.resolve(from + 1)));
-    dispatch(tr);
-    this.pmEditor.focus();
+    this.cmEditor.dispatch(transaction);
+    this.cmEditor.focus();
   }
 
   private insertTable(dimensions: TableDimensions) {
-    const { state, dispatch } = this.pmEditor;
-    const { from } = state.selection;
-    const showCommands = (window as any).latexEditorShowCommands || false;
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
 
     const alignment = 'l'.repeat(dimensions.cols);
-    const rows: any[] = [];
+    const emptyRow = Array(dimensions.cols).fill('').join(' & ');
+    const rows = Array(dimensions.rows).fill(emptyRow).join(' \\\\\n');
 
-    for (let r = 0; r < dimensions.rows; r++) {
-      const cells: any[] = [];
-      for (let c = 0; c < dimensions.cols; c++) {
-        cells.push(
-          latexVisualSchema.nodes.table_cell.create({ alignment: 'l' }, [])
-        );
-      }
-      rows.push(latexVisualSchema.nodes.table_row.create({}, cells));
-    }
+    const tableLatex = `\\begin{tabular}{${alignment}}\n${rows}\n\\end{tabular}`;
+    const cursorPos = from + `\\begin{tabular}{${alignment}}\n`.length;
 
-    const tableLatex = `\\begin{tabular}{${alignment}}\n${Array(dimensions.rows).fill(Array(dimensions.cols).fill('').join(' & ')).join(' \\\\\n')}\n\\end{tabular}`;
+    const transaction = state.update({
+      changes: { from, to, insert: tableLatex },
+      selection: { anchor: cursorPos }
+    });
 
-    const node = latexVisualSchema.nodes.table.create({
-      alignment,
-      latex: tableLatex,
-      showCommands
-    }, rows);
-
-    const tr = state.tr.insert(from, node);
-    dispatch(tr);
-    this.pmEditor.focus();
+    this.cmEditor.dispatch(transaction);
+    this.cmEditor.focus();
   }
 
   updateOptions(options: ToolbarOptions) {
