@@ -23,7 +23,7 @@ export class SectionWidget extends BaseLatexWidget {
       contentSpan.textContent = content;
       contentSpan.style.fontWeight = 'bold';
 
-      this.makeEditable(contentSpan, view, (newContent) => {
+      this.setupEditableElement(contentSpan, view, (newContent) => {
         if (newContent !== content) {
           const newLatex = `\\${sectionName}{${newContent}}`;
           this.updateTokenInEditor(view, newLatex);
@@ -60,9 +60,6 @@ export class SectionWidget extends BaseLatexWidget {
     heading.style.paddingBottom = '0.2em';
     heading.style.fontWeight = 'bold';
     heading.style.display = 'block';
-    heading.style.outline = 'none';
-    heading.style.cursor = 'text';
-    heading.contentEditable = 'true';
 
     // Apply heading-specific styling based on level
     switch (level) {
@@ -79,85 +76,175 @@ export class SectionWidget extends BaseLatexWidget {
         heading.style.fontSize = '1em';
     }
 
-    // Force text selection to work
-    heading.style.userSelect = 'text';
-
-    // Comprehensive event capturing
-    const events = [
-      'mousedown', 'mouseup', 'click', 'dblclick',
-      'keydown', 'keyup', 'keypress', 'input',
-      'focus', 'blur', 'select', 'selectstart'
-    ];
-
-    events.forEach(eventType => {
-      heading.addEventListener(eventType, (e) => {
-        e.stopImmediatePropagation();
-
-        // Allow default behavior for text editing events
-        if (!['mousedown', 'click'].includes(eventType)) {
-          return;
-        }
-
-        // For mouse events, ensure proper focus and selection
-        if (eventType === 'mousedown' || eventType === 'click') {
-          e.preventDefault();
-
-          // Force focus
-          setTimeout(() => {
-            heading.focus();
-
-            // Try to set cursor position
-            try {
-              const selection = window.getSelection();
-              const range = document.createRange();
-
-              if (heading.firstChild && heading.firstChild.nodeType === Node.TEXT_NODE) {
-                const textNode = heading.firstChild;
-                const text = textNode.textContent || '';
-
-                // Calculate approximate cursor position from mouse click
-                const rect = heading.getBoundingClientRect();
-                const relativeX = (e as MouseEvent).clientX - rect.left;
-                const totalWidth = rect.width;
-                const charIndex = Math.round((relativeX / totalWidth) * text.length);
-                const clampedIndex = Math.max(0, Math.min(charIndex, text.length));
-
-                range.setStart(textNode, clampedIndex);
-                range.setEnd(textNode, clampedIndex);
-
-                selection?.removeAllRanges();
-                selection?.addRange(range);
-              }
-            } catch (error) {
-              console.warn('Could not set cursor position:', error);
-            }
-          }, 0);
-        }
-      }, true); // Use capture phase
-    });
-
-    // Handle content changes
-    heading.addEventListener('blur', () => {
-      const newContent = heading.textContent || '';
+    this.setupEditableElement(heading, view, (newContent) => {
       if (newContent !== content) {
         const newLatex = `\\${sectionName}{${newContent}}`;
         this.updateTokenInEditor(view, newLatex);
       }
     });
 
-    // Handle enter key to finish editing
-    heading.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        heading.blur();
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        heading.textContent = content; // Reset to original
-        heading.blur();
+    return heading;
+  }
+
+  private setupEditableElement(element: HTMLElement, view: EditorView, onUpdate: (newContent: string) => void) {
+    const originalContent = element.textContent || '';
+
+    // Make element appear editable but not actually contentEditable yet
+    element.style.cursor = 'text';
+    element.style.userSelect = 'text';
+    element.style.position = 'relative';
+
+    // Add visual indicator that this is editable
+    element.title = 'Click to edit';
+
+    let isEditing = false;
+    let editableSpan: HTMLSpanElement | null = null;
+
+    const startEditing = (clickX?: number) => {
+      if (isEditing) return;
+      isEditing = true;
+
+      // Store original styles instead of making transparent
+      const originalColor = element.style.color || getComputedStyle(element).color;
+
+      // Create an input-like span overlay
+      editableSpan = document.createElement('span');
+      editableSpan.contentEditable = 'true';
+      editableSpan.textContent = element.textContent;
+      editableSpan.style.position = 'absolute';
+      editableSpan.style.top = '0';
+      editableSpan.style.left = '0';
+      editableSpan.style.width = '100%';
+      editableSpan.style.minHeight = '100%';
+      editableSpan.style.background = 'rgba(255, 255, 255, 0.95)';
+      editableSpan.style.color = originalColor || '#333'; // Ensure visible color
+      editableSpan.style.outline = '2px solid #007acc';
+      editableSpan.style.outlineOffset = '1px';
+      editableSpan.style.padding = '2px 4px';
+      editableSpan.style.margin = '-2px -4px';
+      editableSpan.style.borderRadius = '2px';
+      editableSpan.style.fontSize = 'inherit';
+      editableSpan.style.fontWeight = 'inherit';
+      editableSpan.style.fontFamily = 'inherit';
+      editableSpan.style.lineHeight = 'inherit';
+      editableSpan.style.zIndex = '1000';
+      editableSpan.style.boxSizing = 'border-box';
+
+      // Hide original text by making it transparent, but keep layout
+      element.style.color = 'transparent';
+
+      element.appendChild(editableSpan);
+
+      // Focus and select
+      setTimeout(() => {
+        editableSpan!.focus();
+
+        if (clickX !== undefined) {
+          // Try to position cursor based on click
+          const selection = window.getSelection();
+          const range = document.createRange();
+
+          try {
+            if (editableSpan!.firstChild) {
+              const textNode = editableSpan!.firstChild;
+              const text = textNode.textContent || '';
+              const rect = editableSpan!.getBoundingClientRect();
+              const relativeX = clickX - rect.left - 4; // Account for padding
+              const charWidth = (rect.width - 8) / text.length; // Account for padding
+              const charIndex = Math.max(0, Math.min(Math.round(relativeX / charWidth), text.length));
+
+              range.setStart(textNode, charIndex);
+              range.setEnd(textNode, charIndex);
+              selection?.removeAllRanges();
+              selection?.addRange(range);
+            }
+          } catch (e) {
+            // Fallback to select all
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(editableSpan!);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
+        } else {
+          // Select all text
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(editableSpan!);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      }, 10);
+
+      const finishEditing = () => {
+        if (!isEditing || !editableSpan) return;
+        isEditing = false;
+
+        const newContent = editableSpan.textContent || '';
+        element.textContent = newContent;
+        element.style.color = originalColor; // Restore original color
+
+        if (editableSpan.parentNode) {
+          editableSpan.parentNode.removeChild(editableSpan);
+        }
+        editableSpan = null;
+
+        if (newContent !== originalContent) {
+          onUpdate(newContent);
+        }
+      };
+
+      // Handle events on the editable span
+      editableSpan.addEventListener('blur', finishEditing);
+
+      editableSpan.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          finishEditing();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          if (editableSpan) {
+            editableSpan.textContent = originalContent;
+          }
+          finishEditing();
+        }
+      });
+
+      // Prevent clicks from bubbling up
+      editableSpan.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+
+      editableSpan.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    };
+
+    // Handle clicks on the main element
+    element.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!isEditing) {
+        startEditing(e.clientX);
       }
     });
 
-    return heading;
+    element.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    // Double-click to select all
+    element.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!isEditing) {
+        startEditing();
+      }
+    });
   }
 }
