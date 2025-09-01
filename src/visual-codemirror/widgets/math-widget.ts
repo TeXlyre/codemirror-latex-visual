@@ -220,7 +220,22 @@ export class MathWidget extends BaseLatexWidget {
 
   private updateMathInEditor(view: EditorView, newLatex: string) {
     const delimiter = this.isDisplay ? '$$' : '$';
-    const newContent = `${delimiter}${newLatex}${delimiter}`;
-    this.updateTokenInEditor(view, newContent);
+    const newFullLatex = `${delimiter}${newLatex}${delimiter}`;
+    const pos = this.findTokenInDocument(view);
+    if (pos === null) {
+      console.warn('Could not find token to update in document.');
+      return;
+    }
+
+    view.dispatch({
+      changes: { from: pos.from, to: pos.to, insert: newFullLatex }
+    });
+
+    this.token.content = newLatex;
+    this.token.latex = newFullLatex;
+
+    if (this.mathfield) {
+      (this.mathfield as any).setValue(newLatex, { suppressChangeNotifications: true });
+    }
   }
 }

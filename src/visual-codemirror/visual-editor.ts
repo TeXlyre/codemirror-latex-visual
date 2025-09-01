@@ -32,14 +32,14 @@ const visualDecorationsField = StateField.define<DecorationSet>({
       return Decoration.none;
     }
 
-    decorations = decorations.map(tr.changes);
-
+    // Always regenerate decorations when document changes in visual mode
     if (tr.docChanged || tr.effects.some(e => e.is(toggleVisualEffect))) {
       const overlayManager = new OverlayManager();
       return overlayManager.createDecorations(tr.state);
     }
 
-    return decorations;
+    // Map existing decorations to new positions
+    return decorations.map(tr.changes);
   },
   provide: f => EditorView.decorations.from(f)
 });

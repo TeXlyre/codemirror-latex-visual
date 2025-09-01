@@ -18,11 +18,12 @@ export abstract class BaseLatexWidget extends WidgetType {
   }
 
   updateDOM(dom: HTMLElement, view: EditorView): boolean {
+    // Since eq() returned false, we know an update is required.
+    // The unreliable isEqualNode check is removed.
     const newElement = this.toDOM(view);
-    if (dom.isEqualNode(newElement)) {
-      return false;
-    }
     dom.replaceWith(newElement);
+
+    // Return true to tell CodeMirror the DOM has been updated.
     return true;
   }
 
