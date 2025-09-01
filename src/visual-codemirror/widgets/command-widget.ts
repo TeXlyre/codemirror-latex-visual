@@ -26,6 +26,12 @@ export class CommandWidget extends BaseLatexWidget {
         wrapper.textContent = `\\${cmdName}{${content}}`;
       }
 
+      this.makeEditable(wrapper, view, (newLatex) => {
+        if (newLatex !== this.token.latex) {
+          this.updateTokenInEditor(view, newLatex);
+        }
+      });
+
       return wrapper;
     }
 
@@ -33,7 +39,6 @@ export class CommandWidget extends BaseLatexWidget {
     span.className = `latex-visual-command ${cmdName}`;
     span.textContent = content;
 
-    let style = '';
     switch (cmdName) {
       case 'textbf':
         span.style.fontWeight = 'bold';
@@ -71,6 +76,18 @@ export class CommandWidget extends BaseLatexWidget {
         }
         break;
     }
+
+    this.makeEditable(span, view, (newContent) => {
+      if (newContent !== content) {
+        let newLatex;
+        if (colorArg) {
+          newLatex = `\\${cmdName}{${colorArg}}{${newContent}}`;
+        } else {
+          newLatex = `\\${cmdName}{${newContent}}`;
+        }
+        this.updateTokenInEditor(view, newLatex);
+      }
+    });
 
     return span;
   }

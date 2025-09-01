@@ -24,7 +24,7 @@ export class TableWidget extends BaseLatexWidget {
       beginDiv.style.margin = '5px 0';
       beginDiv.style.fontSize = '0.9em';
 
-      const tableElement = this.createVisualTable(content, alignment);
+      const tableElement = this.createEditableTable(content, alignment, view, true);
       tableElement.style.margin = '10px 0';
       tableElement.style.border = '1px solid rgba(111, 66, 193, 0.2)';
 
@@ -43,10 +43,10 @@ export class TableWidget extends BaseLatexWidget {
       return wrapper;
     }
 
-    return this.createVisualTable(content, alignment);
+    return this.createEditableTable(content, alignment, view, false);
   }
 
-  private createVisualTable(content: string, alignment: string): HTMLElement {
+  private createEditableTable(content: string, alignment: string, view: EditorView, showCommands: boolean): HTMLElement {
     const table = document.createElement('table');
     table.className = 'latex-visual-table';
     table.style.borderCollapse = 'collapse';
@@ -57,13 +57,19 @@ export class TableWidget extends BaseLatexWidget {
     const tbody = document.createElement('tbody');
 
     if (!content.trim()) {
-      // Empty table
       const row = document.createElement('tr');
       const cell = document.createElement('td');
       cell.style.padding = '8px 12px';
       cell.style.border = '1px solid #ddd';
       cell.style.minWidth = '60px';
+      cell.contentEditable = 'true';
+      cell.style.outline = 'none';
       cell.textContent = '';
+
+      cell.addEventListener('blur', () => {
+        this.updateTableContent(view, table, alignment);
+      });
+
       row.appendChild(cell);
       tbody.appendChild(row);
       table.appendChild(tbody);
@@ -82,8 +88,9 @@ export class TableWidget extends BaseLatexWidget {
         td.style.border = '1px solid #ddd';
         td.style.padding = '8px 12px';
         td.style.minWidth = '60px';
+        td.contentEditable = 'true';
+        td.style.outline = 'none';
 
-        // Apply alignment based on column spec
         const align = alignment.charAt(index) || 'l';
         switch (align) {
           case 'c':
@@ -96,8 +103,22 @@ export class TableWidget extends BaseLatexWidget {
             td.style.textAlign = 'left';
         }
 
-        // Simple text content for now - could be enhanced to parse math/commands
         td.textContent = cellContent;
+
+        td.addEventListener('blur', () => {
+          this.updateTableContent(view, table, alignment);
+        });
+
+        td.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            const nextCell = this.getNextCell(td, !e.shiftKey);
+            if (nextCell) {
+              nextCell.focus();
+            }
+          }
+        });
+
         tr.appendChild(td);
       });
 
@@ -106,5 +127,39 @@ export class TableWidget extends BaseLatexWidget {
 
     table.appendChild(tbody);
     return table;
+  }
+
+  private getNextCell(currentCell: HTMLTableCellElement, forward: boolean): HTMLTableCellElement | null {
+    const table = currentCell.closest('table');
+    if (!table) return null;
+
+    const cells = Array.from(table.querySelectorAll('td')) as HTMLTableCellElement[];
+    const currentIndex = cells.indexOf(currentCell);
+
+    if (forward && currentIndex < cells.length - 1) {
+      return cells[currentIndex + 1];
+    } else if (!forward && currentIndex > 0) {
+      return cells[currentIndex - 1];
+    }
+
+    return null;
+  }
+
+  private updateTableContent(view: EditorView, table: HTMLElement, alignment: string) {
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const tableRows: string[] = [];
+
+    rows.forEach(row => {
+      const cells = Array.from(row.querySelectorAll('td'));
+      const cellContents = cells.map(cell => (cell.textContent || '').trim());
+      if (cellContents.some(content => content)) {
+        tableRows.push(cellContents.join(' & '));
+      }
+    });
+
+    const newContent = tableRows.join(' \\\\\n');
+    const newLatex = `\\begin{tabular}{${alignment}}\n${newContent}\n\\end{tabular}`;
+
+    this.updateTokenInEditor(view, newLatex);
   }
 }

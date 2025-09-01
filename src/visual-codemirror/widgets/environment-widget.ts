@@ -30,6 +30,13 @@ export class EnvironmentWidget extends BaseLatexWidget {
       contentDiv.style.paddingLeft = '20px';
       contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
 
+      this.makeEditable(contentDiv, view, (newContent) => {
+        if (newContent !== content) {
+          const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
+          this.updateTokenInEditor(view, newLatex);
+        }
+      });
+
       const endDiv = document.createElement('div');
       endDiv.className = 'env-end';
       endDiv.textContent = `\\end{${envName}}`;
@@ -63,7 +70,13 @@ export class EnvironmentWidget extends BaseLatexWidget {
     contentDiv.textContent = content;
     contentDiv.style.lineHeight = '1.4';
 
-    // Style based on environment type
+    this.makeEditable(contentDiv, view, (newContent) => {
+      if (newContent !== content) {
+        const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
+        this.updateTokenInEditor(view, newLatex);
+      }
+    });
+
     switch (envName) {
       case 'theorem':
         wrapper.style.borderLeft = '3px solid #6f42c1';

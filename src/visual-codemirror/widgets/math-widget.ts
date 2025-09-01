@@ -35,13 +35,31 @@ export class MathWidget extends BaseLatexWidget {
       prefix.style.fontWeight = '600';
 
       const mathSpan = document.createElement('span');
+      mathSpan.contentEditable = 'true';
       mathSpan.textContent = this.token.content;
       mathSpan.style.margin = '0 4px';
+      mathSpan.style.outline = 'none';
+      mathSpan.style.fontFamily = 'monospace';
 
       const suffix = document.createElement('span');
       suffix.textContent = delimiter;
       suffix.style.color = '#6f42c1';
       suffix.style.fontWeight = '600';
+
+      mathSpan.addEventListener('blur', () => {
+        const newContent = mathSpan.textContent || '';
+        if (newContent !== this.token.content) {
+          const newLatex = `${delimiter}${newContent}${delimiter}`;
+          this.updateTokenInEditor(view, newLatex);
+        }
+      });
+
+      mathSpan.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          mathSpan.blur();
+          e.preventDefault();
+        }
+      });
 
       wrapper.appendChild(prefix);
       wrapper.appendChild(mathSpan);
@@ -96,7 +114,6 @@ export class MathWidget extends BaseLatexWidget {
   }
 
   private startMathEditing(view: EditorView, container: HTMLElement) {
-    // Prevent multiple editing sessions
     if (container.dataset.editing === 'true') return;
     container.dataset.editing = 'true';
 
@@ -166,7 +183,6 @@ export class MathWidget extends BaseLatexWidget {
         }
       }
 
-      // Safely remove the floating container
       try {
         if (floatingContainer && floatingContainer.parentNode) {
           floatingContainer.parentNode.removeChild(floatingContainer);
@@ -175,7 +191,6 @@ export class MathWidget extends BaseLatexWidget {
         console.warn('Error removing math editor overlay:', error);
       }
 
-      // Clean up event listener
       document.removeEventListener('mousedown', handleClickOutside, true);
     };
 
@@ -204,28 +219,8 @@ export class MathWidget extends BaseLatexWidget {
   }
 
   private updateMathInEditor(view: EditorView, newLatex: string) {
-    const pos = this.findTokenInDocument(view);
-    if (pos === null) return;
-
-    const { from, to } = pos;
     const delimiter = this.isDisplay ? '$$' : '$';
     const newContent = `${delimiter}${newLatex}${delimiter}`;
-
-    view.dispatch({
-      changes: { from, to, insert: newContent }
-    });
-  }
-
-  private findTokenInDocument(view: EditorView) {
-    const doc = view.state.doc;
-    const text = doc.toString();
-    const index = text.indexOf(this.token.latex);
-
-    if (index === -1) return null;
-
-    return {
-      from: index,
-      to: index + this.token.latex.length
-    };
+    this.updateTokenInEditor(view, newContent);
   }
 }

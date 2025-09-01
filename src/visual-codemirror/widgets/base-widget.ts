@@ -29,7 +29,52 @@ export abstract class BaseLatexWidget extends WidgetType {
   abstract toDOM(view: EditorView): HTMLElement;
 
   ignoreEvent(event: Event): boolean {
-    return event.type === 'mousedown' || event.type === 'click';
+    // Never ignore events - let them all reach the widget content
+    return false;
+  }
+
+  protected makeEditable(element: HTMLElement, view: EditorView, onUpdate: (newContent: string) => void) {
+    element.contentEditable = 'true';
+    element.style.outline = 'none';
+    element.style.cursor = 'text';
+    element.style.userSelect = 'text';
+    element.style.webkitUserSelect = 'text';
+
+    // Only stop propagation for specific events that need it
+    element.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    element.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    element.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        element.blur();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        element.blur();
+      }
+    });
+
+    element.addEventListener('input', (e) => {
+      e.stopPropagation();
+    });
+
+    element.addEventListener('blur', () => {
+      const newContent = element.textContent || '';
+      onUpdate(newContent);
+    });
+
+    element.addEventListener('focus', (e) => {
+      e.stopPropagation();
+    });
+
+    return element;
   }
 
   protected createCommandWrapper(content: HTMLElement, cmdName: string): HTMLElement {
@@ -53,5 +98,28 @@ export abstract class BaseLatexWidget extends WidgetType {
     wrapper.appendChild(suffix);
 
     return wrapper;
+  }
+
+  protected findTokenInDocument(view: EditorView) {
+    const doc = view.state.doc;
+    const text = doc.toString();
+    const index = text.indexOf(this.token.latex);
+
+    if (index === -1) return null;
+
+    return {
+      from: index,
+      to: index + this.token.latex.length
+    };
+  }
+
+  protected updateTokenInEditor(view: EditorView, newLatex: string) {
+    const pos = this.findTokenInDocument(view);
+    if (pos === null) return;
+
+    const { from, to } = pos;
+    view.dispatch({
+      changes: { from, to, insert: newLatex }
+    });
   }
 }
