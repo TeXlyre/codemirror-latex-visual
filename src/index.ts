@@ -11,7 +11,6 @@ export { MathParser } from './parsers/math-parser';
 export { SectionParser } from './parsers/section-parser';
 export { EnvironmentParser } from './parsers/environment-parser';
 export { CommandParser, EDITABLE_COMMANDS, FORMATTING_COMMANDS } from './parsers/command-parser';
-export { ParagraphParser } from './parsers/paragraph-parser';
 export { TableParser } from './parsers/table-parser';
 
 export * from './visual-codemirror/widgets/base-widget';

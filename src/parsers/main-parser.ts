@@ -4,7 +4,6 @@ import { MathParser } from './math-parser';
 import { SectionParser } from './section-parser';
 import { EnvironmentParser } from './environment-parser';
 import { CommandParser } from './command-parser';
-import { ParagraphParser } from './paragraph-parser';
 import { TableParser } from './table-parser';
 
 export class LatexTokenizer {
@@ -15,7 +14,6 @@ export class LatexTokenizer {
     new TableParser(),
     new EnvironmentParser(),
     new CommandParser(),
-    new ParagraphParser()
   ];
 
   tokenize(latex: string): LatexToken[] {
@@ -23,6 +21,7 @@ export class LatexTokenizer {
     let pos = 0;
 
     while (pos < latex.length) {
+      // Handle paragraph breaks first
       const paragraphBreakMatch = latex.slice(pos).match(/^(\n{2,})/);
       if (paragraphBreakMatch) {
         tokens.push({
@@ -36,6 +35,7 @@ export class LatexTokenizer {
         continue;
       }
 
+      // Try all parsers
       let parsed = false;
       for (const parser of this.parsers) {
         if (parser.canParse(latex, pos)) {
@@ -49,8 +49,44 @@ export class LatexTokenizer {
         }
       }
 
+      // If no parser handled it, collect as text
       if (!parsed) {
-        pos++;
+        let textStart = pos;
+        let textEnd = pos;
+
+        // Collect consecutive characters that aren't special LaTeX syntax
+        while (textEnd < latex.length) {
+          // Stop at paragraph breaks
+          if (latex.startsWith('\n\n', textEnd)) {
+            break;
+          }
+
+          // Stop at LaTeX commands, math, environments, comments
+          if (latex.charAt(textEnd) === '\\' ||
+              latex.charAt(textEnd) === '$' ||
+              latex.charAt(textEnd) === '%' ||
+              latex.startsWith('\\begin{', textEnd)) {
+            break;
+          }
+
+          textEnd++;
+        }
+
+        // Create a single text token for the entire sequence
+        if (textEnd > textStart) {
+          const textContent = latex.slice(textStart, textEnd);
+          tokens.push({
+            type: 'text',
+            content: textContent,
+            latex: textContent,
+            start: textStart,
+            end: textEnd
+          });
+          pos = textEnd;
+        } else {
+          // Fallback: single character
+          pos++;
+        }
       }
     }
 

@@ -23,12 +23,11 @@ export class OverlayManager {
       const tokens = this.tokenizer.tokenize(text);
 
       for (const token of tokens) {
-        // Skip plain text tokens - let CodeMirror handle them normally
-        if (token.type === 'text') {
+        if (token.type === 'text' || token.type === 'paragraph_break') {
           continue;
         }
 
-        const from = text.indexOf(token.latex);
+        const from = this.findTokenPosition(text, token);
         if (from === -1) continue;
 
         const to = from + token.latex.length;
@@ -46,15 +45,6 @@ export class OverlayManager {
               decorations.push(Decoration.replace({
                 widget,
                 block: true
-              }).range(from, to));
-            }
-            break;
-
-          case 'math_inline':
-            widget = new MathWidget(token, false);
-            if (widget) {
-              decorations.push(Decoration.replace({
-                widget
               }).range(from, to));
             }
             break;
@@ -83,6 +73,15 @@ export class OverlayManager {
             }
             break;
 
+          case 'math_inline':
+            widget = new MathWidget(token, false);
+            if (widget) {
+              decorations.push(Decoration.replace({
+                widget
+              }).range(from, to));
+            }
+            break;
+
           case 'editable_command':
           case 'command':
             if (token.name && ['textbf', 'textit', 'emph', 'underline', 'textcolor', 'colorbox'].includes(token.name)) {
@@ -91,58 +90,6 @@ export class OverlayManager {
                 decorations.push(Decoration.replace({
                   widget
                 }).range(from, to));
-              }
-            }
-            break;
-
-          case 'mixed_paragraph':
-            // Handle mixed paragraphs with inline decorations for commands/math only
-            if (token.elements) {
-              let currentPos = from;
-              for (const element of token.elements) {
-                if (element.type === 'text') {
-                  currentPos += element.latex.length;
-                  continue;
-                }
-
-                const elementFrom = currentPos;
-                const elementTo = currentPos + element.latex.length;
-
-                if (element.type === 'math_inline') {
-                  const mathToken = {
-                    type: 'math_inline' as const,
-                    content: element.content as string,
-                    latex: element.latex,
-                    start: elementFrom,
-                    end: elementTo
-                  };
-                  widget = new MathWidget(mathToken, false);
-                  if (widget) {
-                    decorations.push(Decoration.replace({
-                      widget
-                    }).range(elementFrom, elementTo));
-                  }
-                } else if (element.type === 'editable_command' || element.type === 'command') {
-                  if (element.name && ['textbf', 'textit', 'emph', 'underline', 'textcolor', 'colorbox'].includes(element.name)) {
-                    const cmdToken = {
-                      type: element.type,
-                      content: element.content as string,
-                      latex: element.latex,
-                      start: elementFrom,
-                      end: elementTo,
-                      name: element.name,
-                      colorArg: element.colorArg
-                    };
-                    widget = new CommandWidget(cmdToken);
-                    if (widget) {
-                      decorations.push(Decoration.replace({
-                        widget
-                      }).range(elementFrom, elementTo));
-                    }
-                  }
-                }
-
-                currentPos = elementTo;
               }
             }
             break;
@@ -159,5 +106,13 @@ export class OverlayManager {
       console.warn('Error creating decoration set:', error);
       return Decoration.none;
     }
+  }
+
+  private findTokenPosition(text: string, token: any): number {
+    if (typeof token.start === 'number' && token.start >= 0) {
+      return token.start;
+    }
+
+    return text.indexOf(token.latex);
   }
 }
