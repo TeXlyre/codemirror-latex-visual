@@ -9,7 +9,7 @@ export class SectionWidget extends BaseLatexWidget {
 
     if (this.showCommands) {
       const wrapper = document.createElement('div');
-      wrapper.className = `latex-visual-section-command latex-visual-section-${level}`;
+      wrapper.className = `latex-visual-section-command latex-visual-section-${level} latex-visual-widget`;
 
       const prefix = document.createElement('span');
       prefix.className = 'latex-cmd-prefix';
@@ -51,7 +51,7 @@ export class SectionWidget extends BaseLatexWidget {
     }
 
     const heading = document.createElement('div');
-    heading.className = `latex-visual-section latex-visual-section-${level}`;
+    heading.className = `latex-visual-section latex-visual-section-${level} latex-visual-widget`;
     heading.setAttribute('role', 'heading');
     heading.setAttribute('aria-level', level.toString());
     heading.textContent = content;
@@ -61,7 +61,6 @@ export class SectionWidget extends BaseLatexWidget {
     heading.style.fontWeight = 'bold';
     heading.style.display = 'block';
 
-    // Apply heading-specific styling based on level
     switch (level) {
       case 1:
         heading.style.fontSize = '2em';
@@ -89,12 +88,10 @@ export class SectionWidget extends BaseLatexWidget {
   private setupEditableElement(element: HTMLElement, view: EditorView, onUpdate: (newContent: string) => void) {
     const originalContent = element.textContent || '';
 
-    // Make element appear editable but not actually contentEditable yet
     element.style.cursor = 'text';
     element.style.userSelect = 'text';
     element.style.position = 'relative';
 
-    // Add visual indicator that this is editable
     element.title = 'Click to edit';
 
     let isEditing = false;
@@ -104,10 +101,8 @@ export class SectionWidget extends BaseLatexWidget {
       if (isEditing) return;
       isEditing = true;
 
-      // Store original styles instead of making transparent
       const originalColor = element.style.color || getComputedStyle(element).color;
 
-      // Create an input-like span overlay
       editableSpan = document.createElement('span');
       editableSpan.contentEditable = 'true';
       editableSpan.textContent = element.textContent;
@@ -117,7 +112,7 @@ export class SectionWidget extends BaseLatexWidget {
       editableSpan.style.width = '100%';
       editableSpan.style.minHeight = '100%';
       editableSpan.style.background = 'rgba(255, 255, 255, 0.95)';
-      editableSpan.style.color = originalColor || '#333'; // Ensure visible color
+      editableSpan.style.color = originalColor || '#333';
       editableSpan.style.outline = '2px solid #007acc';
       editableSpan.style.outlineOffset = '1px';
       editableSpan.style.padding = '2px 4px';
@@ -130,36 +125,31 @@ export class SectionWidget extends BaseLatexWidget {
       editableSpan.style.zIndex = '1000';
       editableSpan.style.boxSizing = 'border-box';
 
-      // Hide original text by making it transparent, but keep layout
       element.style.color = 'transparent';
 
       element.appendChild(editableSpan);
 
-      // Focus and select
       setTimeout(() => {
         editableSpan!.focus();
 
         if (clickX !== undefined) {
-          // Try to position cursor based on click
-          const selection = window.getSelection();
-          const range = document.createRange();
-
           try {
             if (editableSpan!.firstChild) {
               const textNode = editableSpan!.firstChild;
               const text = textNode.textContent || '';
               const rect = editableSpan!.getBoundingClientRect();
-              const relativeX = clickX - rect.left - 4; // Account for padding
-              const charWidth = (rect.width - 8) / text.length; // Account for padding
+              const relativeX = clickX - rect.left - 4;
+              const charWidth = (rect.width - 8) / text.length;
               const charIndex = Math.max(0, Math.min(Math.round(relativeX / charWidth), text.length));
 
+              const range = document.createRange();
               range.setStart(textNode, charIndex);
               range.setEnd(textNode, charIndex);
+              const selection = window.getSelection();
               selection?.removeAllRanges();
               selection?.addRange(range);
             }
           } catch (e) {
-            // Fallback to select all
             const selection = window.getSelection();
             const range = document.createRange();
             range.selectNodeContents(editableSpan!);
@@ -167,7 +157,6 @@ export class SectionWidget extends BaseLatexWidget {
             selection?.addRange(range);
           }
         } else {
-          // Select all text
           const selection = window.getSelection();
           const range = document.createRange();
           range.selectNodeContents(editableSpan!);
@@ -182,7 +171,7 @@ export class SectionWidget extends BaseLatexWidget {
 
         const newContent = editableSpan.textContent || '';
         element.textContent = newContent;
-        element.style.color = originalColor; // Restore original color
+        element.style.color = originalColor;
 
         if (editableSpan.parentNode) {
           editableSpan.parentNode.removeChild(editableSpan);
@@ -194,7 +183,6 @@ export class SectionWidget extends BaseLatexWidget {
         }
       };
 
-      // Handle events on the editable span
       editableSpan.addEventListener('blur', finishEditing);
 
       editableSpan.addEventListener('keydown', (e) => {
@@ -212,7 +200,6 @@ export class SectionWidget extends BaseLatexWidget {
         }
       });
 
-      // Prevent clicks from bubbling up
       editableSpan.addEventListener('mousedown', (e) => {
         e.stopPropagation();
       });
@@ -222,7 +209,6 @@ export class SectionWidget extends BaseLatexWidget {
       });
     };
 
-    // Handle clicks on the main element
     element.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -237,7 +223,6 @@ export class SectionWidget extends BaseLatexWidget {
       e.stopPropagation();
     });
 
-    // Double-click to select all
     element.addEventListener('dblclick', (e) => {
       e.preventDefault();
       e.stopPropagation();

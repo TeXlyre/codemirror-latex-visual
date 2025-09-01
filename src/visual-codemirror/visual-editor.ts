@@ -32,13 +32,11 @@ const visualDecorationsField = StateField.define<DecorationSet>({
       return Decoration.none;
     }
 
-    // Always regenerate decorations when document changes in visual mode
     if (tr.docChanged || tr.effects.some(e => e.is(toggleVisualEffect))) {
       const overlayManager = new OverlayManager();
       return overlayManager.createDecorations(tr.state);
     }
 
-    // Map existing decorations to new positions
     return decorations.map(tr.changes);
   },
   provide: f => EditorView.decorations.from(f)
@@ -60,9 +58,6 @@ export class VisualCodeMirrorEditor {
       visualModeField,
       visualDecorationsField,
       EditorView.theme({
-        '.cm-visual-mode .cm-line': {
-          position: 'relative'
-        },
         '.latex-visual-widget': {
           display: 'inline-block',
           position: 'relative'
@@ -129,14 +124,7 @@ export class VisualCodeMirrorEditor {
     this.isVisualMode = enabled;
 
     this.cmEditor.dispatch({
-      effects: [
-        toggleVisualEffect.of(enabled),
-        StateEffect.appendConfig.of(
-          enabled ?
-            EditorView.theme({ '.cm-editor': { className: 'cm-visual-mode' } }) :
-            EditorView.theme({ '.cm-editor': { className: '' } })
-        )
-      ]
+      effects: [toggleVisualEffect.of(enabled)]
     });
 
     this.options.onModeChange?.(enabled ? 'visual' : 'source');

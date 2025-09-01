@@ -18,19 +18,22 @@ export abstract class BaseLatexWidget extends WidgetType {
   }
 
   updateDOM(dom: HTMLElement, view: EditorView): boolean {
-    // Since eq() returned false, we know an update is required.
-    // The unreliable isEqualNode check is removed.
     const newElement = this.toDOM(view);
     dom.replaceWith(newElement);
-
-    // Return true to tell CodeMirror the DOM has been updated.
     return true;
   }
 
   abstract toDOM(view: EditorView): HTMLElement;
 
   ignoreEvent(event: Event): boolean {
-    // Never ignore events - let them all reach the widget content
+    if (event.type === 'mousedown' || event.type === 'click') {
+      const target = event.target as HTMLElement;
+      if (target.closest('.latex-visual-widget, .latex-visual-section, .latex-visual-math-inline, .latex-visual-math-display, .latex-visual-environment, .latex-visual-command, .latex-visual-table')) {
+        return false;
+      }
+      return true;
+    }
+
     return false;
   }
 
@@ -41,7 +44,6 @@ export abstract class BaseLatexWidget extends WidgetType {
     element.style.userSelect = 'text';
     element.style.webkitUserSelect = 'text';
 
-    // Only stop propagation for specific events that need it
     element.addEventListener('mousedown', (e) => {
       e.stopPropagation();
     });

@@ -13,9 +13,7 @@ export class MathWidget extends BaseLatexWidget {
 
   toDOM(view: EditorView): HTMLElement {
     const container = document.createElement('div');
-    container.className = this.isDisplay ?
-      'latex-visual-math-display' :
-      'latex-visual-math-inline';
+    container.className = `${this.isDisplay ? 'latex-visual-math-display' : 'latex-visual-math-inline'} latex-visual-widget`;
 
     if (this.showCommands) {
       const wrapper = document.createElement('div');

@@ -9,7 +9,7 @@ export class CommandWidget extends BaseLatexWidget {
 
     if (this.showCommands) {
       const wrapper = document.createElement('span');
-      wrapper.className = 'latex-command-raw';
+      wrapper.className = 'latex-command-raw latex-visual-widget';
       wrapper.style.display = 'inline-block';
       wrapper.style.margin = '0 2px';
       wrapper.style.padding = '2px 6px';
