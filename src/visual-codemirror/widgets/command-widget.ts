@@ -37,7 +37,10 @@ export class CommandWidget extends BaseLatexWidget {
 
     const span = document.createElement('span');
     span.className = `latex-visual-command ${cmdName}`;
-    span.textContent = content;
+
+    // Ensure content is always a string
+    const textContent = this.extractTextContent(content);
+    span.textContent = textContent;
 
     switch (cmdName) {
       case 'textbf':
@@ -78,7 +81,7 @@ export class CommandWidget extends BaseLatexWidget {
     }
 
     this.makeEditable(span, view, (newContent) => {
-      if (newContent !== content) {
+      if (newContent !== textContent) {
         let newLatex;
         if (colorArg) {
           newLatex = `\\${cmdName}{${colorArg}}{${newContent}}`;
@@ -90,5 +93,29 @@ export class CommandWidget extends BaseLatexWidget {
     });
 
     return span;
+  }
+
+  private extractTextContent(content: string | any): string {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (Array.isArray(content)) {
+      return content.map(item => {
+        if (typeof item === 'string') {
+          return item;
+        }
+        if (item && typeof item === 'object' && item.content) {
+          return this.extractTextContent(item.content);
+        }
+        return '';
+      }).join('');
+    }
+
+    if (content && typeof content === 'object' && content.content) {
+      return this.extractTextContent(content.content);
+    }
+
+    return String(content || '');
   }
 }
