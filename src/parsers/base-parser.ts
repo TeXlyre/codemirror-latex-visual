@@ -1,5 +1,5 @@
 export interface LatexToken {
-  type: 'text' | 'math_inline' | 'math_display' | 'section' | 'environment' | 'command' | 'comment' | 'paragraph_break' | 'mixed_paragraph' | 'editable_command';
+  type: 'text' | 'math_inline' | 'math_display' | 'section' | 'environment' | 'command' | 'comment' | 'paragraph_break' | 'mixed_paragraph' | 'editable_command' | 'unknown_command' | 'table';
   content: string;
   latex: string;
   start: number;

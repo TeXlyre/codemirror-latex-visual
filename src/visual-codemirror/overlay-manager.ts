@@ -84,7 +84,7 @@ export class OverlayManager {
 
           case 'editable_command':
           case 'command':
-            if (token.name && ['textbf', 'textit', 'emph', 'underline', 'textcolor', 'colorbox'].includes(token.name)) {
+            if (token.name) {
               widget = new CommandWidget(token);
               if (widget) {
                 decorations.push(Decoration.replace({

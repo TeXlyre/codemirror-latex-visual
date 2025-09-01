@@ -1,5 +1,6 @@
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
+import { LatexToken } from '../../parsers/base-parser';
 
 export class CommandWidget extends BaseLatexWidget {
   toDOM(view: EditorView): HTMLElement {
@@ -38,49 +39,17 @@ export class CommandWidget extends BaseLatexWidget {
     const span = document.createElement('span');
     span.className = `latex-visual-command ${cmdName}`;
 
-    // Ensure content is always a string
-    const textContent = this.extractTextContent(content);
-    span.textContent = textContent;
-
-    switch (cmdName) {
-      case 'textbf':
-        span.style.fontWeight = 'bold';
-        break;
-      case 'textit':
-      case 'emph':
-        span.style.fontStyle = 'italic';
-        break;
-      case 'underline':
-        span.style.textDecoration = 'underline';
-        break;
-      case 'textsc':
-        span.style.fontVariant = 'small-caps';
-        break;
-      case 'textsf':
-        span.style.fontFamily = 'sans-serif';
-        break;
-      case 'texttt':
-        span.style.fontFamily = 'monospace';
-        span.style.background = 'rgba(0, 0, 0, 0.05)';
-        span.style.borderRadius = '2px';
-        span.style.padding = '1px 2px';
-        break;
-      case 'textcolor':
-      case 'color':
-        if (colorArg) {
-          span.style.color = colorArg;
-        }
-        break;
-      case 'colorbox':
-        if (colorArg) {
-          span.style.backgroundColor = colorArg;
-          span.style.padding = '2px 4px';
-          span.style.borderRadius = '2px';
-        }
-        break;
+    if (this.token.children && this.token.children.length > 0) {
+      this.renderNestedContent(span, this.token.children, view);
+    } else {
+      const textContent = this.extractTextContent(content);
+      span.textContent = textContent;
     }
 
+    this.applyCommandStyles(span, cmdName, colorArg);
+
     this.makeEditable(span, view, (newContent) => {
+      const textContent = this.extractTextContent(content);
       if (newContent !== textContent) {
         let newLatex;
         if (colorArg) {
@@ -93,6 +62,67 @@ export class CommandWidget extends BaseLatexWidget {
     });
 
     return span;
+  }
+
+  private renderNestedContent(container: HTMLElement, children: LatexToken[], view: EditorView) {
+    children.forEach(child => {
+      if (child.type === 'text') {
+        const textNode = document.createTextNode(child.content);
+        container.appendChild(textNode);
+      } else if (child.type === 'editable_command') {
+        const childSpan = document.createElement('span');
+        childSpan.className = `latex-visual-command ${child.name}`;
+
+        if (child.children && child.children.length > 0) {
+          this.renderNestedContent(childSpan, child.children, view);
+        } else {
+          childSpan.textContent = this.extractTextContent(child.content);
+        }
+
+        this.applyCommandStyles(childSpan, child.name || '', child.colorArg || '');
+        container.appendChild(childSpan);
+      }
+    });
+  }
+
+  private applyCommandStyles(element: HTMLElement, cmdName: string, colorArg: string) {
+    switch (cmdName) {
+      case 'textbf':
+        element.style.fontWeight = 'bold';
+        break;
+      case 'textit':
+      case 'emph':
+        element.style.fontStyle = 'italic';
+        break;
+      case 'underline':
+        element.style.textDecoration = 'underline';
+        break;
+      case 'textsc':
+        element.style.fontVariant = 'small-caps';
+        break;
+      case 'textsf':
+        element.style.fontFamily = 'sans-serif';
+        break;
+      case 'texttt':
+        element.style.fontFamily = 'monospace';
+        element.style.background = 'rgba(0, 0, 0, 0.05)';
+        element.style.borderRadius = '2px';
+        element.style.padding = '1px 2px';
+        break;
+      case 'textcolor':
+      case 'color':
+        if (colorArg) {
+          element.style.color = colorArg;
+        }
+        break;
+      case 'colorbox':
+        if (colorArg) {
+          element.style.backgroundColor = colorArg;
+          element.style.padding = '2px 4px';
+          element.style.borderRadius = '2px';
+        }
+        break;
+    }
   }
 
   private extractTextContent(content: string | any): string {
