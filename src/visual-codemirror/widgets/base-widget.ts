@@ -86,29 +86,6 @@ export abstract class BaseLatexWidget extends WidgetType {
     return element;
   }
 
-  protected createCommandWrapper(content: HTMLElement, cmdName: string): HTMLElement {
-    if (!this.showCommands) {
-      return content;
-    }
-
-    const wrapper = document.createElement('span');
-    wrapper.className = 'latex-command-wrapper';
-
-    const prefix = document.createElement('span');
-    prefix.className = 'latex-cmd-prefix';
-    prefix.textContent = `\\${cmdName}{`;
-
-    const suffix = document.createElement('span');
-    suffix.className = 'latex-cmd-suffix';
-    suffix.textContent = '}';
-
-    wrapper.appendChild(prefix);
-    wrapper.appendChild(content);
-    wrapper.appendChild(suffix);
-
-    return wrapper;
-  }
-
   protected findTokenInDocument(view: EditorView) {
     const doc = view.state.doc;
     const text = doc.toString();
