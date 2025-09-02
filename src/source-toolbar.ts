@@ -1,4 +1,5 @@
 import { EditorView } from '@codemirror/view';
+import { TableSelector, TableDimensions } from './components/table-selector';
 
 export interface SourceToolbarOptions {
   showLatexCommands?: boolean;
@@ -8,6 +9,7 @@ export class SourceToolbar {
   private container: HTMLElement;
   private cmEditor: EditorView;
   private options: SourceToolbarOptions;
+  private tableSelector?: TableSelector;
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: SourceToolbarOptions = {}) {
     this.container = container;
@@ -39,6 +41,14 @@ export class SourceToolbar {
           </button>
         </div>
         <div class="toolbar-group">
+          <div class="toolbar-table-container">
+            <button class="toolbar-btn" data-command="table" title="Insert Table">
+              <span>⊞</span>
+            </button>
+            <div class="table-selector-dropdown"></div>
+          </div>
+        </div>
+        <div class="toolbar-group">
           <select class="toolbar-select" data-command="section">
             <option value="">Heading</option>
             <option value="section">Section</option>
@@ -54,6 +64,16 @@ export class SourceToolbar {
     `;
 
     this.attachEventListeners();
+    this.setupTableSelector();
+  }
+
+  private setupTableSelector() {
+    const dropdown = this.container.querySelector('.table-selector-dropdown') as HTMLElement;
+    if (dropdown) {
+      this.tableSelector = new TableSelector(dropdown, (dimensions) => {
+        this.insertTable(dimensions);
+      });
+    }
   }
 
   private attachEventListeners() {
@@ -63,7 +83,10 @@ export class SourceToolbar {
 
       if (btn) {
         const command = btn.dataset.command;
-        if (command !== 'textcolor' && command !== 'colorbox') {
+        if (command === 'table') {
+          e.preventDefault();
+          this.toggleTableSelector();
+        } else if (command !== 'textcolor' && command !== 'colorbox') {
           e.preventDefault();
           this.executeCommand(command!, btn);
         }
@@ -114,6 +137,23 @@ export class SourceToolbar {
         const colorboxInput = element as HTMLInputElement;
         this.insertColorCommand('colorbox', colorboxInput.value, selectedText);
         break;
+    }
+  }
+
+  private toggleTableSelector() {
+    if (!this.tableSelector) return;
+
+    const dropdown = this.container.querySelector('.table-selector-dropdown') as HTMLElement;
+    if (!dropdown) return;
+
+    const computedStyle = window.getComputedStyle(dropdown);
+    const isVisible = dropdown.style.display === 'block' ||
+                     (dropdown.style.display !== 'none' && computedStyle.display === 'block');
+
+    if (isVisible) {
+      this.tableSelector.hide();
+    } else {
+      this.tableSelector.show();
     }
   }
 
@@ -175,6 +215,26 @@ export class SourceToolbar {
 
     const transaction = state.update({
       changes: { from, to, insert: latexCommand },
+      selection: { anchor: cursorPos }
+    });
+
+    this.cmEditor.dispatch(transaction);
+    this.cmEditor.focus();
+  }
+
+  private insertTable(dimensions: TableDimensions) {
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
+
+    const alignment = 'l'.repeat(dimensions.cols);
+    const emptyRow = Array(dimensions.cols).fill('').join(' & ');
+    const rows = Array(dimensions.rows).fill(emptyRow).join(' \\\\\n');
+
+    const tableLatex = `\\begin{tabular}{${alignment}}\n${rows}\n\\end{tabular}`;
+    const cursorPos = from + `\\begin{tabular}{${alignment}}\n`.length;
+
+    const transaction = state.update({
+      changes: { from, to, insert: tableLatex },
       selection: { anchor: cursorPos }
     });
 

@@ -1,8 +1,6 @@
 export { DualLatexEditor, latexVisualKeymap } from './dual-editor';
-export { parseLatexToProseMirror, renderProseMirrorToLatex } from './latex-parser';
-export { latexVisualSchema } from './prosemirror-schema';
-export { SyncManager } from './sync-manager';
-export { createLatexInputRules } from './prosemirror-input-rules';
+export { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
+export { OverlayManager } from './visual-codemirror/overlay-manager';
 export { VisualToolbar } from './visual-toolbar';
 export { SourceToolbar } from './source-toolbar';
 
@@ -13,13 +11,13 @@ export { MathParser } from './parsers/math-parser';
 export { SectionParser } from './parsers/section-parser';
 export { EnvironmentParser } from './parsers/environment-parser';
 export { CommandParser, EDITABLE_COMMANDS, FORMATTING_COMMANDS } from './parsers/command-parser';
-export { ParagraphParser } from './parsers/paragraph-parser';
+export { TableParser } from './parsers/table-parser';
 
-export * from './renderers/base-renderer';
-export { LatexRenderer } from './renderers/main-renderer';
-export { CommentRenderer } from './renderers/comment-renderer';
-export { MathRenderer } from './renderers/math-renderer';
-export { SectionRenderer } from './renderers/section-renderer';
-export { EnvironmentRenderer } from './renderers/environment-renderer';
-export { CommandRenderer } from './renderers/command-renderer';
-export { ParagraphRenderer } from './renderers/paragraph-renderer';
+export * from './visual-codemirror/widgets/base-widget';
+export { SectionWidget } from './visual-codemirror/widgets/section-widget';
+export { MathWidget } from './visual-codemirror/widgets/math-widget';
+export { EnvironmentWidget } from './visual-codemirror/widgets/environment-widget';
+export { CommandWidget } from './visual-codemirror/widgets/command-widget';
+export { TableWidget } from './visual-codemirror/widgets/table-widget';
+
+export { TableSelector, TableDimensions } from './components/table-selector';

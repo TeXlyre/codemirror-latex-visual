@@ -19,36 +19,36 @@
   <main>
     <section class="demo-container">
       <h2>Side-by-Side Demo</h2>
-      <p>See how changes in either editor update the other in real-time. Click math equations to edit them interactively.</p>
+      <p>See how the new CodeMirror-based visual editor renders LaTeX with overlay widgets. The left editor shows raw LaTeX source, while the right shows the same content with visual overlays for sections, math, and commands.</p>
       <div class="editors-grid">
         <div class="editor-panel">
           <h3>CodeMirror (Source)</h3>
           <div id="codemirror-editor"></div>
         </div>
         <div class="editor-panel">
-          <h3>ProseMirror (Visual)</h3>
+          <h3>CodeMirror (Visual Overlays)</h3>
           <div id="prosemirror-editor"></div>
         </div>
       </div>
 
       <div class="single-editor-demo">
         <h2>Integrated Dual Editor</h2>
-        <p>Toggle between source and visual editing modes. Press <kbd>Ctrl+E</kbd> to switch modes. In visual mode, click any math equation to edit it with the full MathLive interface.</p>
+        <p>Toggle between source and visual editing modes. Press <kbd>Ctrl+E</kbd> to switch modes. In visual mode, LaTeX elements are replaced with visual widgets. Press <kbd>Ctrl+Shift+C</kbd> to toggle command visibility. Click any math equation to edit it with MathLive.</p>
         <div id="dual-editor"></div>
       </div>
     </section>
 
     <section class="features">
-      <h2>Features</h2>
+      <h2>New Architecture Features</h2>
       <ul>
-        <li>Visual editing - LaTeX source remains authoritative</li>
-        <li>Interactive math editing with MathLive's equation editor</li>
-        <li>Virtual keyboard and advanced math input features</li>
-        <li>Real-time bidirectional synchronization between editors</li>
-        <li>Visual rendering of sections and environments</li>
-        <li>Mode switching with keyboard shortcut (Ctrl+E)</li>
-        <li>Works with any existing CodeMirror setup</li>
-        <li>Extensible schema for custom LaTeX constructs</li>
+        <li><strong>Single Editor:</strong> Uses CodeMirror with visual overlays instead of dual editors</li>
+        <li><strong>Perfect Sync:</strong> No synchronization needed - visual widgets correspond exactly to source positions</li>
+        <li><strong>Interactive Math:</strong> Click math equations to edit with MathLive's interface</li>
+        <li><strong>Visual Widgets:</strong> Sections, environments, tables, and commands rendered as visual overlays</li>
+        <li><strong>Command Toggle:</strong> Show/hide LaTeX commands in visual mode (Ctrl+Shift+C)</li>
+        <li><strong>Direct Editing:</strong> All changes update the source document directly</li>
+        <li><strong>Better Performance:</strong> No document conversion overhead</li>
+        <li><strong>Extensible:</strong> Easy to add new widget types for custom LaTeX constructs</li>
       </ul>
     </section>
 
@@ -58,9 +58,9 @@
     </section>
 
     <section class="usage">
-      <h2>Usage</h2>
+      <h2>Updated Usage</h2>
       <pre><code>import { EditorState, EditorView } from '@codemirror/state';
-import { DualLatexEditor } from 'codemirror-latex-visual';
+import { DualLatexEditor, VisualCodeMirrorEditor } from 'codemirror-latex-visual';
 import 'codemirror-latex-visual/dist/styles.css';
 
 // Create your CodeMirror editor
@@ -72,32 +72,59 @@ const cmEditor = new EditorView({
   parent: document.getElementById('cm-container')
 });
 
-// Add visual editing capability
+// Option 1: Dual editor with mode switching
 const dualEditor = new DualLatexEditor(
   document.getElementById('editor-wrapper'),
   cmEditor,
   {
     initialMode: 'source',
+    showCommands: false,
     onModeChange: (mode) => console.log('Switched to:', mode)
   }
-);</code></pre>
+);
+
+// Option 2: Always-visual editor
+const visualEditor = new VisualCodeMirrorEditor(cmEditor, {
+  showCommands: false
+});
+visualEditor.setVisualMode(true);</code></pre>
     </section>
 
     <section class="api">
-      <h2>API Reference</h2>
+      <h2>Updated API Reference</h2>
       <h3>DualLatexEditor</h3>
       <pre><code>const dualEditor = new DualLatexEditor(container, cmEditor, options);
 
 // Methods
-dualEditor.setMode('visual');  // Switch to visual mode
-dualEditor.setMode('source');  // Switch to source mode
-dualEditor.destroy();          // Clean up resources
+dualEditor.setMode('visual');           // Switch to visual mode
+dualEditor.setMode('source');           // Switch to source mode
+dualEditor.toggleMode();                // Toggle between modes
+dualEditor.toggleCommandVisibility();   // Toggle LaTeX command display
+dualEditor.toggleToolbar();             // Toggle toolbar display
+dualEditor.destroy();                   // Clean up resources
 
 // Options
 {
-  initialMode: 'source' | 'visual',  // Default: 'source'
-  onModeChange: (mode) => void,      // Mode change callback
-  className: string                  // Additional CSS class
+  initialMode: 'source' | 'visual',      // Default: 'source'
+  onModeChange: (mode) => void,          // Mode change callback
+  showCommands: boolean,                 // Show LaTeX commands in visual mode
+  showToolbar: boolean,                  // Show formatting toolbar
+  className: string                      // Additional CSS class
+}</code></pre>
+
+      <h3>VisualCodeMirrorEditor</h3>
+      <pre><code>const visualEditor = new VisualCodeMirrorEditor(cmEditor, options);
+
+// Methods
+visualEditor.setVisualMode(true);       // Enable visual overlays
+visualEditor.setVisualMode(false);      // Disable visual overlays
+visualEditor.toggleMode();              // Toggle visual mode
+visualEditor.destroy();                 // Clean up
+
+// Options
+{
+  showCommands: boolean,                 // Show LaTeX commands
+  onModeChange: (mode) => void          // Mode change callback
 }</code></pre>
     </section>
   </main>

@@ -16,7 +16,7 @@
   flex-shrink: 0;
 }
 
-.mode-btn, .toggle-cmd-btn {
+.mode-btn, .toggle-cmd-btn, .toggle-toolbar-btn {
   padding: 6px 12px;
   border: 1px solid #ccc;
   background: white;
@@ -25,7 +25,7 @@
   font-size: 13px;
 }
 
-.mode-btn:hover, .toggle-cmd-btn:hover {
+.mode-btn:hover, .toggle-cmd-btn:hover, .toggle-toolbar-btn:hover {
   background: #f8f8f8;
 }
 
@@ -35,7 +35,7 @@
   border-color: #007acc;
 }
 
-.toggle-cmd-btn.active {
+.toggle-cmd-btn.active, .toggle-toolbar-btn.active {
   background: #28a745;
   color: white;
   border-color: #28a745;
@@ -112,6 +112,66 @@
   padding: 2px;
 }
 
+.toolbar-table-container {
+  position: relative;
+}
+
+.table-selector-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  min-width: 180px;
+  max-height: 300px;
+  overflow: visible;
+}
+
+.table-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.table-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 16px);
+  grid-template-rows: repeat(8, 16px);
+  gap: 1px;
+  margin-bottom: 8px;
+  border: 1px solid #ddd;
+  padding: 2px;
+  background: white;
+}
+
+.table-grid-cell {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  background: #f8f8f8;
+  transition: background-color 0.1s ease;
+}
+
+.table-grid-cell.highlighted {
+  background: #007acc;
+  border-color: #005c99;
+}
+
+.table-selector-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .latex-editors-container {
   flex: 1;
   display: flex;
@@ -119,8 +179,7 @@
   min-height: 0;
 }
 
-.codemirror-container,
-.prosemirror-container {
+.codemirror-container {
   flex: 1;
   min-height: 0;
 }
@@ -129,26 +188,34 @@
   height: 100%;
 }
 
-.prosemirror-container {
-  padding: 10px;
-  box-sizing: border-box;
-  overflow: auto;
+/* Visual mode styles for CodeMirror */
+.cm-visual-mode .latex-visual-widget {
+  display: inline-block;
+  position: relative;
 }
 
-.prosemirror-container .ProseMirror {
-  outline: none;
-  min-height: 100%;
+.latex-visual-section {
+  display: block;
+  font-weight: bold;
+  margin: 1em 0 0.5em 0;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.2em;
 }
 
-.prosemirror-container .ProseMirror p:first-child {
-  margin-top: 0;
+.latex-visual-section-1 {
+  font-size: 1.8em;
 }
 
-.prosemirror-container .ProseMirror p:last-child {
-  margin-bottom: 0;
+.latex-visual-section-2 {
+  font-size: 1.5em;
 }
 
-.latex-section-command {
+.latex-visual-section-3 {
+  font-size: 1.2em;
+}
+
+.latex-visual-section-command {
+  display: block;
   margin: 20px 0 10px 0;
   padding: 8px 12px;
   background: rgba(0, 123, 255, 0.1);
@@ -157,22 +224,54 @@
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
-.latex-section-command .cmd-prefix,
-.latex-section-command .cmd-suffix {
+.latex-cmd-prefix,
+.latex-cmd-suffix {
   color: #007acc;
   font-weight: 600;
   user-select: none;
 }
 
-.latex-section-command .cmd-content {
+.latex-cmd-content {
   font-weight: bold;
   color: #333;
-  font-family: inherit;
 }
 
-.latex-section-level-1 { font-size: 1.8em; }
-.latex-section-level-2 { font-size: 1.5em; }
-.latex-section-level-3 { font-size: 1.2em; }
+.latex-visual-math-inline {
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: 0 1px;
+  cursor: pointer;
+}
+
+.latex-visual-math-display {
+  display: block;
+  background: rgba(0, 123, 255, 0.05);
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px 0;
+  text-align: center;
+  cursor: pointer;
+}
+
+.latex-math-command-wrapper {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  background: rgba(111, 66, 193, 0.1);
+  border: 1px solid rgba(111, 66, 193, 0.3);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.latex-visual-environment {
+  display: block;
+  margin: 10px 0;
+  padding: 10px;
+  border-left: 3px solid #28a745;
+  background: rgba(40, 167, 69, 0.05);
+  border-radius: 4px;
+}
 
 .latex-env-command {
   margin: 10px 0;
@@ -183,20 +282,61 @@
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
-.latex-env-command .env-begin,
-.latex-env-command .env-end {
+.env-begin,
+.env-end {
   color: #28a745;
   font-weight: 600;
   margin: 5px 0;
 }
 
-.latex-env-command .env-content {
+.env-content {
   margin: 10px 0;
   padding-left: 20px;
   border-left: 2px solid rgba(40, 167, 69, 0.3);
 }
 
-.latex-editable-command-raw {
+.env-header {
+  font-weight: bold;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  text-transform: capitalize;
+}
+
+.latex-visual-command {
+  display: inline;
+  padding: 1px 2px;
+  border-radius: 2px;
+  background: rgba(0, 123, 255, 0.1);
+}
+
+.latex-visual-command.textbf {
+  font-weight: bold;
+}
+
+.latex-visual-command.textit {
+  font-style: italic;
+}
+
+.latex-visual-command.underline {
+  text-decoration: underline;
+}
+
+.latex-visual-command.textsc {
+  font-variant: small-caps;
+}
+
+.latex-visual-command.textsf {
+  font-family: sans-serif;
+}
+
+.latex-visual-command.texttt {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+
+.latex-command-raw {
   display: inline-block;
   margin: 0 2px;
   padding: 2px 6px;
@@ -208,95 +348,94 @@
   color: #dc3545;
 }
 
-.latex-editable-command-raw .cmd-prefix,
-.latex-editable-command-raw .cmd-suffix {
-  color: #dc3545;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.9em;
-  font-weight: 600;
-  user-select: none;
-}
-
-.latex-editable-command-raw .cmd-content-raw {
-  font-family: inherit;
-  color: inherit;
-}
-
-.latex-editable-command.hide-commands .cmd-label {
-  display: none;
-}
-
-.latex-editable-command.hide-commands {
-  display: inline;
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  transition: none;
-  position: static;
-}
-
-.latex-editable-command.hide-commands:hover {
-  background: transparent;
-  border: none;
-}
-
-.latex-editable-command-visual {
-  display: inline;
-}
-
-.latex-editable-command-visual.latex-cmd-textbf {
-  font-weight: bold;
-}
-
-.latex-editable-command-visual.latex-cmd-textit,
-.latex-editable-command-visual.latex-cmd-emph {
-  font-style: italic;
-}
-
-.latex-editable-command-visual.latex-cmd-underline {
-  text-decoration: underline;
-}
-
-.latex-editable-command-visual.latex-cmd-textsc {
-  font-variant: small-caps;
-}
-
-.latex-editable-command-visual.latex-cmd-textsf {
-  font-family: sans-serif;
-}
-
-.latex-editable-command-visual.latex-cmd-texttt {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 2px;
-  padding: 1px 2px;
-}
-
-.math-inline-container {
+.latex-command-wrapper {
   display: inline-block;
-  position: relative;
-  min-width: 3em;
-  cursor: pointer;
+  margin: 0 1px;
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 3px;
+  background: rgba(0, 123, 255, 0);
+  transition: all 0.2s ease;
 }
 
-.math-display-container {
-  display: block;
-  position: relative;
+.latex-command-wrapper:hover {
+  background: rgba(0, 123, 255, 0.1);
+  border-color: rgba(0, 123, 255, 0.5);
+}
+
+.latex-visual-table {
+  border-collapse: collapse;
   margin: 10px 0;
-  cursor: pointer;
+  width: 100%;
+  border: 1px solid #ddd;
 }
 
-.math-inline-container:hover,
-.math-display-container:hover {
-  background: rgba(0, 123, 255, 0.05);
+.latex-table-cell {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  min-width: 60px;
+}
+
+.latex-table-command {
+  margin: 10px 0;
+  padding: 10px;
+  background: rgba(111, 66, 193, 0.1);
+  border: 1px solid rgba(111, 66, 193, 0.3);
   border-radius: 4px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.table-begin,
+.table-end {
+  color: #6f42c1;
+  font-weight: 600;
+  margin: 5px 0;
+  font-size: 0.9em;
+}
+
+/* MathLive styles */
+math-field.math-inline-field {
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: 0 1px;
+  font-size: 1em;
+  cursor: pointer;
+  min-width: 3em;
+  pointer-events: auto;
+}
+
+math-field.math-display-field {
+  background: rgba(0, 123, 255, 0.05);
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px 0;
+  width: 100%;
+  font-size: 1.2em;
+  cursor: pointer;
+  min-height: 3em;
+  pointer-events: auto;
+  box-sizing: border-box;
+  display: block;
+}
+
+math-field:hover {
+  background: rgba(0, 123, 255, 0.15);
+  border-color: rgba(0, 123, 255, 0.5);
+}
+
+math-field:focus,
+math-field:focus-within,
+math-field.focused {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
+  background: rgba(0, 123, 255, 0.1);
+  border-color: #007acc;
 }
 
 .math-edit-indicator {
   position: absolute;
-  top: -6px;
-  right: -6px;
   width: 14px;
   height: 14px;
   background: #007acc;
@@ -311,14 +450,6 @@
   pointer-events: none;
   z-index: 10;
   user-select: none;
-}
-
-.math-edit-indicator-display {
-  top: 6px;
-  right: 6px;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
 }
 
 .math-edit-indicator.visible {
@@ -364,193 +495,23 @@
   color: white;
 }
 
-.math-inline-field.editing {
-  display: block;
-  min-width: 4em;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
+.math-inline-field.editing,
 .math-display-field.editing {
   display: block;
   width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
+}
+
+.math-inline-field.editing {
+  min-width: 4em;
+}
+
+.math-display-field.editing {
   min-height: 2em;
-  box-sizing: border-box;
 }
 
-math-field.math-inline-field {
-  background: rgba(0, 123, 255, 0.1);
-  border: 1px solid rgba(0, 123, 255, 0.3);
-  border-radius: 3px;
-  padding: 2px 4px;
-  margin: 0 1px;
-  font-size: 1em;
-  cursor: pointer;
-  min-width: 3em;
-  pointer-events: auto;
-}
-
-math-field.math-display-field {
-  background: rgba(0, 123, 255, 0.05);
-  border: 1px solid rgba(0, 123, 255, 0.2);
-  border-radius: 4px;
-  padding: 10px;
-  margin: 10px 0;
-  width: 100%;
-  font-size: 1.2em;
-  cursor: pointer;
-  min-height: 3em;
-  pointer-events: auto;
-  box-sizing: border-box;
-}
-
-math-field:hover {
-  background: rgba(0, 123, 255, 0.15);
-  border-color: rgba(0, 123, 255, 0.5);
-}
-
-math-field:focus,
-math-field:focus-within,
-math-field.focused {
-  outline: 2px solid #007acc;
-  outline-offset: 1px;
-  background: rgba(0, 123, 255, 0.1);
-  border-color: #007acc;
-}
-
-math-field[contenteditable="false"] {
-  outline: none !important;
-}
-
-math-field:focus[contenteditable="false"] {
-  outline: 2px solid #007acc;
-  outline-offset: 1px;
-}
-
-.math-error {
-  background: #ffe6e6;
-  color: #cc0000;
-  border: 1px solid #ff9999;
-  border-radius: 3px;
-  padding: 2px 4px;
-}
-
-.latex-env {
-  margin: 10px 0;
-  padding: 10px;
-  border-left: 3px solid #28a745;
-  background: rgba(40, 167, 69, 0.05);
-}
-
-.latex-env-theorem {
-  border-left-color: #6f42c1;
-  background: rgba(111, 66, 193, 0.05);
-}
-
-.latex-env-proof {
-  border-left-color: #fd7e14;
-  background: rgba(253, 126, 20, 0.05);
-}
-
-.latex-command {
-  color: #d73a49;
-  font-weight: 500;
-}
-
-.latex-editable-command {
-  display: inline-block;
-  margin: 0 1px;
-  border: 1px solid rgba(0, 123, 255, 0.3);
-  border-radius: 3px;
-  background: rgba(0, 123, 255, 0);
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.latex-editable-command:hover {
-  background: rgba(0, 123, 255, 0.1);
-  border-color: rgba(0, 123, 255, 0.5);
-}
-
-.latex-editable-command .cmd-label {
-  color: #007acc;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.85em;
-  font-weight: 600;
-  padding: 1px 2px;
-  user-select: none;
-}
-
-.latex-editable-command .cmd-content {
-  padding: 1px 2px;
-  min-width: 1em;
-  display: inline-block;
-}
-
-.latex-cmd-textbf .cmd-content {
-  font-weight: bold;
-}
-
-.latex-cmd-textit .cmd-content,
-.latex-cmd-emph .cmd-content {
-  font-style: italic;
-}
-
-.latex-cmd-underline .cmd-content {
-  text-decoration: underline;
-}
-
-.latex-cmd-textsc .cmd-content {
-  font-variant: small-caps;
-}
-
-.latex-cmd-textsf .cmd-content {
-  font-family: sans-serif;
-}
-
-.latex-cmd-texttt .cmd-content {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 2px;
-}
-
-.latex-editable-command.latex-cmd-textcolor.hide-commands {
-  display: inline;
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-}
-
-.latex-editable-command.latex-cmd-textcolor.hide-commands .cmd-content {
-  color: inherit;
-}
-
-.latex-editable-command.latex-cmd-colorbox.hide-commands {
-  display: inline;
-  margin: 0;
-  border: none;
-  border-radius: 2px;
-  background: transparent;
-  padding: 2px 4px;
-}
-
-.latex-editable-command.latex-cmd-colorbox.hide-commands .cmd-content {
-  background-color: inherit;
-  padding: 2px 4px;
-  border-radius: 2px;
-}
-
-h1, h2, h3 {
-  margin: 20px 0 10px 0;
-}
-
-h1 { font-size: 1.8em; }
-h2 { font-size: 1.5em; }
-h3 { font-size: 1.2em; }
-
+/* MathLive virtual keyboard */
 .ML__keyboard {
   z-index: 1000;
 }
