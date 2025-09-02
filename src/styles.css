@@ -237,19 +237,15 @@
 }
 
 .latex-visual-math-inline {
-  background: rgba(0, 123, 255, 0.1);
-  border: 1px solid rgba(0, 123, 255, 0.3);
-  border-radius: 3px;
-  padding: 2px 4px;
+  background: none;
+  border: none;
   margin: 0 1px;
   cursor: pointer;
 }
 
 .latex-visual-math-display {
   display: block;
-  background: rgba(0, 123, 255, 0.05);
-  border: 1px solid rgba(0, 123, 255, 0.2);
-  border-radius: 4px;
+  background: none;
   padding: 10px;
   margin: 10px 0;
   text-align: center;
@@ -306,7 +302,7 @@
   display: inline;
   padding: 1px 2px;
   border-radius: 2px;
-  background: rgba(0, 123, 255, 0.1);
+  background: none;
 }
 
 .latex-visual-command.textbf {
@@ -349,17 +345,34 @@
 }
 
 .latex-command-wrapper {
-  display: inline-block;
-  margin: 0 1px;
-  border: 1px solid rgba(0, 123, 255, 0.3);
-  border-radius: 3px;
-  background: rgba(0, 123, 255, 0);
-  transition: all 0.2s ease;
+  position: relative;
+  display: inline;
+  cursor: text;
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.latex-command-wrapper:focus {
+  background: rgba(0, 123, 255, 0.05) !important;
+  outline: none;
 }
 
 .latex-command-wrapper:hover {
-  background: rgba(0, 123, 255, 0.1);
-  border-color: rgba(0, 123, 255, 0.5);
+  background: rgba(0, 123, 255, 0.03);
+}
+
+/* Make command widgets more visually distinct when focused */
+.latex-command-wrapper[tabindex="0"] {
+  padding: 1px 2px;
+  margin: -1px -2px;
+}
+
+/* Ensure editable spans have proper z-index */
+.latex-command-wrapper span[contenteditable="true"] {
+  position: relative;
+  z-index: 1000;
+  display: inline-block;
+  min-width: 3em;
 }
 
 .latex-visual-table {
@@ -394,9 +407,8 @@
 
 /* MathLive styles */
 math-field.math-inline-field {
-  background: rgba(0, 123, 255, 0.1);
-  border: 1px solid rgba(0, 123, 255, 0.3);
-  border-radius: 3px;
+  background: none;
+  border: none;
   padding: 2px 4px;
   margin: 0 1px;
   font-size: 1em;
@@ -406,9 +418,8 @@ math-field.math-inline-field {
 }
 
 math-field.math-display-field {
-  background: rgba(0, 123, 255, 0.05);
-  border: 1px solid rgba(0, 123, 255, 0.2);
-  border-radius: 4px;
+  background: none;
+  border: none;
   padding: 10px;
   margin: 10px 0;
   width: 100%;
@@ -421,8 +432,7 @@ math-field.math-display-field {
 }
 
 math-field:hover {
-  background: rgba(0, 123, 255, 0.15);
-  border-color: rgba(0, 123, 255, 0.5);
+  background: none;
 }
 
 math-field:focus,
@@ -430,7 +440,7 @@ math-field:focus-within,
 math-field.focused {
   outline: 2px solid #007acc;
   outline-offset: 1px;
-  background: rgba(0, 123, 255, 0.1);
+  background: none;
   border-color: #007acc;
 }
 

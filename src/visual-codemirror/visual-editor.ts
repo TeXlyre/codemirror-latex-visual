@@ -73,17 +73,15 @@ export class VisualCodeMirrorEditor {
         '.latex-visual-section-2': { fontSize: '1.5em' },
         '.latex-visual-section-3': { fontSize: '1.2em' },
         '.latex-visual-math-inline': {
-          background: 'rgba(0, 123, 255, 0.1)',
-          border: '1px solid rgba(0, 123, 255, 0.3)',
-          borderRadius: '3px',
-          padding: '2px 4px',
+          background: 'none',
+          border: 'none',
           margin: '0 1px',
           cursor: 'pointer'
         },
         '.latex-visual-math-display': {
           display: 'block',
-          background: 'rgba(0, 123, 255, 0.05)',
-          border: '1px solid rgba(0, 123, 255, 0.2)',
+          background: 'none',
+          border: 'none',
           borderRadius: '4px',
           padding: '10px',
           margin: '10px 0',
