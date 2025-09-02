@@ -96,14 +96,9 @@ export class TableWidget extends BaseLatexWidget {
             td.style.textAlign = 'left';
         }
 
-        if (cellData.hasWidgets) {
-          NestedContentRenderer.setupEditableNestedContent(td, cellData.content, view, () => {
-            this.updateTableContent(view, table, alignment);
-          }, this.showCommands);
-        } else {
-          td.contentEditable = 'true';
-          td.textContent = cellData.content;
-        }
+        // Always use simple contentEditable for table cells to prevent focus issues
+        td.contentEditable = 'true';
+        td.textContent = cellData.content;
 
         this.setupCellEvents(td, view, table, alignment);
         tr.appendChild(td);
@@ -124,7 +119,6 @@ export class TableWidget extends BaseLatexWidget {
 
     const rows = content.split('\\\\').map(row => row.trim());
     const colCount = alignment.length || 2;
-    const tokenizer = new LatexTokenizer();
 
     return rows.map(rowContent => {
       if (!rowContent) {
@@ -133,11 +127,8 @@ export class TableWidget extends BaseLatexWidget {
 
       const cells = rowContent.split('&').map(cell => {
         const trimmed = cell.trim();
-        const tokens = tokenizer.tokenize(trimmed);
-        const hasWidgets = tokens.some(token =>
-          token.type !== 'text' && token.type !== 'paragraph_break'
-        );
-        return {content: trimmed, hasWidgets};
+        // For now, treat all cells as simple text to avoid focus issues
+        return {content: trimmed, hasWidgets: false};
       });
 
       while (cells.length < colCount) {
@@ -149,40 +140,58 @@ export class TableWidget extends BaseLatexWidget {
 
   private setupCellEvents(cell: HTMLTableCellElement, view: EditorView, table: HTMLElement, alignment: string) {
     let updateTimeout: number;
+    let isUpdating = false;
 
     const scheduleUpdate = () => {
+      if (isUpdating) return;
       clearTimeout(updateTimeout);
       updateTimeout = window.setTimeout(() => {
+        isUpdating = true;
         this.updateTableContent(view, table, alignment);
-      }, 300);
+        setTimeout(() => { isUpdating = false; }, 100);
+      }, 1000); // Much longer delay
     };
 
-    cell.addEventListener('input', () => {
+    cell.addEventListener('input', (e) => {
+      e.stopPropagation();
+      // Only schedule update, don't do it immediately
       scheduleUpdate();
     });
 
     cell.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+
       if (e.key === 'Tab') {
         e.preventDefault();
+        // Save immediately on tab
+        clearTimeout(updateTimeout);
+        this.updateTableContent(view, table, alignment);
+
         const nextCell = this.getNextCell(cell, !e.shiftKey);
         if (nextCell) {
-          nextCell.focus();
-          const range = document.createRange();
-          const selection = window.getSelection();
-          if (nextCell.firstChild) {
-            range.setStart(nextCell.firstChild, 0);
-            range.setEnd(nextCell.firstChild, nextCell.textContent?.length || 0);
-          } else {
-            range.selectNodeContents(nextCell);
-          }
-          selection?.removeAllRanges();
-          selection?.addRange(range);
+          setTimeout(() => {
+            nextCell.focus();
+            const selection = window.getSelection();
+            if (selection) {
+              const range = document.createRange();
+              range.selectNodeContents(nextCell);
+              range.collapse(false); // Move cursor to end
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+          }, 50);
         }
       } else if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        // Save immediately on enter
+        clearTimeout(updateTimeout);
+        this.updateTableContent(view, table, alignment);
+
         const nextRow = this.getNextRowCell(cell);
         if (nextRow) {
-          nextRow.focus();
+          setTimeout(() => {
+            nextRow.focus();
+          }, 50);
         }
       }
     });
@@ -193,6 +202,19 @@ export class TableWidget extends BaseLatexWidget {
 
     cell.addEventListener('click', (e) => {
       e.stopPropagation();
+    });
+
+    cell.addEventListener('focus', (e) => {
+      e.stopPropagation();
+    });
+
+    // Only save on blur if user is actually leaving the table
+    cell.addEventListener('blur', (e) => {
+      const relatedTarget = e.relatedTarget as HTMLElement;
+      if (!relatedTarget || !table.contains(relatedTarget)) {
+        clearTimeout(updateTimeout);
+        this.updateTableContent(view, table, alignment);
+      }
     });
   }
 
@@ -233,12 +255,7 @@ export class TableWidget extends BaseLatexWidget {
 
     rows.forEach(row => {
       const cells = Array.from(row.querySelectorAll('td'));
-      const cellContents = cells.map(cell => {
-        if (cell.dataset.latexOriginal) {
-          return cell.dataset.latexOriginal;
-        }
-        return NestedContentRenderer.extractContentFromContainer(cell as HTMLElement);
-      });
+      const cellContents = cells.map(cell => (cell.textContent || '').trim());
       tableRows.push(cellContents.join(' & '));
     });
 

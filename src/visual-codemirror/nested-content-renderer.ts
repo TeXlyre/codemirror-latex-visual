@@ -3,7 +3,7 @@ import { LatexTokenizer } from '../parsers/main-parser';
 import { WidgetFactory } from './widget-factory';
 
 export class NestedContentRenderer {
-  private static tokenizer = new LatexTokenizer();
+  static tokenizer = new LatexTokenizer();
 
   static renderNestedContent(container: HTMLElement, content: string, view: EditorView, showCommands: boolean = false): void {
     const fragment = this.createNestedContent(content, view, showCommands);
@@ -17,11 +17,22 @@ export class NestedContentRenderer {
     onUpdate: (newContent: string) => void,
     showCommands: boolean = false
   ): void {
-    container.innerHTML = '';
-    const fragment = this.createNestedContent(content, view, showCommands);
-    container.appendChild(fragment);
+    // Only render nested content if it contains widgets, otherwise use plain text
+    const tokens = this.tokenizer.tokenize(content);
+    const hasComplexTokens = tokens.some(token =>
+      token.type !== 'text' && token.type !== 'paragraph_break'
+    );
 
-    this.makeContainerEditable(container, onUpdate);
+    if (hasComplexTokens) {
+      container.innerHTML = '';
+      const fragment = this.createNestedContent(content, view, showCommands);
+      container.appendChild(fragment);
+      this.makeContainerEditable(container, onUpdate);
+    } else {
+      // Simple text content - just make it directly editable
+      container.textContent = content;
+      this.makeSimpleEditable(container, onUpdate);
+    }
   }
 
   private static createNestedContent(content: string, view: EditorView, showCommands: boolean = false): DocumentFragment {
@@ -54,6 +65,53 @@ export class NestedContentRenderer {
     return fragment;
   }
 
+  private static makeSimpleEditable(container: HTMLElement, onUpdate: (newContent: string) => void): void {
+    container.contentEditable = 'true';
+    container.style.outline = 'none';
+    container.style.cursor = 'text';
+
+    let updateTimeout: number;
+    const scheduleUpdate = () => {
+      clearTimeout(updateTimeout);
+      updateTimeout = window.setTimeout(() => {
+        const newContent = container.textContent || '';
+        onUpdate(newContent);
+      }, 500); // Longer delay to avoid interrupting typing
+    };
+
+    container.addEventListener('input', (e) => {
+      e.stopPropagation();
+      scheduleUpdate();
+    });
+
+    container.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        container.blur();
+      }
+    });
+
+    container.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    container.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    container.addEventListener('focus', (e) => {
+      e.stopPropagation();
+    });
+
+    // Don't update on blur for simple text to avoid losing focus during typing
+    container.addEventListener('blur', () => {
+      clearTimeout(updateTimeout);
+      const newContent = container.textContent || '';
+      onUpdate(newContent);
+    });
+  }
+
   private static makeContainerEditable(container: HTMLElement, onUpdate: (newContent: string) => void): void {
     container.contentEditable = 'true';
     container.style.outline = 'none';
@@ -65,10 +123,11 @@ export class NestedContentRenderer {
       updateTimeout = window.setTimeout(() => {
         const newContent = this.extractContentFromContainer(container);
         onUpdate(newContent);
-      }, 300);
+      }, 500); // Longer delay for complex content too
     };
 
-    container.addEventListener('input', () => {
+    container.addEventListener('input', (e) => {
+      e.stopPropagation();
       scheduleUpdate();
     });
 
