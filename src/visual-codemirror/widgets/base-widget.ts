@@ -104,6 +104,18 @@ export abstract class BaseLatexWidget extends WidgetType {
     if (pos === null) return;
 
     const { from, to } = pos;
+
+    // Update the token's content immediately to prevent rerender conflicts
+    this.token.latex = newLatex;
+
+    // Extract new content from the latex if possible
+    if (newLatex.includes('{') && newLatex.includes('}')) {
+      const contentMatch = newLatex.match(/\{([^}]*)\}$/);
+      if (contentMatch) {
+        this.token.content = contentMatch[1];
+      }
+    }
+
     view.dispatch({
       changes: { from, to, insert: newLatex }
     });

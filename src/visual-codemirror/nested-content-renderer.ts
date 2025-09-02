@@ -17,7 +17,6 @@ export class NestedContentRenderer {
     onUpdate: (newContent: string) => void,
     showCommands: boolean = false
   ): void {
-    // Only render nested content if it contains widgets, otherwise use plain text
     const tokens = this.tokenizer.tokenize(content);
     const hasComplexTokens = tokens.some(token =>
       token.type !== 'text' && token.type !== 'paragraph_break'
@@ -29,7 +28,6 @@ export class NestedContentRenderer {
       container.appendChild(fragment);
       this.makeContainerEditable(container, onUpdate);
     } else {
-      // Simple text content - just make it directly editable
       container.textContent = content;
       this.makeSimpleEditable(container, onUpdate);
     }
@@ -70,18 +68,10 @@ export class NestedContentRenderer {
     container.style.outline = 'none';
     container.style.cursor = 'text';
 
-    let updateTimeout: number;
-    const scheduleUpdate = () => {
-      clearTimeout(updateTimeout);
-      updateTimeout = window.setTimeout(() => {
-        const newContent = container.textContent || '';
-        onUpdate(newContent);
-      }, 3000); // Much longer delay - 3 seconds
-    };
-
     container.addEventListener('input', (e) => {
       e.stopPropagation();
-      scheduleUpdate();
+      const newContent = container.textContent || '';
+      onUpdate(newContent);
     });
 
     container.addEventListener('keydown', (e) => {
@@ -104,9 +94,7 @@ export class NestedContentRenderer {
       e.stopPropagation();
     });
 
-    // Don't update on blur for simple text to avoid losing focus during typing
     container.addEventListener('blur', () => {
-      clearTimeout(updateTimeout);
       const newContent = container.textContent || '';
       onUpdate(newContent);
     });
@@ -117,18 +105,10 @@ export class NestedContentRenderer {
     container.style.outline = 'none';
     container.style.cursor = 'text';
 
-    let updateTimeout: number;
-    const scheduleUpdate = () => {
-      clearTimeout(updateTimeout);
-      updateTimeout = window.setTimeout(() => {
-        const newContent = this.extractContentFromContainer(container);
-        onUpdate(newContent);
-      }, 3000); // Much longer delay - 3 seconds
-    };
-
     container.addEventListener('input', (e) => {
       e.stopPropagation();
-      scheduleUpdate();
+      const newContent = this.extractContentFromContainer(container);
+      onUpdate(newContent);
     });
 
     container.addEventListener('keydown', (e) => {
@@ -149,6 +129,11 @@ export class NestedContentRenderer {
 
     container.addEventListener('click', (e) => {
       e.stopPropagation();
+    });
+
+    container.addEventListener('blur', () => {
+      const newContent = this.extractContentFromContainer(container);
+      onUpdate(newContent);
     });
   }
 
