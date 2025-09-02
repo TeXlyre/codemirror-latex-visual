@@ -73,8 +73,6 @@ export class TableWidget extends BaseLatexWidget {
         td.style.border = '1px solid #ddd';
         td.style.padding = '8px 12px';
         td.style.minWidth = '60px';
-        td.contentEditable = 'true';
-        td.style.outline = 'none';
         td.dataset.row = rowIndex.toString();
         td.dataset.col = colIndex.toString();
 
@@ -90,7 +88,13 @@ export class TableWidget extends BaseLatexWidget {
             td.style.textAlign = 'left';
         }
 
-        td.textContent = cellContent;
+        const cellTokens = this.parseContent(cellContent);
+        if (cellTokens.length > 1 || (cellTokens.length === 1 && cellTokens[0].type !== 'text')) {
+          this.renderChildren(td, cellTokens, view);
+        } else {
+          td.textContent = cellContent;
+        }
+
         this.setupCellEvents(td, view, table, alignment);
         tr.appendChild(td);
       });
@@ -132,6 +136,9 @@ export class TableWidget extends BaseLatexWidget {
         this.updateTableContent(view, table, alignment);
       }, 300);
     };
+
+    cell.contentEditable = 'true';
+    cell.style.outline = 'none';
 
     cell.addEventListener('input', () => {
       scheduleUpdate();
@@ -209,7 +216,7 @@ export class TableWidget extends BaseLatexWidget {
 
     rows.forEach(row => {
       const cells = Array.from(row.querySelectorAll('td'));
-      const cellContents = cells.map(cell => (cell.textContent || ''));
+      const cellContents = cells.map(cell => (cell.textContent || '').trim());
       tableRows.push(cellContents.join(' & '));
     });
 

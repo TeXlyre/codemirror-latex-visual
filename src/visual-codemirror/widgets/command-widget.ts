@@ -38,51 +38,36 @@ export class CommandWidget extends BaseLatexWidget {
 
     const span = document.createElement('span');
     span.className = `latex-visual-command ${cmdName}`;
+    span.dataset.cmdName = cmdName;
+    if (colorArg) span.dataset.colorArg = colorArg;
 
     if (this.token.children && this.token.children.length > 0) {
-      this.renderNestedContent(span, this.token.children, view);
+      this.renderChildren(span, this.token.children, view);
     } else {
-      const textContent = this.extractTextContent(content);
-      span.textContent = textContent;
+      const nestedTokens = this.parseContent(content);
+      if (nestedTokens.length > 1 || (nestedTokens.length === 1 && nestedTokens[0].type !== 'text')) {
+        this.renderChildren(span, nestedTokens, view);
+      } else {
+        span.textContent = this.extractTextContent(content);
+      }
     }
 
     this.applyCommandStyles(span, cmdName, colorArg);
 
-    this.makeEditable(span, view, (newContent) => {
-      const textContent = this.extractTextContent(content);
-      if (newContent !== textContent) {
-        let newLatex;
+    this.makeEditableWithNestedWidgets(
+      span,
+      view,
+      content,
+      (extractedContent) => {
         if (colorArg) {
-          newLatex = `\\${cmdName}{${colorArg}}{${newContent}}`;
+          return `\\${cmdName}{${colorArg}}{${extractedContent}}`;
         } else {
-          newLatex = `\\${cmdName}{${newContent}}`;
+          return `\\${cmdName}{${extractedContent}}`;
         }
-        this.updateTokenInEditor(view, newLatex);
       }
-    });
+    );
 
     return span;
-  }
-
-  private renderNestedContent(container: HTMLElement, children: LatexToken[], view: EditorView) {
-    children.forEach(child => {
-      if (child.type === 'text') {
-        const textNode = document.createTextNode(child.content);
-        container.appendChild(textNode);
-      } else if (child.type === 'editable_command') {
-        const childSpan = document.createElement('span');
-        childSpan.className = `latex-visual-command ${child.name}`;
-
-        if (child.children && child.children.length > 0) {
-          this.renderNestedContent(childSpan, child.children, view);
-        } else {
-          childSpan.textContent = this.extractTextContent(child.content);
-        }
-
-        this.applyCommandStyles(childSpan, child.name || '', child.colorArg || '');
-        container.appendChild(childSpan);
-      }
-    });
   }
 
   private applyCommandStyles(element: HTMLElement, cmdName: string, colorArg: string) {

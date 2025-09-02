@@ -28,17 +28,23 @@ export class EnvironmentWidget extends BaseLatexWidget {
 
       const contentDiv = document.createElement('div');
       contentDiv.className = 'env-content';
-      contentDiv.textContent = content;
       contentDiv.style.margin = '5px 0';
       contentDiv.style.paddingLeft = '20px';
       contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
 
-      this.makeEditable(contentDiv, view, (newContent) => {
-        if (newContent !== content) {
-          const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-          this.updateTokenInEditor(view, newLatex);
-        }
-      });
+      const nestedTokens = this.parseContent(content);
+      if (nestedTokens.length > 1 || (nestedTokens.length === 1 && nestedTokens[0].type !== 'text')) {
+        this.renderChildren(contentDiv, nestedTokens, view);
+      } else {
+        contentDiv.textContent = content;
+      }
+
+      this.makeEditableWithNestedWidgets(
+        contentDiv,
+        view,
+        content,
+        (extractedContent) => `\\begin{${envName}}\n${extractedContent}\n\\end{${envName}}`
+      );
 
       const endDiv = document.createElement('div');
       endDiv.className = 'env-end';
@@ -73,15 +79,21 @@ export class EnvironmentWidget extends BaseLatexWidget {
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'env-content';
-    contentDiv.textContent = content;
     contentDiv.style.lineHeight = '1.4';
 
-    this.makeEditable(contentDiv, view, (newContent) => {
-      if (newContent !== content) {
-        const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-        this.updateTokenInEditor(view, newLatex);
-      }
-    });
+    const nestedTokens = this.parseContent(content);
+    if (nestedTokens.length > 1 || (nestedTokens.length === 1 && nestedTokens[0].type !== 'text')) {
+      this.renderChildren(contentDiv, nestedTokens, view);
+    } else {
+      contentDiv.textContent = content;
+    }
+
+    this.makeEditableWithNestedWidgets(
+      contentDiv,
+      view,
+      content,
+      (extractedContent) => `\\begin{${envName}}\n${extractedContent}\n\\end{${envName}}`
+    );
 
     switch (envName) {
       case 'theorem':
