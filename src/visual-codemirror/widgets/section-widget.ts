@@ -10,6 +10,14 @@ export class SectionWidget extends BaseLatexWidget {
     if (this.showCommands) {
       const wrapper = document.createElement('div');
       wrapper.className = `latex-visual-section-command latex-visual-section-${level} latex-visual-widget`;
+      wrapper.style.margin = '0';
+      wrapper.style.padding = '8px 12px';
+      wrapper.style.background = 'rgba(0, 123, 255, 0.1)';
+      wrapper.style.borderLeft = '4px solid #007acc';
+      wrapper.style.borderRadius = '4px';
+      wrapper.style.lineHeight = '1.4';
+
+      this.preserveLineHeight(wrapper, this.token.latex);
 
       const prefix = document.createElement('span');
       prefix.className = 'latex-cmd-prefix';
@@ -41,12 +49,6 @@ export class SectionWidget extends BaseLatexWidget {
       wrapper.appendChild(contentSpan);
       wrapper.appendChild(suffix);
 
-      wrapper.style.background = 'rgba(0, 123, 255, 0.1)';
-      wrapper.style.borderLeft = '4px solid #007acc';
-      wrapper.style.padding = '8px 12px';
-      wrapper.style.margin = '20px 0 10px 0';
-      wrapper.style.borderRadius = '4px';
-
       return wrapper;
     }
 
@@ -55,11 +57,14 @@ export class SectionWidget extends BaseLatexWidget {
     heading.setAttribute('role', 'heading');
     heading.setAttribute('aria-level', level.toString());
     heading.textContent = content;
-    heading.style.margin = '1em 0 0.5em 0';
+    heading.style.margin = '0';
+    heading.style.padding = '0.2em 0';
     heading.style.borderBottom = '1px solid #ddd';
-    heading.style.paddingBottom = '0.2em';
     heading.style.fontWeight = 'bold';
     heading.style.display = 'block';
+    heading.style.lineHeight = '1.4';
+
+    this.preserveLineHeight(heading, this.token.latex);
 
     switch (level) {
       case 1:

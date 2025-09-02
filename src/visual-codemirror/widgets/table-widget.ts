@@ -9,23 +9,26 @@ export class TableWidget extends BaseLatexWidget {
     if (this.showCommands) {
       const wrapper = document.createElement('div');
       wrapper.className = 'latex-table-command';
-      wrapper.style.margin = '10px 0';
+      wrapper.style.margin = '0';
       wrapper.style.padding = '10px';
       wrapper.style.background = 'rgba(111, 66, 193, 0.1)';
       wrapper.style.border = '1px solid rgba(111, 66, 193, 0.3)';
       wrapper.style.borderRadius = '4px';
       wrapper.style.fontFamily = 'monospace';
+      wrapper.style.lineHeight = '1.4';
+
+      this.preserveLineHeight(wrapper, this.token.latex);
 
       const beginDiv = document.createElement('div');
       beginDiv.className = 'table-begin';
       beginDiv.textContent = `\\begin{tabular}{${alignment}}`;
       beginDiv.style.color = '#6f42c1';
       beginDiv.style.fontWeight = '600';
-      beginDiv.style.margin = '5px 0';
+      beginDiv.style.margin = '0 0 5px 0';
       beginDiv.style.fontSize = '0.9em';
 
       const tableElement = this.createEditableTable(content, alignment, view, true);
-      tableElement.style.margin = '10px 0';
+      tableElement.style.margin = '5px 0';
       tableElement.style.border = '1px solid rgba(111, 66, 193, 0.2)';
 
       const endDiv = document.createElement('div');
@@ -33,7 +36,7 @@ export class TableWidget extends BaseLatexWidget {
       endDiv.textContent = '\\end{tabular}';
       endDiv.style.color = '#6f42c1';
       endDiv.style.fontWeight = '600';
-      endDiv.style.margin = '5px 0';
+      endDiv.style.margin = '5px 0 0 0';
       endDiv.style.fontSize = '0.9em';
 
       wrapper.appendChild(beginDiv);
@@ -43,7 +46,10 @@ export class TableWidget extends BaseLatexWidget {
       return wrapper;
     }
 
-    return this.createEditableTable(content, alignment, view, false);
+    const table = this.createEditableTable(content, alignment, view, false);
+    table.style.margin = '0';
+    this.preserveLineHeight(table, this.token.latex);
+    return table;
   }
 
   private createEditableTable(content: string, alignment: string, view: EditorView, showCommands: boolean): HTMLElement {

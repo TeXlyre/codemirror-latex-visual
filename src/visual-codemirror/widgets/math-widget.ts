@@ -14,6 +14,13 @@ export class MathWidget extends BaseLatexWidget {
   toDOM(view: EditorView): HTMLElement {
     const container = document.createElement('div');
     container.className = `${this.isDisplay ? 'latex-visual-math-display' : 'latex-visual-math-inline'} latex-visual-widget`;
+    container.style.lineHeight = '1.4';
+
+    if (this.isDisplay) {
+      container.style.margin = '0';
+      container.style.padding = '10px';
+      this.preserveLineHeight(container, this.token.latex);
+    }
 
     if (this.showCommands) {
       const wrapper = document.createElement('div');
@@ -23,8 +30,13 @@ export class MathWidget extends BaseLatexWidget {
       wrapper.style.border = '1px solid rgba(111, 66, 193, 0.3)';
       wrapper.style.borderRadius = '4px';
       wrapper.style.padding = '8px';
-      wrapper.style.margin = this.isDisplay ? '10px 0' : '0 2px';
+      wrapper.style.margin = '0';
       wrapper.style.display = this.isDisplay ? 'block' : 'inline-block';
+      wrapper.style.lineHeight = '1.4';
+
+      if (this.isDisplay) {
+        this.preserveLineHeight(wrapper, this.token.latex);
+      }
 
       const delimiter = this.isDisplay ? '$$' : '$';
       const prefix = document.createElement('span');

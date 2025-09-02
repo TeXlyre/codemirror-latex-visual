@@ -9,24 +9,27 @@ export class EnvironmentWidget extends BaseLatexWidget {
     if (this.showCommands) {
       const wrapper = document.createElement('div');
       wrapper.className = 'latex-env-command';
-      wrapper.style.margin = '10px 0';
+      wrapper.style.margin = '0';
       wrapper.style.padding = '10px';
       wrapper.style.background = 'rgba(40, 167, 69, 0.1)';
       wrapper.style.border = '1px solid rgba(40, 167, 69, 0.3)';
       wrapper.style.borderRadius = '4px';
       wrapper.style.fontFamily = 'monospace';
+      wrapper.style.lineHeight = '1.4';
+
+      this.preserveLineHeight(wrapper, this.token.latex);
 
       const beginDiv = document.createElement('div');
       beginDiv.className = 'env-begin';
       beginDiv.textContent = `\\begin{${envName}}`;
       beginDiv.style.color = '#28a745';
       beginDiv.style.fontWeight = '600';
-      beginDiv.style.margin = '5px 0';
+      beginDiv.style.margin = '0 0 5px 0';
 
       const contentDiv = document.createElement('div');
       contentDiv.className = 'env-content';
       contentDiv.textContent = content;
-      contentDiv.style.margin = '10px 0';
+      contentDiv.style.margin = '5px 0';
       contentDiv.style.paddingLeft = '20px';
       contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
 
@@ -42,7 +45,7 @@ export class EnvironmentWidget extends BaseLatexWidget {
       endDiv.textContent = `\\end{${envName}}`;
       endDiv.style.color = '#28a745';
       endDiv.style.fontWeight = '600';
-      endDiv.style.margin = '5px 0';
+      endDiv.style.margin = '5px 0 0 0';
 
       wrapper.appendChild(beginDiv);
       wrapper.appendChild(contentDiv);
@@ -53,9 +56,12 @@ export class EnvironmentWidget extends BaseLatexWidget {
 
     const wrapper = document.createElement('div');
     wrapper.className = `latex-visual-environment latex-env-${envName}`;
-    wrapper.style.margin = '10px 0';
+    wrapper.style.margin = '0';
     wrapper.style.padding = '10px';
     wrapper.style.borderRadius = '4px';
+    wrapper.style.lineHeight = '1.4';
+
+    this.preserveLineHeight(wrapper, this.token.latex);
 
     const header = document.createElement('div');
     header.className = 'env-header';

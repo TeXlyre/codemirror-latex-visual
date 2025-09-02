@@ -33,8 +33,14 @@ export abstract class BaseLatexWidget extends WidgetType {
       }
       return true;
     }
-
     return false;
+  }
+
+  protected preserveLineHeight(element: HTMLElement, originalText: string) {
+    const newlineCount = (originalText.match(/\n/g) || []).length;
+    if (newlineCount > 0) {
+      element.style.minHeight = `${(newlineCount + 1) * 1.4}em`;
+    }
   }
 
   protected makeEditable(element: HTMLElement, view: EditorView, onUpdate: (newContent: string) => void) {
