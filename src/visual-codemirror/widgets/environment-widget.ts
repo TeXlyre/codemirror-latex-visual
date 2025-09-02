@@ -3,6 +3,8 @@ import { BaseLatexWidget } from './base-widget';
 import { NestedContentRenderer } from '../nested-content-renderer';
 
 export class EnvironmentWidget extends BaseLatexWidget {
+  private updateTimer: number | null = null;
+
   toDOM(view: EditorView): HTMLElement {
     const envName = this.token.name || '';
     const content = this.token.content || '';
@@ -33,66 +35,9 @@ export class EnvironmentWidget extends BaseLatexWidget {
       contentDiv.style.paddingLeft = '20px';
       contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
 
-      // Check if content has complex tokens
-      const tokens = NestedContentRenderer.tokenizer.tokenize(content);
-      const hasComplexTokens = tokens.some(token =>
-        token.type !== 'text' && token.type !== 'paragraph_break'
-      );
-
-      if (hasComplexTokens) {
-        NestedContentRenderer.setupEditableNestedContent(contentDiv, content, view, (newContent) => {
-          if (newContent !== content) {
-            const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-            this.updateTokenInEditor(view, newLatex);
-          }
-        }, this.showCommands);
-      } else {
-        // Simple text editing for plain content
-        contentDiv.contentEditable = 'true';
-        contentDiv.style.outline = 'none';
-        contentDiv.textContent = content;
-
-        let updateTimeout: number;
-        let isUpdating = false;
-
-        contentDiv.addEventListener('input', (e) => {
-          e.stopPropagation();
-          if (isUpdating) return;
-
-          clearTimeout(updateTimeout);
-          updateTimeout = window.setTimeout(() => {
-            isUpdating = true;
-            const newContent = contentDiv.textContent || '';
-            if (newContent !== content) {
-              const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-              this.updateTokenInEditor(view, newLatex);
-            }
-            setTimeout(() => { isUpdating = false; }, 100);
-          }, 1000);
-        });
-
-        contentDiv.addEventListener('keydown', (e) => {
-          e.stopPropagation();
-        });
-
-        contentDiv.addEventListener('mousedown', (e) => {
-          e.stopPropagation();
-        });
-
-        contentDiv.addEventListener('click', (e) => {
-          e.stopPropagation();
-        });
-
-        contentDiv.addEventListener('blur', () => {
-          if (isUpdating) return;
-          clearTimeout(updateTimeout);
-          const newContent = contentDiv.textContent || '';
-          if (newContent !== content) {
-            const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-            this.updateTokenInEditor(view, newLatex);
-          }
-        });
-      }
+      NestedContentRenderer.setupEditableNestedContent(contentDiv, content, view, (newContent) => {
+        this.scheduleUpdate(view, envName, newContent);
+      }, this.showCommands);
 
       const endDiv = document.createElement('div');
       endDiv.className = 'env-end';
@@ -129,66 +74,9 @@ export class EnvironmentWidget extends BaseLatexWidget {
     contentDiv.className = 'env-content';
     contentDiv.style.lineHeight = '1.4';
 
-    // Check if content has complex tokens
-    const tokens = NestedContentRenderer.tokenizer.tokenize(content);
-    const hasComplexTokens = tokens.some(token =>
-      token.type !== 'text' && token.type !== 'paragraph_break'
-    );
-
-    if (hasComplexTokens) {
-      NestedContentRenderer.setupEditableNestedContent(contentDiv, content, view, (newContent) => {
-        if (newContent !== content) {
-          const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-          this.updateTokenInEditor(view, newLatex);
-        }
-      }, this.showCommands);
-    } else {
-      // Simple text editing for plain content
-      contentDiv.contentEditable = 'true';
-      contentDiv.style.outline = 'none';
-      contentDiv.textContent = content;
-
-      let updateTimeout: number;
-      let isUpdating = false;
-
-      contentDiv.addEventListener('input', (e) => {
-        e.stopPropagation();
-        if (isUpdating) return;
-
-        clearTimeout(updateTimeout);
-        updateTimeout = window.setTimeout(() => {
-          isUpdating = true;
-          const newContent = contentDiv.textContent || '';
-          if (newContent !== content) {
-            const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-            this.updateTokenInEditor(view, newLatex);
-          }
-          setTimeout(() => { isUpdating = false; }, 100);
-        }, 1000);
-      });
-
-      contentDiv.addEventListener('keydown', (e) => {
-        e.stopPropagation();
-      });
-
-      contentDiv.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-      });
-
-      contentDiv.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-
-      contentDiv.addEventListener('blur', () => {
-        if (isUpdating) return;
-        clearTimeout(updateTimeout);
-        const newContent = contentDiv.textContent || '';
-        if (newContent !== content) {
-          const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-          this.updateTokenInEditor(view, newLatex);
-        }
-      });
-    }
+    NestedContentRenderer.setupEditableNestedContent(contentDiv, content, view, (newContent) => {
+      this.scheduleUpdate(view, envName, newContent);
+    }, this.showCommands);
 
     switch (envName) {
       case 'theorem':
@@ -216,5 +104,19 @@ export class EnvironmentWidget extends BaseLatexWidget {
     wrapper.appendChild(contentDiv);
 
     return wrapper;
+  }
+
+  private scheduleUpdate(view: EditorView, envName: string, newContent: string) {
+    // Clear any existing timer
+    if (this.updateTimer) {
+      clearTimeout(this.updateTimer);
+    }
+
+    this.updateTimer = window.setTimeout(() => {
+      if (newContent !== this.token.content) {
+        const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
+        this.updateTokenInEditor(view, newLatex);
+      }
+    }, 100);
   }
 }

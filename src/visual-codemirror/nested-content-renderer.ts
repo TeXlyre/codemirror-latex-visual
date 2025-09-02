@@ -76,7 +76,7 @@ export class NestedContentRenderer {
       updateTimeout = window.setTimeout(() => {
         const newContent = container.textContent || '';
         onUpdate(newContent);
-      }, 500); // Longer delay to avoid interrupting typing
+      }, 3000); // Much longer delay - 3 seconds
     };
 
     container.addEventListener('input', (e) => {
@@ -123,7 +123,7 @@ export class NestedContentRenderer {
       updateTimeout = window.setTimeout(() => {
         const newContent = this.extractContentFromContainer(container);
         onUpdate(newContent);
-      }, 500); // Longer delay for complex content too
+      }, 3000); // Much longer delay - 3 seconds
     };
 
     container.addEventListener('input', (e) => {
