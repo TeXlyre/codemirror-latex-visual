@@ -1,21 +1,8 @@
-import { SectionWidget } from './visual-codemirror/widgets/section-widget';
-import { MathWidget } from './visual-codemirror/widgets/math-widget';
-import { EnvironmentWidget } from './visual-codemirror/widgets/environment-widget';
-import { CommandWidget } from './visual-codemirror/widgets/command-widget';
-import { TableWidget } from './visual-codemirror/widgets/table-widget';
-
-// Register widgets globally to avoid circular dependencies
-(window as any).LatexWidgets = {
-  SectionWidget,
-  MathWidget,
-  EnvironmentWidget,
-  CommandWidget,
-  TableWidget
-};
-
 export { DualLatexEditor, latexVisualKeymap } from './dual-editor';
 export { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
 export { OverlayManager } from './visual-codemirror/overlay-manager';
+export { WidgetFactory } from './visual-codemirror/widget-factory';
+export { NestedContentRenderer } from './visual-codemirror/nested-content-renderer';
 export { VisualToolbar } from './visual-toolbar';
 export { SourceToolbar } from './source-toolbar';
 

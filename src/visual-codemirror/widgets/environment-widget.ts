@@ -1,5 +1,6 @@
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
+import { NestedContentRenderer } from '../nested-content-renderer';
 
 export class EnvironmentWidget extends BaseLatexWidget {
   toDOM(view: EditorView): HTMLElement {
@@ -32,19 +33,12 @@ export class EnvironmentWidget extends BaseLatexWidget {
       contentDiv.style.paddingLeft = '20px';
       contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
 
-      const nestedTokens = this.parseContent(content);
-      if (nestedTokens.length > 1 || (nestedTokens.length === 1 && nestedTokens[0].type !== 'text')) {
-        this.renderChildren(contentDiv, nestedTokens, view);
-      } else {
-        contentDiv.textContent = content;
-      }
-
-      this.makeEditableWithNestedWidgets(
-        contentDiv,
-        view,
-        content,
-        (extractedContent) => `\\begin{${envName}}\n${extractedContent}\n\\end{${envName}}`
-      );
+      NestedContentRenderer.setupEditableNestedContent(contentDiv, content, view, (newContent) => {
+        if (newContent !== content) {
+          const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
+          this.updateTokenInEditor(view, newLatex);
+        }
+      }, this.showCommands);
 
       const endDiv = document.createElement('div');
       endDiv.className = 'env-end';
@@ -81,19 +75,12 @@ export class EnvironmentWidget extends BaseLatexWidget {
     contentDiv.className = 'env-content';
     contentDiv.style.lineHeight = '1.4';
 
-    const nestedTokens = this.parseContent(content);
-    if (nestedTokens.length > 1 || (nestedTokens.length === 1 && nestedTokens[0].type !== 'text')) {
-      this.renderChildren(contentDiv, nestedTokens, view);
-    } else {
-      contentDiv.textContent = content;
-    }
-
-    this.makeEditableWithNestedWidgets(
-      contentDiv,
-      view,
-      content,
-      (extractedContent) => `\\begin{${envName}}\n${extractedContent}\n\\end{${envName}}`
-    );
+    NestedContentRenderer.setupEditableNestedContent(contentDiv, content, view, (newContent) => {
+      if (newContent !== content) {
+        const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
+        this.updateTokenInEditor(view, newLatex);
+      }
+    }, this.showCommands);
 
     switch (envName) {
       case 'theorem':

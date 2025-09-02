@@ -1,5 +1,12 @@
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
+import { LatexTokenizer } from '../../parsers/main-parser';
+import { NestedContentRenderer } from '../nested-content-renderer';
+
+interface CellData {
+  content: string;
+  hasWidgets: boolean;
+}
 
 export class TableWidget extends BaseLatexWidget {
   toDOM(view: EditorView): HTMLElement {
@@ -64,15 +71,16 @@ export class TableWidget extends BaseLatexWidget {
 
     const rows = this.parseTableRows(content, alignment);
 
-    rows.forEach((rowCells: string[], rowIndex: number) => {
+    rows.forEach((rowCells: CellData[], rowIndex: number) => {
       const tr = document.createElement('tr');
 
-      rowCells.forEach((cellContent: string, colIndex: number) => {
+      rowCells.forEach((cellData: CellData, colIndex: number) => {
         const td = document.createElement('td');
         td.className = 'latex-table-cell';
         td.style.border = '1px solid #ddd';
         td.style.padding = '8px 12px';
         td.style.minWidth = '60px';
+        td.style.outline = 'none';
         td.dataset.row = rowIndex.toString();
         td.dataset.col = colIndex.toString();
 
@@ -88,11 +96,13 @@ export class TableWidget extends BaseLatexWidget {
             td.style.textAlign = 'left';
         }
 
-        const cellTokens = this.parseContent(cellContent);
-        if (cellTokens.length > 1 || (cellTokens.length === 1 && cellTokens[0].type !== 'text')) {
-          this.renderChildren(td, cellTokens, view);
+        if (cellData.hasWidgets) {
+          NestedContentRenderer.setupEditableNestedContent(td, cellData.content, view, () => {
+            this.updateTableContent(view, table, alignment);
+          }, this.showCommands);
         } else {
-          td.textContent = cellContent;
+          td.contentEditable = 'true';
+          td.textContent = cellData.content;
         }
 
         this.setupCellEvents(td, view, table, alignment);
@@ -106,22 +116,32 @@ export class TableWidget extends BaseLatexWidget {
     return table;
   }
 
-  private parseTableRows(content: string, alignment: string): string[][] {
+  private parseTableRows(content: string, alignment: string): CellData[][] {
     if (!content.trim()) {
       const colCount = alignment.length || 2;
-      return [Array(colCount).fill('')];
+      return [Array(colCount).fill({content: '', hasWidgets: false})];
     }
 
     const rows = content.split('\\\\').map(row => row.trim());
     const colCount = alignment.length || 2;
+    const tokenizer = new LatexTokenizer();
 
     return rows.map(rowContent => {
       if (!rowContent) {
-        return Array(colCount).fill('');
+        return Array(colCount).fill({content: '', hasWidgets: false});
       }
-      const cells = rowContent.split('&').map(cell => cell.trim());
+
+      const cells = rowContent.split('&').map(cell => {
+        const trimmed = cell.trim();
+        const tokens = tokenizer.tokenize(trimmed);
+        const hasWidgets = tokens.some(token =>
+          token.type !== 'text' && token.type !== 'paragraph_break'
+        );
+        return {content: trimmed, hasWidgets};
+      });
+
       while (cells.length < colCount) {
-        cells.push('');
+        cells.push({content: '', hasWidgets: false});
       }
       return cells.slice(0, colCount);
     });
@@ -136,9 +156,6 @@ export class TableWidget extends BaseLatexWidget {
         this.updateTableContent(view, table, alignment);
       }, 300);
     };
-
-    cell.contentEditable = 'true';
-    cell.style.outline = 'none';
 
     cell.addEventListener('input', () => {
       scheduleUpdate();
@@ -216,7 +233,12 @@ export class TableWidget extends BaseLatexWidget {
 
     rows.forEach(row => {
       const cells = Array.from(row.querySelectorAll('td'));
-      const cellContents = cells.map(cell => (cell.textContent || '').trim());
+      const cellContents = cells.map(cell => {
+        if (cell.dataset.latexOriginal) {
+          return cell.dataset.latexOriginal;
+        }
+        return NestedContentRenderer.extractContentFromContainer(cell as HTMLElement);
+      });
       tableRows.push(cellContents.join(' & '));
     });
 

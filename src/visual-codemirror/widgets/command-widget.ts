@@ -1,6 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
 import { LatexToken } from '../../parsers/base-parser';
+import { NestedContentRenderer } from '../nested-content-renderer';
 
 export class CommandWidget extends BaseLatexWidget {
   toDOM(view: EditorView): HTMLElement {
@@ -38,34 +39,29 @@ export class CommandWidget extends BaseLatexWidget {
 
     const span = document.createElement('span');
     span.className = `latex-visual-command ${cmdName}`;
-    span.dataset.cmdName = cmdName;
-    if (colorArg) span.dataset.colorArg = colorArg;
 
     if (this.token.children && this.token.children.length > 0) {
-      this.renderChildren(span, this.token.children, view);
+      const nestedContent = this.token.children.map(child => child.latex).join('');
+      NestedContentRenderer.renderNestedContent(span, nestedContent, view, this.showCommands);
     } else {
-      const nestedTokens = this.parseContent(content);
-      if (nestedTokens.length > 1 || (nestedTokens.length === 1 && nestedTokens[0].type !== 'text')) {
-        this.renderChildren(span, nestedTokens, view);
-      } else {
-        span.textContent = this.extractTextContent(content);
-      }
+      const textContent = this.extractTextContent(content);
+      span.textContent = textContent;
     }
 
     this.applyCommandStyles(span, cmdName, colorArg);
 
-    this.makeEditableWithNestedWidgets(
-      span,
-      view,
-      content,
-      (extractedContent) => {
+    this.makeEditable(span, view, (newContent) => {
+      const textContent = this.extractTextContent(content);
+      if (newContent !== textContent) {
+        let newLatex;
         if (colorArg) {
-          return `\\${cmdName}{${colorArg}}{${extractedContent}}`;
+          newLatex = `\\${cmdName}{${colorArg}}{${newContent}}`;
         } else {
-          return `\\${cmdName}{${extractedContent}}`;
+          newLatex = `\\${cmdName}{${newContent}}`;
         }
+        this.updateTokenInEditor(view, newLatex);
       }
-    );
+    });
 
     return span;
   }
