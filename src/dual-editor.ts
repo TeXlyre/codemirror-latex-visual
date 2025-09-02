@@ -1,6 +1,13 @@
 import { EditorView, keymap } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
-import { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
+import { EditorView as PMView } from 'prosemirror-view';
+import { EditorState as PMState } from 'prosemirror-state';
+import { baseKeymap } from 'prosemirror-commands';
+import { keymap as pmKeymap } from 'prosemirror-keymap';
+import { SyncManager } from './sync-manager';
+import { latexVisualSchema } from './prosemirror-schema';
+import { parseLatexToProseMirror } from './latex-parser';
+import { createLatexInputRules } from './prosemirror-input-rules';
 import { VisualToolbar } from './visual-toolbar';
 import { SourceToolbar } from './source-toolbar';
 
@@ -15,9 +22,11 @@ export interface DualEditorOptions {
 export class DualLatexEditor {
   private container: HTMLElement;
   private cmEditor: EditorView;
-  private visualEditor!: VisualCodeMirrorEditor;
+  private pmEditor!: PMView;
+  private syncManager!: SyncManager;
   private currentMode: 'source' | 'visual';
   private options: DualEditorOptions;
+  private pmContainer!: HTMLElement;
   private toolbar!: HTMLElement;
   private visualToolbar!: VisualToolbar;
   private sourceToolbar!: SourceToolbar;
@@ -36,7 +45,8 @@ export class DualLatexEditor {
 
     this.setupLayout();
     this.addCodeMirrorKeymap();
-    this.createVisualEditor();
+    this.createProseMirrorEditor();
+    this.setupSyncManager();
     this.setMode(this.currentMode);
     this.updateCommandVisibility();
     this.updateToolbarVisibility();
@@ -100,15 +110,21 @@ export class DualLatexEditor {
     const cmContainer = document.createElement('div');
     cmContainer.className = 'codemirror-container';
 
+    const pmContainer = document.createElement('div');
+    pmContainer.className = 'prosemirror-container';
+
     editorsContainer.appendChild(cmContainer);
+    editorsContainer.appendChild(pmContainer);
     wrapper.appendChild(toolbar);
     wrapper.appendChild(visualToolbarContainer);
     wrapper.appendChild(sourceToolbarContainer);
     wrapper.appendChild(editorsContainer);
 
     this.container.appendChild(wrapper);
+
     cmContainer.appendChild(this.cmEditor.dom);
 
+    this.pmContainer = pmContainer;
     this.toolbar = toolbar;
     this.visualToolbarContainer = visualToolbarContainer;
     this.sourceToolbarContainer = sourceToolbarContainer;
@@ -133,18 +149,57 @@ export class DualLatexEditor {
     }, 0);
   }
 
-  private createVisualEditor() {
-    this.visualEditor = new VisualCodeMirrorEditor(this.cmEditor, {
-      showCommands: this.showCommands,
-      onModeChange: (mode) => {
-        this.currentMode = mode;
-        this.updateToolbar();
-        this.options.onModeChange?.(mode);
+  private createProseMirrorEditor() {
+    const toggleCommand = (state: any, dispatch: any) => {
+      this.toggleMode();
+      return true;
+    };
+
+    const toggleCommandsVisibility = (state: any, dispatch: any) => {
+      this.toggleCommandVisibility();
+      return true;
+    };
+
+    const toggleToolbarVisibility = (state: any, dispatch: any) => {
+      this.toggleToolbar();
+      return true;
+    };
+
+    const pmState = PMState.create({
+      schema: latexVisualSchema,
+      doc: parseLatexToProseMirror(''),
+      plugins: [
+        createLatexInputRules(latexVisualSchema),
+        pmKeymap({
+          ...baseKeymap,
+          'Ctrl-e': toggleCommand,
+          'Cmd-e': toggleCommand,
+          'Ctrl-Shift-c': toggleCommandsVisibility,
+          'Cmd-Shift-c': toggleCommandsVisibility,
+          'Ctrl-Shift-t': toggleToolbarVisibility,
+          'Cmd-Shift-t': toggleToolbarVisibility
+        })
+      ]
+    });
+
+    this.pmEditor = new PMView(this.pmContainer, {
+      state: pmState,
+      dispatchTransaction: (tr) => {
+        const newState = this.pmEditor.state.apply(tr);
+        this.pmEditor.updateState(newState);
+
+        if (this.currentMode === 'visual' && tr.docChanged && !this.syncManager.syncing) {
+          this.syncManager.handleProseMirrorChange(tr);
+        }
       }
     });
 
-    this.visualToolbar = new VisualToolbar(this.visualToolbarContainer, this.cmEditor);
+    this.visualToolbar = new VisualToolbar(this.visualToolbarContainer, this.pmEditor);
     this.sourceToolbar = new SourceToolbar(this.sourceToolbarContainer, this.cmEditor);
+  }
+
+  private setupSyncManager() {
+    this.syncManager = new SyncManager(this.cmEditor, this.pmEditor, this.showCommands);
   }
 
   public toggleMode() {
@@ -155,14 +210,10 @@ export class DualLatexEditor {
   public toggleCommandVisibility() {
     this.showCommands = !this.showCommands;
     this.updateCommandVisibility();
-    this.visualEditor.updateOptions({ showCommands: this.showCommands });
+    this.syncManager.updateCommandVisibility(this.showCommands);
 
-    // Force refresh of visual mode if currently active
     if (this.currentMode === 'visual') {
-      this.visualEditor.setVisualMode(false);
-      setTimeout(() => {
-        this.visualEditor.setVisualMode(true);
-      }, 10);
+      this.syncManager.syncToVisualWithCommandToggle();
     }
   }
 
@@ -195,8 +246,26 @@ export class DualLatexEditor {
   setMode(mode: 'source' | 'visual') {
     if (mode === this.currentMode) return;
 
+    if (mode === 'visual') {
+      this.syncManager.syncToVisual();
+      const parentElement = this.cmEditor.dom.parentElement;
+      if (parentElement) {
+        parentElement.style.display = 'none';
+      }
+      this.pmContainer.style.display = 'block';
+      this.pmEditor.focus();
+    } else {
+      this.syncManager.syncToSource();
+      this.pmContainer.style.display = 'none';
+      const parentElement = this.cmEditor.dom.parentElement;
+      if (parentElement) {
+        parentElement.style.display = 'block';
+      }
+      this.cmEditor.requestMeasure();
+      this.cmEditor.focus();
+    }
+
     this.currentMode = mode;
-    this.visualEditor.setVisualMode(mode === 'visual');
     this.updateToolbar();
     this.updateToolbarVisibility();
     this.options.onModeChange?.(mode);
@@ -210,7 +279,8 @@ export class DualLatexEditor {
   }
 
   destroy() {
-    this.visualEditor.destroy();
+    this.syncManager.destroy();
+    this.pmEditor.destroy();
   }
 }
 
