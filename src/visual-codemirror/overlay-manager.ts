@@ -1,11 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { LatexTokenizer } from '../parsers/main-parser';
-import { SectionWidget } from './widgets/section-widget';
-import { MathWidget } from './widgets/math-widget';
-import { EnvironmentWidget } from './widgets/environment-widget';
-import { CommandWidget } from './widgets/command-widget';
-import { TableWidget } from './widgets/table-widget';
+import { WidgetFactory } from './widget-factory';
 
 export class OverlayManager {
   private tokenizer = new LatexTokenizer();
@@ -21,6 +17,7 @@ export class OverlayManager {
 
     try {
       const tokens = this.tokenizer.tokenize(text);
+      const showCommands = (window as any).latexEditorShowCommands || false;
 
       for (const token of tokens) {
         if (token.type === 'text' || token.type === 'paragraph_break') {
@@ -36,63 +33,16 @@ export class OverlayManager {
           continue;
         }
 
-        let widget: WidgetType | null = null;
+        const widget = WidgetFactory.createWidget(token, showCommands);
 
-        switch (token.type) {
-          case 'section':
-            widget = new SectionWidget(token);
-            if (widget) {
-              decorations.push(Decoration.replace({
-                widget,
-                block: true
-              }).range(from, to));
-            }
-            break;
+        if (widget) {
+          const decorationConfig = token.type === 'section' ||
+                                  token.type === 'math_display' ||
+                                  token.type === 'environment'
+                                  ? { widget, block: true }
+                                  : { widget };
 
-          case 'math_display':
-            widget = new MathWidget(token, true);
-            if (widget) {
-              decorations.push(Decoration.replace({
-                widget,
-                block: true
-              }).range(from, to));
-            }
-            break;
-
-          case 'environment':
-            if (token.name === 'tabular') {
-              widget = new TableWidget(token);
-            } else {
-              widget = new EnvironmentWidget(token);
-            }
-            if (widget) {
-              decorations.push(Decoration.replace({
-                widget,
-                block: true
-              }).range(from, to));
-            }
-            break;
-
-          case 'math_inline':
-            widget = new MathWidget(token, false);
-            if (widget) {
-              decorations.push(Decoration.replace({
-                widget
-              }).range(from, to));
-            }
-            break;
-
-          case 'editable_command':
-          case 'command':
-            if (token.name) {
-              widget = new CommandWidget(token);
-              if (widget) {
-                decorations.push(Decoration.replace({
-                  widget
-                }).range(from, to));
-              }
-            }
-            break;
+          decorations.push(Decoration.replace(decorationConfig).range(from, to));
         }
       }
     } catch (error) {

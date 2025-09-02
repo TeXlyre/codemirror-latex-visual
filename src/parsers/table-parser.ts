@@ -1,9 +1,10 @@
 import { BaseLatexParser, LatexToken } from './base-parser';
+import { LatexTokenizer } from './main-parser';
 
 export class TableParser extends BaseLatexParser {
   canParse(latex: string, position: number): boolean {
     return latex.startsWith('\\begin{tabular}', position) ||
-           latex.startsWith('\\begin{table}', position);
+        latex.startsWith('\\begin{table}', position);
   }
 
   parse(latex: string, position: number): LatexToken | null {
@@ -13,7 +14,7 @@ export class TableParser extends BaseLatexParser {
     const envName = isTable ? 'table' : 'tabular';
 
     const beginMatch = latex.slice(position).match(
-      isTable ? /^\\begin\{table\}(\[.*?\])?/ : /^\\begin\{tabular\}(\[.*?\])?\{([^}]+)\}/
+        isTable ? /^\\begin\{table\}(\[.*?\])?/ : /^\\begin\{tabular\}(\[.*?\])?\{([^}]+)\}/
     );
 
     if (!beginMatch) return null;
@@ -33,10 +34,10 @@ export class TableParser extends BaseLatexParser {
 
     const fullLatex = latex.slice(position, endPos + endPattern.length);
     const rawContent = latex.slice(position + beginMatch[0].length, endPos);
-    const content = rawContent.replace(/^\s*\n|\n\s*$/g, ''); // Remove leading/trailing newlines only
+    const content = rawContent.replace(/^\s*\n|\n\s*$/g, '');
     const alignment = isTable ? '' : (beginMatch[2] || '');
 
-    return {
+    const token: LatexToken = {
       type: 'environment',
       content,
       latex: fullLatex,
@@ -45,5 +46,33 @@ export class TableParser extends BaseLatexParser {
       name: envName,
       params: alignment
     };
+
+    if (content.trim() && envName === 'tabular') {
+      token.children = this.parseTableContent(content);
+    }
+
+    return token;
+  }
+
+  private parseTableContent(content: string): LatexToken[] {
+    if (!content.trim()) return [];
+
+    const rows = content.split('\\\\').map(row => row.trim()).filter(row => row);
+    const tokens: LatexToken[] = [];
+
+    rows.forEach((rowContent, rowIndex) => {
+      if (rowContent) {
+        const cells = rowContent.split('&').map(cell => cell.trim());
+        cells.forEach((cellContent, cellIndex) => {
+          if (cellContent) {
+            const tokenizer = new LatexTokenizer();
+            const cellTokens = tokenizer.tokenize(cellContent);
+            tokens.push(...cellTokens);
+          }
+        });
+      }
+    });
+
+    return tokens;
   }
 }

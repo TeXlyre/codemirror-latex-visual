@@ -1,7 +1,10 @@
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
+import { NestedContentRenderer } from '../nested-content-renderer';
 
 export class EnvironmentWidget extends BaseLatexWidget {
+  private contentDiv?: HTMLElement;
+
   toDOM(view: EditorView): HTMLElement {
     const envName = this.token.name || '';
     const content = this.token.content || '';
@@ -26,19 +29,15 @@ export class EnvironmentWidget extends BaseLatexWidget {
       beginDiv.style.fontWeight = '600';
       beginDiv.style.margin = '0 0 5px 0';
 
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'env-content';
-      contentDiv.textContent = content;
-      contentDiv.style.margin = '5px 0';
-      contentDiv.style.paddingLeft = '20px';
-      contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
+      this.contentDiv = document.createElement('div');
+      this.contentDiv.className = 'env-content';
+      this.contentDiv.style.margin = '5px 0';
+      this.contentDiv.style.paddingLeft = '20px';
+      this.contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
 
-      this.makeEditable(contentDiv, view, (newContent) => {
-        if (newContent !== content) {
-          const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-          this.updateTokenInEditor(view, newLatex);
-        }
-      });
+      NestedContentRenderer.setupEditableNestedContent(this.contentDiv, content, view, (newContent) => {
+        this.updateContent(view, envName, newContent);
+      }, this.showCommands);
 
       const endDiv = document.createElement('div');
       endDiv.className = 'env-end';
@@ -48,7 +47,7 @@ export class EnvironmentWidget extends BaseLatexWidget {
       endDiv.style.margin = '5px 0 0 0';
 
       wrapper.appendChild(beginDiv);
-      wrapper.appendChild(contentDiv);
+      wrapper.appendChild(this.contentDiv);
       wrapper.appendChild(endDiv);
 
       return wrapper;
@@ -71,17 +70,13 @@ export class EnvironmentWidget extends BaseLatexWidget {
     header.style.marginBottom = '8px';
     header.style.textTransform = 'capitalize';
 
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'env-content';
-    contentDiv.textContent = content;
-    contentDiv.style.lineHeight = '1.4';
+    this.contentDiv = document.createElement('div');
+    this.contentDiv.className = 'env-content';
+    this.contentDiv.style.lineHeight = '1.4';
 
-    this.makeEditable(contentDiv, view, (newContent) => {
-      if (newContent !== content) {
-        const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
-        this.updateTokenInEditor(view, newLatex);
-      }
-    });
+    NestedContentRenderer.setupEditableNestedContent(this.contentDiv, content, view, (newContent) => {
+      this.updateContent(view, envName, newContent);
+    }, this.showCommands);
 
     switch (envName) {
       case 'theorem':
@@ -106,8 +101,13 @@ export class EnvironmentWidget extends BaseLatexWidget {
     }
 
     wrapper.appendChild(header);
-    wrapper.appendChild(contentDiv);
+    wrapper.appendChild(this.contentDiv);
 
     return wrapper;
+  }
+
+  private updateContent(view: EditorView, envName: string, newContent: string) {
+    const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
+    this.updateTokenInEditor(view, newLatex);
   }
 }

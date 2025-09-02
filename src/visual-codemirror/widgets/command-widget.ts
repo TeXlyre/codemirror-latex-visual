@@ -1,120 +1,295 @@
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
 import { LatexToken } from '../../parsers/base-parser';
+import { NestedContentRenderer } from '../nested-content-renderer';
+import { LatexTokenizer } from '../../parsers/main-parser';
 
 export class CommandWidget extends BaseLatexWidget {
+  private isEditing: boolean = false;
+  private editableSpan?: HTMLSpanElement;
+
+  private _parseAndSetTokenProperties(latex: string): void {
+    const colorMatch = latex.match(/^\\(textcolor|colorbox)\{([^}]*)\}\{(.*)\}$/s);
+    const regularMatch = latex.match(/^\\([a-zA-Z*]+)\{(.*)\}$/s);
+
+    if (colorMatch) {
+      this.token.name = colorMatch[1];
+      this.token.colorArg = colorMatch[2];
+      this.token.content = colorMatch[3];
+    } else if (regularMatch) {
+      this.token.name = regularMatch[1];
+      this.token.content = regularMatch[2];
+      this.token.colorArg = undefined;
+    } else {
+      this.token.name = this.token.name || 'unknown';
+      this.token.content = this.token.content || latex;
+      this.token.colorArg = undefined;
+    }
+
+    this.token.latex = latex;
+
+    if (this.token.content) {
+      try {
+        const tokenizer = new LatexTokenizer();
+        const childTokens = tokenizer.tokenize(this.token.content);
+        if (childTokens.length > 1 || (childTokens.length === 1 && childTokens[0].type !== 'text')) {
+          this.token.children = childTokens;
+        } else {
+          this.token.children = undefined;
+        }
+      } catch (e) {
+        this.token.children = undefined;
+      }
+    } else {
+        this.token.children = undefined;
+    }
+  }
+
   toDOM(view: EditorView): HTMLElement {
-    const cmdName = this.token.name || '';
-    const content = this.token.content || '';
-    const colorArg = this.token.colorArg || '';
+    this._parseAndSetTokenProperties(this.token.latex);
+
+    const { name = '', content = '', colorArg = '' } = this.token;
 
     if (this.showCommands) {
-      const wrapper = document.createElement('span');
-      wrapper.className = 'latex-command-raw latex-visual-widget';
-      wrapper.style.display = 'inline-block';
-      wrapper.style.margin = '0 2px';
-      wrapper.style.padding = '2px 6px';
-      wrapper.style.background = 'rgba(220, 53, 69, 0.1)';
-      wrapper.style.border = '1px solid rgba(220, 53, 69, 0.3)';
-      wrapper.style.borderRadius = '3px';
-      wrapper.style.fontFamily = 'monospace';
-      wrapper.style.fontSize = '0.9em';
-      wrapper.style.color = '#dc3545';
-
-      if (colorArg) {
-        wrapper.textContent = `\\${cmdName}{${colorArg}}{${content}}`;
-      } else {
-        wrapper.textContent = `\\${cmdName}{${content}}`;
-      }
-
-      this.makeEditable(wrapper, view, (newLatex) => {
-        if (newLatex !== this.token.latex) {
-          this.updateTokenInEditor(view, newLatex);
-        }
-      });
-
-      return wrapper;
+      return this.createRawCommandView(view, name, content, colorArg);
     }
 
-    const span = document.createElement('span');
-    span.className = `latex-visual-command ${cmdName}`;
+    return this.createStyledCommandView(view, name, content, colorArg);
+  }
 
-    if (this.token.children && this.token.children.length > 0) {
-      this.renderNestedContent(span, this.token.children, view);
-    } else {
-      const textContent = this.extractTextContent(content);
-      span.textContent = textContent;
-    }
+  private createRawCommandView(view: EditorView, cmdName: string, content: string, colorArg: string): HTMLElement {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'latex-command-raw latex-visual-widget';
+    wrapper.style.display = 'inline-block';
+    wrapper.style.margin = '0 2px';
+    wrapper.style.padding = '2px 6px';
+    wrapper.style.background = 'rgba(220, 53, 69, 0.1)';
+    wrapper.style.border = '1px solid rgba(220, 53, 69, 0.3)';
+    wrapper.style.borderRadius = '3px';
+    wrapper.style.fontFamily = 'monospace';
+    wrapper.style.fontSize = '0.9em';
+    wrapper.style.color = '#dc3545';
 
-    this.applyCommandStyles(span, cmdName, colorArg);
+    wrapper.textContent = this.token.latex;
 
-    this.makeEditable(span, view, (newContent) => {
-      const textContent = this.extractTextContent(content);
-      if (newContent !== textContent) {
-        let newLatex;
-        if (colorArg) {
-          newLatex = `\\${cmdName}{${colorArg}}{${newContent}}`;
-        } else {
-          newLatex = `\\${cmdName}{${newContent}}`;
-        }
+    this.makeEditable(wrapper, view, (newLatex) => {
+      if (newLatex !== this.token.latex) {
         this.updateTokenInEditor(view, newLatex);
       }
     });
 
-    return span;
+    return wrapper;
   }
 
-  private renderNestedContent(container: HTMLElement, children: LatexToken[], view: EditorView) {
-    children.forEach(child => {
-      if (child.type === 'text') {
-        const textNode = document.createTextNode(child.content);
-        container.appendChild(textNode);
-      } else if (child.type === 'editable_command') {
-        const childSpan = document.createElement('span');
-        childSpan.className = `latex-visual-command ${child.name}`;
+  private createStyledCommandView(view: EditorView, cmdName: string, content: string, colorArg: string): HTMLElement {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'latex-command-wrapper';
+    wrapper.style.position = 'relative';
+    wrapper.style.display = 'inline';
+    wrapper.style.cursor = 'text';
+    wrapper.tabIndex = 0;
+    wrapper.style.outline = 'none';
 
-        if (child.children && child.children.length > 0) {
-          this.renderNestedContent(childSpan, child.children, view);
+    const visualSpan = document.createElement('span');
+    visualSpan.className = `latex-visual-command ${cmdName}`;
+
+    this.updateVisualContent(visualSpan, view);
+    this.applyCommandStyles(visualSpan, cmdName, colorArg);
+    wrapper.appendChild(visualSpan);
+
+    this.setupInlineEditing(wrapper, visualSpan, view);
+
+    wrapper.addEventListener('focus', () => {
+      wrapper.style.background = 'rgba(0, 123, 255, 0.05)';
+      wrapper.style.borderRadius = '2px';
+    });
+
+    wrapper.addEventListener('blur', () => {
+      wrapper.style.background = '';
+    });
+
+    return wrapper;
+  }
+
+  private setupInlineEditing(wrapper: HTMLElement, visualSpan: HTMLElement, view: EditorView) {
+    const startEditing = (clickX?: number) => {
+      if (this.isEditing) return;
+      this.isEditing = true;
+
+      visualSpan.style.display = 'none';
+
+      this.editableSpan = document.createElement('span');
+      this.editableSpan.contentEditable = 'true';
+      this.editableSpan.style.outline = '2px solid #007acc';
+      this.editableSpan.style.outlineOffset = '1px';
+      this.editableSpan.style.background = 'rgba(255, 255, 255, 0.95)';
+      this.editableSpan.style.padding = '2px 4px';
+      this.editableSpan.style.margin = '-2px -4px';
+      this.editableSpan.style.borderRadius = '3px';
+      this.editableSpan.style.fontFamily = 'monospace';
+      this.editableSpan.style.fontSize = '0.9em';
+      this.editableSpan.style.color = '#dc3545';
+      this.editableSpan.style.minWidth = '3em';
+      this.editableSpan.style.whiteSpace = 'nowrap';
+      this.editableSpan.textContent = this.token.latex;
+
+      wrapper.appendChild(this.editableSpan);
+
+      setTimeout(() => {
+        this.editableSpan!.focus();
+        if (clickX !== undefined) {
+          this.positionCursorFromClick(this.editableSpan!, clickX);
         } else {
-          childSpan.textContent = this.extractTextContent(child.content);
+          this.selectEditableContent(this.editableSpan!);
         }
+      }, 10);
 
-        this.applyCommandStyles(childSpan, child.name || '', child.colorArg || '');
-        container.appendChild(childSpan);
+      this.setupEditingEvents(view, wrapper, visualSpan);
+    };
+
+    wrapper.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startEditing(e.clientX);
+    });
+
+    wrapper.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startEditing();
+    });
+
+    wrapper.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === 'F2') && !this.isEditing) {
+        e.preventDefault();
+        e.stopPropagation();
+        startEditing();
       }
     });
   }
 
+  private setupEditingEvents(view: EditorView, wrapper: HTMLElement, visualSpan: HTMLElement) {
+    if (!this.editableSpan) return;
+
+    const finishEditing = () => {
+      if (!this.isEditing || !this.editableSpan) return;
+      this.isEditing = false;
+
+      const newLatex = (this.editableSpan.textContent || '').trim();
+
+      if (newLatex && newLatex !== this.token.latex) {
+        this.updateTokenInEditor(view, newLatex);
+        this._parseAndSetTokenProperties(newLatex);
+        this.updateVisualContent(visualSpan, view);
+        this.reapplyCommandStyles(visualSpan);
+      }
+
+      visualSpan.style.display = '';
+      if (this.editableSpan.parentNode) {
+        this.editableSpan.parentNode.removeChild(this.editableSpan);
+      }
+      this.editableSpan = undefined;
+      wrapper.focus();
+    };
+
+    const cancelEditing = () => {
+      if (!this.isEditing || !this.editableSpan) return;
+      this.isEditing = false;
+
+      visualSpan.style.display = '';
+      if (this.editableSpan.parentNode) {
+        this.editableSpan.parentNode.removeChild(this.editableSpan);
+      }
+      this.editableSpan = undefined;
+      wrapper.focus();
+    };
+
+    this.editableSpan.addEventListener('blur', finishEditing);
+    this.editableSpan.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        finishEditing();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelEditing();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        finishEditing();
+        setTimeout(() => {
+          const nextFocusable = this.findNextFocusableElement(wrapper);
+          if (nextFocusable) nextFocusable.focus();
+        }, 0);
+      }
+    });
+
+    this.editableSpan.addEventListener('mousedown', (e) => e.stopPropagation());
+    this.editableSpan.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  private positionCursorFromClick(editableSpan: HTMLElement, clickX: number) {
+    try {
+      const rect = editableSpan.getBoundingClientRect();
+      const text = editableSpan.textContent || '';
+      const relativeX = clickX - rect.left - 4;
+      const charWidth = (rect.width - 8) / Math.max(text.length, 1);
+      const charIndex = Math.max(0, Math.min(Math.round(relativeX / charWidth), text.length));
+
+      if (editableSpan.firstChild) {
+        const range = document.createRange();
+        range.setStart(editableSpan.firstChild, charIndex);
+        range.collapse(true);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    } catch (e) {
+      this.selectEditableContent(editableSpan);
+    }
+  }
+
+  private selectEditableContent(editableSpan: HTMLElement) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    const text = editableSpan.textContent || '';
+    const lastBraceIndex = text.lastIndexOf('{');
+    const closingBraceIndex = text.lastIndexOf('}');
+
+    if (lastBraceIndex !== -1 && closingBraceIndex > lastBraceIndex && editableSpan.firstChild) {
+      range.setStart(editableSpan.firstChild, lastBraceIndex + 1);
+      range.setEnd(editableSpan.firstChild, closingBraceIndex);
+    } else if (editableSpan.firstChild) {
+      range.selectNodeContents(editableSpan);
+    }
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+
+  private findNextFocusableElement(currentElement: HTMLElement): HTMLElement | null {
+    const focusableElements = Array.from(document.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]), .latex-command-wrapper'
+    )) as HTMLElement[];
+    const currentIndex = focusableElements.indexOf(currentElement);
+    return currentIndex > -1 && currentIndex < focusableElements.length - 1
+      ? focusableElements[currentIndex + 1]
+      : null;
+  }
+
   private applyCommandStyles(element: HTMLElement, cmdName: string, colorArg: string) {
     switch (cmdName) {
-      case 'textbf':
-        element.style.fontWeight = 'bold';
-        break;
-      case 'textit':
-      case 'emph':
-        element.style.fontStyle = 'italic';
-        break;
-      case 'underline':
-        element.style.textDecoration = 'underline';
-        break;
-      case 'textsc':
-        element.style.fontVariant = 'small-caps';
-        break;
-      case 'textsf':
-        element.style.fontFamily = 'sans-serif';
-        break;
+      case 'textbf': element.style.fontWeight = 'bold'; break;
+      case 'textit': case 'emph': element.style.fontStyle = 'italic'; break;
+      case 'underline': element.style.textDecoration = 'underline'; break;
+      case 'textsc': element.style.fontVariant = 'small-caps'; break;
+      case 'textsf': element.style.fontFamily = 'sans-serif'; break;
       case 'texttt':
         element.style.fontFamily = 'monospace';
         element.style.background = 'rgba(0, 0, 0, 0.05)';
         element.style.borderRadius = '2px';
         element.style.padding = '1px 2px';
         break;
-      case 'textcolor':
-      case 'color':
-        if (colorArg) {
-          element.style.color = colorArg;
-        }
-        break;
+      case 'textcolor': case 'color': if (colorArg) element.style.color = colorArg; break;
       case 'colorbox':
         if (colorArg) {
           element.style.backgroundColor = colorArg;
@@ -125,27 +300,19 @@ export class CommandWidget extends BaseLatexWidget {
     }
   }
 
-  private extractTextContent(content: string | any): string {
-    if (typeof content === 'string') {
-      return content;
+  private updateVisualContent(visualSpan: HTMLElement, view: EditorView) {
+    visualSpan.innerHTML = '';
+    if (this.token.children?.length) {
+      NestedContentRenderer.renderNestedContent(visualSpan, this.token.content || '', view, this.showCommands);
+    } else {
+      visualSpan.textContent = this.token.content || '';
     }
+  }
 
-    if (Array.isArray(content)) {
-      return content.map(item => {
-        if (typeof item === 'string') {
-          return item;
-        }
-        if (item && typeof item === 'object' && item.content) {
-          return this.extractTextContent(item.content);
-        }
-        return '';
-      }).join('');
-    }
-
-    if (content && typeof content === 'object' && content.content) {
-      return this.extractTextContent(content.content);
-    }
-
-    return String(content || '');
+  private reapplyCommandStyles(visualSpan: HTMLElement) {
+    const { name = '', colorArg = '' } = this.token;
+    visualSpan.style.cssText = '';
+    visualSpan.className = `latex-visual-command ${name}`;
+    this.applyCommandStyles(visualSpan, name, colorArg);
   }
 }

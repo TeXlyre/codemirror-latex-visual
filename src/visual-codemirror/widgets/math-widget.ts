@@ -6,19 +6,18 @@ export class MathWidget extends BaseLatexWidget {
   private isDisplay: boolean;
   private mathfield?: any;
 
-  constructor(token: any, isDisplay: boolean) {
-    super(token);
+  constructor(token: any, isDisplay: boolean, showCommands: boolean = false) {
+    super(token, showCommands);
     this.isDisplay = isDisplay;
   }
 
   toDOM(view: EditorView): HTMLElement {
     const container = document.createElement('div');
     container.className = `${this.isDisplay ? 'latex-visual-math-display' : 'latex-visual-math-inline'} latex-visual-widget`;
-    container.style.lineHeight = '1.4';
+    container.style.lineHeight = '1.0';
 
     if (this.isDisplay) {
       container.style.margin = '0';
-      container.style.padding = '10px';
       this.preserveLineHeight(container, this.token.latex);
     }
 

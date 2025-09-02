@@ -1,7 +1,16 @@
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
+import { LatexTokenizer } from '../../parsers/main-parser';
+import { NestedContentRenderer } from '../nested-content-renderer';
+
+interface CellData {
+  content: string;
+  hasWidgets: boolean;
+}
 
 export class TableWidget extends BaseLatexWidget {
+  private tableElement?: HTMLElement;
+
   toDOM(view: EditorView): HTMLElement {
     const content = this.token.content || '';
     const alignment = this.token.params || '';
@@ -27,9 +36,9 @@ export class TableWidget extends BaseLatexWidget {
       beginDiv.style.margin = '0 0 5px 0';
       beginDiv.style.fontSize = '0.9em';
 
-      const tableElement = this.createEditableTable(content, alignment, view, true);
-      tableElement.style.margin = '5px 0';
-      tableElement.style.border = '1px solid rgba(111, 66, 193, 0.2)';
+      this.tableElement = this.createEditableTable(content, alignment, view, true);
+      this.tableElement.style.margin = '5px 0';
+      this.tableElement.style.border = '1px solid rgba(111, 66, 193, 0.2)';
 
       const endDiv = document.createElement('div');
       endDiv.className = 'table-end';
@@ -40,16 +49,16 @@ export class TableWidget extends BaseLatexWidget {
       endDiv.style.fontSize = '0.9em';
 
       wrapper.appendChild(beginDiv);
-      wrapper.appendChild(tableElement);
+      wrapper.appendChild(this.tableElement);
       wrapper.appendChild(endDiv);
 
       return wrapper;
     }
 
-    const table = this.createEditableTable(content, alignment, view, false);
-    table.style.margin = '0';
-    this.preserveLineHeight(table, this.token.latex);
-    return table;
+    this.tableElement = this.createEditableTable(content, alignment, view, false);
+    this.tableElement.style.margin = '0';
+    this.preserveLineHeight(this.tableElement, this.token.latex);
+    return this.tableElement;
   }
 
   private createEditableTable(content: string, alignment: string, view: EditorView, showCommands: boolean): HTMLElement {
@@ -64,19 +73,19 @@ export class TableWidget extends BaseLatexWidget {
 
     const rows = this.parseTableRows(content, alignment);
 
-    rows.forEach((rowCells: string[], rowIndex: number) => {
+    rows.forEach((rowCells: CellData[], rowIndex: number) => {
       const tr = document.createElement('tr');
 
-      rowCells.forEach((cellContent: string, colIndex: number) => {
+      rowCells.forEach((cellData: CellData, colIndex: number) => {
         const td = document.createElement('td');
         td.className = 'latex-table-cell';
         td.style.border = '1px solid #ddd';
         td.style.padding = '8px 12px';
         td.style.minWidth = '60px';
-        td.contentEditable = 'true';
         td.style.outline = 'none';
         td.dataset.row = rowIndex.toString();
         td.dataset.col = colIndex.toString();
+        td.dataset.originalContent = cellData.content;
 
         const align = alignment.charAt(colIndex) || 'l';
         switch (align) {
@@ -90,8 +99,23 @@ export class TableWidget extends BaseLatexWidget {
             td.style.textAlign = 'left';
         }
 
-        td.textContent = cellContent;
-        this.setupCellEvents(td, view, table, alignment);
+        if (cellData.hasWidgets) {
+          td.contentEditable = 'false';
+          const contentDiv = document.createElement('div');
+          contentDiv.contentEditable = 'true';
+          contentDiv.style.outline = 'none';
+          contentDiv.style.minHeight = '1.2em';
+
+          NestedContentRenderer.renderNestedContent(contentDiv, cellData.content, view, this.showCommands);
+          td.appendChild(contentDiv);
+
+          this.setupNestedCellEvents(contentDiv, td, view, table, alignment);
+        } else {
+          td.contentEditable = 'true';
+          td.textContent = cellData.content;
+          this.setupSimpleCellEvents(td, view, table, alignment);
+        }
+
         tr.appendChild(td);
       });
 
@@ -102,63 +126,58 @@ export class TableWidget extends BaseLatexWidget {
     return table;
   }
 
-  private parseTableRows(content: string, alignment: string): string[][] {
+  private parseTableRows(content: string, alignment: string): CellData[][] {
     if (!content.trim()) {
       const colCount = alignment.length || 2;
-      return [Array(colCount).fill('')];
+      return [Array(colCount).fill({content: '', hasWidgets: false})];
     }
 
     const rows = content.split('\\\\').map(row => row.trim());
     const colCount = alignment.length || 2;
+    const tokenizer = new LatexTokenizer();
 
     return rows.map(rowContent => {
       if (!rowContent) {
-        return Array(colCount).fill('');
+        return Array(colCount).fill({content: '', hasWidgets: false});
       }
-      const cells = rowContent.split('&').map(cell => cell.trim());
+
+      const cells = rowContent.split('&').map(cell => {
+        const trimmed = cell.trim();
+        const tokens = tokenizer.tokenize(trimmed);
+        const hasWidgets = tokens.some(token =>
+          token.type !== 'text' && token.type !== 'paragraph_break'
+        );
+        return {content: trimmed, hasWidgets};
+      });
+
       while (cells.length < colCount) {
-        cells.push('');
+        cells.push({content: '', hasWidgets: false});
       }
       return cells.slice(0, colCount);
     });
   }
 
-  private setupCellEvents(cell: HTMLTableCellElement, view: EditorView, table: HTMLElement, alignment: string) {
-    let updateTimeout: number;
-
-    const scheduleUpdate = () => {
-      clearTimeout(updateTimeout);
-      updateTimeout = window.setTimeout(() => {
-        this.updateTableContent(view, table, alignment);
-      }, 300);
-    };
-
-    cell.addEventListener('input', () => {
-      scheduleUpdate();
+  private setupSimpleCellEvents(cell: HTMLTableCellElement, view: EditorView, table: HTMLElement, alignment: string) {
+    cell.addEventListener('input', (e) => {
+      e.stopPropagation();
+      this.updateTable(view, table, alignment);
     });
 
     cell.addEventListener('keydown', (e) => {
+      e.stopPropagation();
       if (e.key === 'Tab') {
         e.preventDefault();
+        this.updateTable(view, table, alignment);
         const nextCell = this.getNextCell(cell, !e.shiftKey);
         if (nextCell) {
-          nextCell.focus();
-          const range = document.createRange();
-          const selection = window.getSelection();
-          if (nextCell.firstChild) {
-            range.setStart(nextCell.firstChild, 0);
-            range.setEnd(nextCell.firstChild, nextCell.textContent?.length || 0);
-          } else {
-            range.selectNodeContents(nextCell);
-          }
-          selection?.removeAllRanges();
-          selection?.addRange(range);
+          setTimeout(() => this.focusCell(nextCell), 10);
         }
       } else if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        this.updateTable(view, table, alignment);
         const nextRow = this.getNextRowCell(cell);
         if (nextRow) {
-          nextRow.focus();
+          setTimeout(() => this.focusCell(nextRow), 10);
         }
       }
     });
@@ -170,6 +189,115 @@ export class TableWidget extends BaseLatexWidget {
     cell.addEventListener('click', (e) => {
       e.stopPropagation();
     });
+
+    cell.addEventListener('focus', (e) => {
+      e.stopPropagation();
+    });
+
+    cell.addEventListener('blur', () => {
+      this.updateTable(view, table, alignment);
+    });
+  }
+
+  private setupNestedCellEvents(contentDiv: HTMLElement, cell: HTMLTableCellElement, view: EditorView, table: HTMLElement, alignment: string) {
+    contentDiv.addEventListener('input', (e) => {
+      e.stopPropagation();
+      this.updateTable(view, table, alignment);
+    });
+
+    contentDiv.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        this.updateTable(view, table, alignment);
+        const nextCell = this.getNextCell(cell, !e.shiftKey);
+        if (nextCell) {
+          setTimeout(() => this.focusCell(nextCell), 10);
+        }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.updateTable(view, table, alignment);
+        const nextRow = this.getNextRowCell(cell);
+        if (nextRow) {
+          setTimeout(() => this.focusCell(nextRow), 10);
+        }
+      }
+    });
+
+    contentDiv.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    contentDiv.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    contentDiv.addEventListener('focus', (e) => {
+      e.stopPropagation();
+    });
+
+    contentDiv.addEventListener('blur', () => {
+      this.updateTable(view, table, alignment);
+    });
+  }
+
+  private handleCellNavigation(e: KeyboardEvent, cell: HTMLTableCellElement, view: EditorView, table: HTMLElement, alignment: string) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const nextCell = this.getNextCell(cell, !e.shiftKey);
+      if (nextCell) {
+        setTimeout(() => this.focusCell(nextCell), 10);
+      }
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const nextRow = this.getNextRowCell(cell);
+      if (nextRow) {
+        setTimeout(() => this.focusCell(nextRow), 10);
+      }
+    }
+  }
+
+  private focusCell(cell: HTMLTableCellElement) {
+    requestAnimationFrame(() => {
+      const editableElement = cell.contentEditable === 'true' ? cell : cell.querySelector('[contenteditable="true"]') as HTMLElement;
+      if (editableElement) {
+        editableElement.focus();
+
+        if (editableElement.textContent) {
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.selectNodeContents(editableElement);
+          range.collapse(false);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      }
+    });
+  }
+
+  private updateTable(view: EditorView, table: HTMLElement, alignment: string) {
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const tableRows: string[] = [];
+
+    rows.forEach(row => {
+      const cells = Array.from(row.querySelectorAll('td'));
+      const cellContents = cells.map(cell => {
+        if (cell.contentEditable === 'true') {
+          return (cell.textContent || '').trim();
+        } else {
+          const editableDiv = cell.querySelector('[contenteditable="true"]');
+          if (editableDiv) {
+            return NestedContentRenderer.extractContentFromContainer(editableDiv as HTMLElement);
+          }
+        }
+        return cell.dataset.originalContent || '';
+      });
+      tableRows.push(cellContents.join(' & '));
+    });
+
+    const newContent = tableRows.join(' \\\\\n');
+    const newLatex = `\\begin{tabular}{${alignment}}\n${newContent}\n\\end{tabular}`;
+    this.updateTokenInEditor(view, newLatex);
   }
 
   private getNextCell(currentCell: HTMLTableCellElement, forward: boolean): HTMLTableCellElement | null {
@@ -201,21 +329,5 @@ export class TableWidget extends BaseLatexWidget {
     }
 
     return null;
-  }
-
-  private updateTableContent(view: EditorView, table: HTMLElement, alignment: string) {
-    const rows = Array.from(table.querySelectorAll('tr'));
-    const tableRows: string[] = [];
-
-    rows.forEach(row => {
-      const cells = Array.from(row.querySelectorAll('td'));
-      const cellContents = cells.map(cell => (cell.textContent || ''));
-      tableRows.push(cellContents.join(' & '));
-    });
-
-    const newContent = tableRows.join(' \\\\\n');
-    const newLatex = `\\begin{tabular}{${alignment}}\n${newContent}\n\\end{tabular}`;
-
-    this.updateTokenInEditor(view, newLatex);
   }
 }
