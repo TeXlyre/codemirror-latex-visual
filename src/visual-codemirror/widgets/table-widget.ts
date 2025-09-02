@@ -62,33 +62,12 @@ export class TableWidget extends BaseLatexWidget {
 
     const tbody = document.createElement('tbody');
 
-    if (!content.trim()) {
-      const row = document.createElement('tr');
-      const cell = document.createElement('td');
-      cell.style.padding = '8px 12px';
-      cell.style.border = '1px solid #ddd';
-      cell.style.minWidth = '60px';
-      cell.contentEditable = 'true';
-      cell.style.outline = 'none';
-      cell.textContent = '';
+    const rows = this.parseTableRows(content, alignment);
 
-      cell.addEventListener('blur', () => {
-        this.updateTableContent(view, table, alignment);
-      });
-
-      row.appendChild(cell);
-      tbody.appendChild(row);
-      table.appendChild(tbody);
-      return table;
-    }
-
-    const rows = content.split('\\\\').map(row => row.trim()).filter(row => row);
-
-    rows.forEach((rowContent: string) => {
+    rows.forEach((rowCells: string[], rowIndex: number) => {
       const tr = document.createElement('tr');
-      const cells = rowContent.split('&').map(cell => cell.trim());
 
-      cells.forEach((cellContent: string, index: number) => {
+      rowCells.forEach((cellContent: string, colIndex: number) => {
         const td = document.createElement('td');
         td.className = 'latex-table-cell';
         td.style.border = '1px solid #ddd';
@@ -96,8 +75,10 @@ export class TableWidget extends BaseLatexWidget {
         td.style.minWidth = '60px';
         td.contentEditable = 'true';
         td.style.outline = 'none';
+        td.dataset.row = rowIndex.toString();
+        td.dataset.col = colIndex.toString();
 
-        const align = alignment.charAt(index) || 'l';
+        const align = alignment.charAt(colIndex) || 'l';
         switch (align) {
           case 'c':
             td.style.textAlign = 'center';
@@ -110,21 +91,7 @@ export class TableWidget extends BaseLatexWidget {
         }
 
         td.textContent = cellContent;
-
-        td.addEventListener('blur', () => {
-          this.updateTableContent(view, table, alignment);
-        });
-
-        td.addEventListener('keydown', (e) => {
-          if (e.key === 'Tab') {
-            e.preventDefault();
-            const nextCell = this.getNextCell(td, !e.shiftKey);
-            if (nextCell) {
-              nextCell.focus();
-            }
-          }
-        });
-
+        this.setupCellEvents(td, view, table, alignment);
         tr.appendChild(td);
       });
 
@@ -133,6 +100,76 @@ export class TableWidget extends BaseLatexWidget {
 
     table.appendChild(tbody);
     return table;
+  }
+
+  private parseTableRows(content: string, alignment: string): string[][] {
+    if (!content.trim()) {
+      const colCount = alignment.length || 2;
+      return [Array(colCount).fill('')];
+    }
+
+    const rows = content.split('\\\\').map(row => row.trim());
+    const colCount = alignment.length || 2;
+
+    return rows.map(rowContent => {
+      if (!rowContent) {
+        return Array(colCount).fill('');
+      }
+      const cells = rowContent.split('&').map(cell => cell.trim());
+      while (cells.length < colCount) {
+        cells.push('');
+      }
+      return cells.slice(0, colCount);
+    });
+  }
+
+  private setupCellEvents(cell: HTMLTableCellElement, view: EditorView, table: HTMLElement, alignment: string) {
+    let updateTimeout: number;
+
+    const scheduleUpdate = () => {
+      clearTimeout(updateTimeout);
+      updateTimeout = window.setTimeout(() => {
+        this.updateTableContent(view, table, alignment);
+      }, 300);
+    };
+
+    cell.addEventListener('input', () => {
+      scheduleUpdate();
+    });
+
+    cell.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const nextCell = this.getNextCell(cell, !e.shiftKey);
+        if (nextCell) {
+          nextCell.focus();
+          const range = document.createRange();
+          const selection = window.getSelection();
+          if (nextCell.firstChild) {
+            range.setStart(nextCell.firstChild, 0);
+            range.setEnd(nextCell.firstChild, nextCell.textContent?.length || 0);
+          } else {
+            range.selectNodeContents(nextCell);
+          }
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const nextRow = this.getNextRowCell(cell);
+        if (nextRow) {
+          nextRow.focus();
+        }
+      }
+    });
+
+    cell.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    cell.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
   }
 
   private getNextCell(currentCell: HTMLTableCellElement, forward: boolean): HTMLTableCellElement | null {
@@ -151,16 +188,29 @@ export class TableWidget extends BaseLatexWidget {
     return null;
   }
 
+  private getNextRowCell(currentCell: HTMLTableCellElement): HTMLTableCellElement | null {
+    const table = currentCell.closest('table');
+    if (!table) return null;
+
+    const currentRow = currentCell.parentElement;
+    const nextRow = currentRow?.nextElementSibling;
+
+    if (nextRow) {
+      const colIndex = Array.from(currentRow.children).indexOf(currentCell);
+      return nextRow.children[colIndex] as HTMLTableCellElement;
+    }
+
+    return null;
+  }
+
   private updateTableContent(view: EditorView, table: HTMLElement, alignment: string) {
     const rows = Array.from(table.querySelectorAll('tr'));
     const tableRows: string[] = [];
 
     rows.forEach(row => {
       const cells = Array.from(row.querySelectorAll('td'));
-      const cellContents = cells.map(cell => (cell.textContent || '').trim());
-      if (cellContents.some(content => content)) {
-        tableRows.push(cellContents.join(' & '));
-      }
+      const cellContents = cells.map(cell => (cell.textContent || ''));
+      tableRows.push(cellContents.join(' & '));
     });
 
     const newContent = tableRows.join(' \\\\\n');

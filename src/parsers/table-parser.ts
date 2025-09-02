@@ -32,7 +32,8 @@ export class TableParser extends BaseLatexParser {
     }
 
     const fullLatex = latex.slice(position, endPos + endPattern.length);
-    const content = latex.slice(position + beginMatch[0].length, endPos);
+    const rawContent = latex.slice(position + beginMatch[0].length, endPos);
+    const content = rawContent.replace(/^\s*\n|\n\s*$/g, ''); // Remove leading/trailing newlines only
     const alignment = isTable ? '' : (beginMatch[2] || '');
 
     return {
