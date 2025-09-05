@@ -12,239 +12,357 @@ export class MathWidget extends BaseLatexWidget {
   }
 
   toDOM(view: EditorView): HTMLElement {
+    if (this.showCommands) {
+      return this.createCommandView(view);
+    }
+
     const container = document.createElement('div');
     container.className = `${this.isDisplay ? 'latex-visual-math-display' : 'latex-visual-math-inline'} latex-visual-widget`;
     container.style.lineHeight = '1.0';
+    container.style.position = 'relative';
 
     if (this.isDisplay) {
       container.style.margin = '0';
       this.preserveLineHeight(container, this.token.latex);
     }
 
-    if (this.showCommands) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'latex-math-command-wrapper';
-      wrapper.style.fontFamily = 'monospace';
-      wrapper.style.background = 'rgba(111, 66, 193, 0.1)';
-      wrapper.style.border = '1px solid rgba(111, 66, 193, 0.3)';
-      wrapper.style.borderRadius = '4px';
-      wrapper.style.padding = '8px';
-      wrapper.style.margin = '0';
-      wrapper.style.display = this.isDisplay ? 'block' : 'inline-block';
-      wrapper.style.lineHeight = '1.4';
-
-      if (this.isDisplay) {
-        this.preserveLineHeight(wrapper, this.token.latex);
-      }
-
-      const delimiter = this.isDisplay ? '$$' : '$';
-      const prefix = document.createElement('span');
-      prefix.textContent = delimiter;
-      prefix.style.color = '#6f42c1';
-      prefix.style.fontWeight = '600';
-
-      const mathSpan = document.createElement('span');
-      mathSpan.contentEditable = 'true';
-      mathSpan.textContent = this.token.content;
-      mathSpan.style.margin = '0 4px';
-      mathSpan.style.outline = 'none';
-      mathSpan.style.fontFamily = 'monospace';
-
-      const suffix = document.createElement('span');
-      suffix.textContent = delimiter;
-      suffix.style.color = '#6f42c1';
-      suffix.style.fontWeight = '600';
-
-      mathSpan.addEventListener('blur', () => {
-        const newContent = mathSpan.textContent || '';
-        if (newContent !== this.token.content) {
-          const newLatex = `${delimiter}${newContent}${delimiter}`;
-          this.updateTokenInEditor(view, newLatex);
-        }
-      });
-
-      mathSpan.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          mathSpan.blur();
-          e.preventDefault();
-        }
-      });
-
-      wrapper.appendChild(prefix);
-      wrapper.appendChild(mathSpan);
-      wrapper.appendChild(suffix);
-
-      return wrapper;
-    }
-
     this.mathfield = createEditableMath(this.token.content, this.isDisplay);
     (this.mathfield as any).readOnly = true;
 
-    const indicator = document.createElement('div');
-    indicator.className = 'math-edit-indicator';
-    indicator.innerHTML = '✏️';
-    indicator.style.position = 'absolute';
-    indicator.style.top = this.isDisplay ? '6px' : '-6px';
-    indicator.style.right = this.isDisplay ? '6px' : '-6px';
-    indicator.style.width = this.isDisplay ? '18px' : '14px';
-    indicator.style.height = this.isDisplay ? '18px' : '14px';
-    indicator.style.background = '#007acc';
-    indicator.style.color = 'white';
-    indicator.style.fontSize = this.isDisplay ? '10px' : '8px';
-    indicator.style.display = 'flex';
-    indicator.style.alignItems = 'center';
-    indicator.style.justifyContent = 'center';
-    indicator.style.borderRadius = '50%';
-    indicator.style.opacity = '0';
-    indicator.style.transition = 'opacity 0.2s';
-    indicator.style.zIndex = '10';
-
-    container.style.position = 'relative';
-    container.style.cursor = 'pointer';
-
-    container.addEventListener('mouseenter', () => {
-      indicator.style.opacity = '1';
-    });
-
-    container.addEventListener('mouseleave', () => {
-      indicator.style.opacity = '0';
-    });
-
-    container.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.startMathEditing(view, container);
-    });
+    const editButton = this.createEditButton();
 
     container.appendChild(this.mathfield);
-    container.appendChild(indicator);
+    container.appendChild(editButton);
+
+    this.setupEventHandlers(container, editButton, view);
 
     return container;
   }
 
-  private startMathEditing(view: EditorView, container: HTMLElement) {
-    if (container.dataset.editing === 'true') return;
-    container.dataset.editing = 'true';
+  private createEditButton(): HTMLElement {
+    const button = document.createElement('button');
+    button.className = 'math-edit-button';
+    button.innerHTML = '✏️';
+    button.style.position = 'absolute';
+    button.style.top = this.isDisplay ? '6px' : '-6px';
+    button.style.right = this.isDisplay ? '6px' : '-6px';
+    button.style.width = this.isDisplay ? '18px' : '14px';
+    button.style.height = this.isDisplay ? '18px' : '14px';
+    button.style.background = '#007acc';
+    button.style.color = 'white';
+    button.style.fontSize = this.isDisplay ? '10px' : '8px';
+    button.style.border = 'none';
+    button.style.borderRadius = '50%';
+    button.style.cursor = 'pointer';
+    button.style.opacity = '0';
+    button.style.transition = 'opacity 0.2s';
+    button.style.zIndex = '100';
+    button.style.display = 'flex';
+    button.style.alignItems = 'center';
+    button.style.justifyContent = 'center';
+    button.title = 'Open math editor';
+    return button;
+  }
 
-    const rect = container.getBoundingClientRect();
-    const currentValue = this.mathfield?.getValue('latex') || this.token.content;
+  private setupEventHandlers(container: HTMLElement, editButton: HTMLElement, view: EditorView): void {
+    container.addEventListener('mouseenter', () => {
+      editButton.style.opacity = '1';
+    });
 
-    const floatingContainer = document.createElement('div');
-    floatingContainer.className = 'mathfield-editor-overlay';
-    floatingContainer.style.position = 'fixed';
-    floatingContainer.style.left = `${rect.left - 10}px`;
-    floatingContainer.style.top = `${rect.top - 10}px`;
-    floatingContainer.style.minWidth = `${Math.max(rect.width + 20, 250)}px`;
-    floatingContainer.style.minHeight = '80px';
-    floatingContainer.style.zIndex = '10000';
-    floatingContainer.style.background = 'white';
-    floatingContainer.style.border = '2px solid #007acc';
-    floatingContainer.style.borderRadius = '6px';
-    floatingContainer.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
-    floatingContainer.style.padding = '10px';
+    container.addEventListener('mouseleave', () => {
+      editButton.style.opacity = '0';
+    });
 
-    const newMathfield = createEditableMath(currentValue, this.isDisplay);
-    (newMathfield as any).readOnly = false;
+    editButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.openFloatingEditor(view, container);
+    });
 
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.marginTop = '8px';
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'flex-end';
-    buttonContainer.style.gap = '6px';
+    this.mathfield.addEventListener('click', (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.showInlineEditor(view, container);
+    });
+  }
 
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.border = 'none';
-    cancelBtn.style.borderRadius = '4px';
-    cancelBtn.style.padding = '6px 12px';
-    cancelBtn.style.cursor = 'pointer';
-    cancelBtn.style.background = '#6c757d';
-    cancelBtn.style.color = 'white';
+  private createCommandView(view: EditorView): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'latex-math-command-wrapper';
+    wrapper.style.fontFamily = 'monospace';
+    wrapper.style.background = 'rgba(111, 66, 193, 0.1)';
+    wrapper.style.border = '1px solid rgba(111, 66, 193, 0.3)';
+    wrapper.style.borderRadius = '4px';
+    wrapper.style.padding = '8px';
+    wrapper.style.margin = '0';
+    wrapper.style.display = this.isDisplay ? 'block' : 'inline-block';
+    wrapper.style.lineHeight = '1.4';
 
-    const doneBtn = document.createElement('button');
-    doneBtn.textContent = 'Done';
-    doneBtn.style.border = 'none';
-    doneBtn.style.borderRadius = '4px';
-    doneBtn.style.padding = '6px 12px';
-    doneBtn.style.cursor = 'pointer';
-    doneBtn.style.background = '#007acc';
-    doneBtn.style.color = 'white';
+    if (this.isDisplay) {
+      this.preserveLineHeight(wrapper, this.token.latex);
+    }
 
-    buttonContainer.appendChild(cancelBtn);
-    buttonContainer.appendChild(doneBtn);
-    floatingContainer.appendChild(newMathfield);
-    floatingContainer.appendChild(buttonContainer);
-    document.body.appendChild(floatingContainer);
+    const delimiter = this.isDisplay ? '$$' : '$';
 
-    setTimeout(() => (newMathfield as any).focus(), 10);
+    const prefix = document.createElement('span');
+    prefix.textContent = delimiter;
+    prefix.style.color = '#6f42c1';
+    prefix.style.fontWeight = '600';
 
-    let isFinishing = false;
-    const finishEditing = (save: boolean) => {
-      if (isFinishing) return;
-      isFinishing = true;
+    const mathInput = document.createElement('span');
+    mathInput.contentEditable = 'true';
+    mathInput.textContent = this.token.content;
+    mathInput.style.margin = '0 4px';
+    mathInput.style.outline = 'none';
+    mathInput.style.fontFamily = 'monospace';
 
-      container.dataset.editing = 'false';
+    const suffix = document.createElement('span');
+    suffix.textContent = delimiter;
+    suffix.style.color = '#6f42c1';
+    suffix.style.fontWeight = '600';
 
-      if (save) {
-        const newLatex = (newMathfield as any).getValue('latex');
-        if (newLatex !== this.token.content) {
-          this.updateMathInEditor(view, newLatex);
-        }
+    mathInput.addEventListener('blur', () => {
+      const newContent = mathInput.textContent || '';
+      if (newContent !== this.token.content) {
+        this.updateContent(view, newContent);
       }
+    });
 
-      try {
-        if (floatingContainer && floatingContainer.parentNode) {
-          floatingContainer.parentNode.removeChild(floatingContainer);
-        }
-      } catch (error) {
-        console.warn('Error removing math editor overlay:', error);
-      }
-
-      document.removeEventListener('mousedown', handleClickOutside, true);
-    };
-
-    const handleClickOutside = (e: Event) => {
-      if (!isFinishing && floatingContainer && !floatingContainer.contains(e.target as Node)) {
-        finishEditing(true);
-      }
-    };
-
-    doneBtn.addEventListener('click', () => finishEditing(true));
-    cancelBtn.addEventListener('click', () => finishEditing(false));
-
-    (newMathfield as any).addEventListener('keydown', (e: KeyboardEvent) => {
+    mathInput.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        finishEditing(false);
+        mathInput.blur();
         e.preventDefault();
-      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        finishEditing(true);
+      } else if (e.key === 'Enter') {
+        mathInput.blur();
         e.preventDefault();
       }
     });
 
+    wrapper.appendChild(prefix);
+    wrapper.appendChild(mathInput);
+    wrapper.appendChild(suffix);
+
+    return wrapper;
+  }
+
+  private showInlineEditor(view: EditorView, container: HTMLElement): void {
+    if (container.dataset.inlineEditing === 'true') return;
+
+    container.dataset.inlineEditing = 'true';
+
+    const mathfield = container.querySelector('.mathfield') as HTMLElement;
+    if (mathfield) {
+      mathfield.style.display = 'none';
+    }
+
+    const delimiter = this.isDisplay ? '$$' : '$';
+
+    const editorWrapper = document.createElement('div');
+    editorWrapper.className = 'math-inline-editor';
+    editorWrapper.style.fontFamily = 'monospace';
+    editorWrapper.style.background = 'rgba(111, 66, 193, 0.1)';
+    editorWrapper.style.border = '1px solid rgba(111, 66, 193, 0.3)';
+    editorWrapper.style.borderRadius = '4px';
+    editorWrapper.style.padding = '6px';
+    editorWrapper.style.display = this.isDisplay ? 'block' : 'inline-block';
+    editorWrapper.style.minWidth = '60px';
+
+    const prefixSpan = document.createElement('span');
+    prefixSpan.textContent = delimiter;
+    prefixSpan.style.color = '#6f42c1';
+    prefixSpan.style.fontWeight = 'bold';
+
+    const inputField = document.createElement('input');
+    inputField.type = 'text';
+    inputField.value = this.token.content;
+    inputField.style.border = 'none';
+    inputField.style.background = 'transparent';
+    inputField.style.outline = 'none';
+    inputField.style.fontFamily = 'monospace';
+    inputField.style.margin = '0 4px';
+    inputField.style.minWidth = '30px';
+    inputField.style.width = `${Math.max(this.token.content.length * 8, 60)}px`;
+    inputField.style.color = '#000';
+    inputField.style.fontSize = '14px';
+
+    const suffixSpan = document.createElement('span');
+    suffixSpan.textContent = delimiter;
+    suffixSpan.style.color = '#6f42c1';
+    suffixSpan.style.fontWeight = 'bold';
+
+    editorWrapper.appendChild(prefixSpan);
+    editorWrapper.appendChild(inputField);
+    editorWrapper.appendChild(suffixSpan);
+    container.appendChild(editorWrapper);
+
+    inputField.focus();
+    inputField.select();
+
+    let isActive = true;
+
+    const finishEditing = (shouldSave: boolean) => {
+      if (!isActive) return;
+      isActive = false;
+
+      container.dataset.inlineEditing = 'false';
+
+      if (shouldSave) {
+        const newContent = inputField.value.trim();
+        if (newContent && newContent !== this.token.content) {
+          this.updateContent(view, newContent);
+        }
+      }
+
+      if (editorWrapper.parentNode) {
+        editorWrapper.parentNode.removeChild(editorWrapper);
+      }
+
+      if (mathfield) {
+        mathfield.style.display = '';
+      }
+
+      document.removeEventListener('click', handleOutsideClick, true);
+    };
+
+    const handleOutsideClick = (e: Event) => {
+      if (isActive && !editorWrapper.contains(e.target as Node)) {
+        finishEditing(true);
+      }
+    };
+
+    inputField.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        finishEditing(true);
+        e.preventDefault();
+        e.stopPropagation();
+      } else if (e.key === 'Escape') {
+        finishEditing(false);
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
+    inputField.addEventListener('input', () => {
+      inputField.style.width = `${Math.max(inputField.value.length * 8, 60)}px`;
+    });
+
+    editorWrapper.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
     setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('click', handleOutsideClick, true);
+    }, 200);
+  }
+
+  private openFloatingEditor(view: EditorView, container: HTMLElement): void {
+    if (container.dataset.floatingEditing === 'true') return;
+
+    container.dataset.floatingEditing = 'true';
+
+    const rect = container.getBoundingClientRect();
+    const overlay = document.createElement('div');
+    overlay.className = 'math-floating-editor';
+    overlay.style.position = 'fixed';
+    overlay.style.left = `${rect.left - 10}px`;
+    overlay.style.top = `${rect.top - 10}px`;
+    overlay.style.minWidth = `${Math.max(rect.width + 20, 300)}px`;
+    overlay.style.minHeight = '100px';
+    overlay.style.background = 'white';
+    overlay.style.border = '2px solid #007acc';
+    overlay.style.borderRadius = '8px';
+    overlay.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
+    overlay.style.padding = '15px';
+    overlay.style.zIndex = '10000';
+
+    const mathEditor = createEditableMath(this.token.content, this.isDisplay);
+    (mathEditor as any).readOnly = false;
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.marginTop = '10px';
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-end';
+    buttonContainer.style.gap = '8px';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.padding = '8px 16px';
+    cancelButton.style.border = 'none';
+    cancelButton.style.borderRadius = '4px';
+    cancelButton.style.background = '#6c757d';
+    cancelButton.style.color = 'white';
+    cancelButton.style.cursor = 'pointer';
+
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save';
+    saveButton.style.padding = '8px 16px';
+    saveButton.style.border = 'none';
+    saveButton.style.borderRadius = '4px';
+    saveButton.style.background = '#007acc';
+    saveButton.style.color = 'white';
+    saveButton.style.cursor = 'pointer';
+
+    buttonContainer.appendChild(cancelButton);
+    buttonContainer.appendChild(saveButton);
+    overlay.appendChild(mathEditor);
+    overlay.appendChild(buttonContainer);
+    document.body.appendChild(overlay);
+
+    setTimeout(() => (mathEditor as any).focus(), 50);
+
+    const closeEditor = (shouldSave: boolean) => {
+      container.dataset.floatingEditing = 'false';
+
+      if (shouldSave) {
+        const newLatex = (mathEditor as any).getValue('latex');
+        if (newLatex && newLatex !== this.token.content) {
+          this.updateContent(view, newLatex);
+        }
+      }
+
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    };
+
+    saveButton.addEventListener('click', () => closeEditor(true));
+    cancelButton.addEventListener('click', () => closeEditor(false));
+
+    const handleOutsideClick = (e: Event) => {
+      if (!overlay.contains(e.target as Node)) {
+        closeEditor(true);
+        document.removeEventListener('click', handleOutsideClick, true);
+      }
+    };
+
+    setTimeout(() => {
+      document.addEventListener('click', handleOutsideClick, true);
     }, 100);
   }
 
-  private updateMathInEditor(view: EditorView, newLatex: string) {
+  private updateContent(view: EditorView, newLatex: string): void {
     const delimiter = this.isDisplay ? '$$' : '$';
-    const newFullLatex = `${delimiter}${newLatex}${delimiter}`;
+    const fullLatex = `${delimiter}${newLatex}${delimiter}`;
+
     const pos = this.findTokenInDocument(view);
     if (pos === null) {
-      console.warn('Could not find token to update in document.');
+      console.warn('Could not find token position');
       return;
     }
 
     view.dispatch({
-      changes: { from: pos.from, to: pos.to, insert: newFullLatex }
+      changes: { from: pos.from, to: pos.to, insert: fullLatex }
     });
 
     this.token.content = newLatex;
-    this.token.latex = newFullLatex;
+    this.token.latex = fullLatex;
 
     if (this.mathfield) {
-      (this.mathfield as any).setValue(newLatex, { suppressChangeNotifications: true });
+      try {
+        (this.mathfield as any).setValue(newLatex, { suppressChangeNotifications: true });
+      } catch (error) {
+        console.warn('Error updating mathfield:', error);
+      }
     }
   }
 }
