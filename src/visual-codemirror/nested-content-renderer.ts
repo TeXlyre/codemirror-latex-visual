@@ -43,9 +43,14 @@ export class NestedContentRenderer {
     const tokens = this.tokenizer.tokenize(content);
 
     for (const token of tokens) {
-      if (token.type === 'text' || token.type === 'paragraph_break') {
-        const textNode = document.createTextNode(token.content);
-        fragment.appendChild(textNode);
+      if (token.type === 'text') {
+        this.appendTextWithLineBreaks(fragment, token.content);
+        continue;
+      }
+
+      if (token.type === 'paragraph_break') {
+        const br = document.createElement('br');
+        fragment.appendChild(br);
         continue;
       }
 
@@ -53,14 +58,31 @@ export class NestedContentRenderer {
       if (widget) {
         const element = widget.toDOM(view);
         element.dataset.latexOriginal = token.latex;
+        element.dataset.tokenType = token.type;
+        if ('token' in widget) {
+          (element as any)._widgetToken = (widget as any).token;
+        }
         fragment.appendChild(element);
       } else {
-        const textNode = document.createTextNode(token.latex);
-        fragment.appendChild(textNode);
+        this.appendTextWithLineBreaks(fragment, token.latex);
       }
     }
 
     return fragment;
+  }
+
+  private static appendTextWithLineBreaks(parent: DocumentFragment | HTMLElement, text: string): void {
+    const lines = text.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (i > 0) {
+        const br = document.createElement('br');
+        parent.appendChild(br);
+      }
+      if (lines[i]) {
+        const textNode = document.createTextNode(lines[i]);
+        parent.appendChild(textNode);
+      }
+    }
   }
 
   private static makeSimpleEditable(container: HTMLElement, onUpdate: (newContent: string) => void): void {
@@ -146,12 +168,19 @@ export class NestedContentRenderer {
       } else if (child.nodeType === Node.ELEMENT_NODE) {
         const element = child as HTMLElement;
 
-        if (element.dataset.latexOriginal) {
+        if (element.tagName === 'BR') {
+          result += '\n';
+        } else if (element.dataset.latexOriginal) {
           result += element.dataset.latexOriginal;
         } else if (element.classList.contains('latex-visual-widget')) {
-          result += element.textContent || '';
+          const widgetToken = (element as any)._widgetToken;
+          if (widgetToken && widgetToken.latex) {
+            result += widgetToken.latex;
+          } else {
+            result += element.textContent || '';
+          }
         } else {
-          result += element.textContent || '';
+          result += this.extractContentFromContainer(element);
         }
       }
     }
