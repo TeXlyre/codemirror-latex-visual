@@ -81,7 +81,6 @@ export class MathWidget extends BaseLatexWidget {
 
     this.mathfield.addEventListener('click', (e: Event) => {
       e.stopPropagation();
-      e.preventDefault();
       this.showInlineEditor(view, container);
     });
   }

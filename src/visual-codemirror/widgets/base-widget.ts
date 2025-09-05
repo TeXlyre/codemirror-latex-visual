@@ -26,12 +26,26 @@ export abstract class BaseLatexWidget extends WidgetType {
   abstract toDOM(view: EditorView): HTMLElement;
 
   ignoreEvent(event: Event): boolean {
-    if (event.type === 'mousedown' || event.type === 'click') {
-      const target = event.target as HTMLElement;
-      if (target.closest('.latex-visual-widget, .latex-visual-section, .latex-visual-math-inline, .latex-visual-math-display, .latex-visual-environment, .latex-visual-command, .latex-visual-table')) {
-        return false;
+    if (event.type === 'mousedown'
+     || event.type === 'pointerdown'
+     || event.type === 'touchstart'
+     || event.type === 'click'
+     || event.type === 'keydown'
+     || event.type === 'input') {
+      const target = event.target as HTMLElement | null;
+      if (target && target.closest(
+        '.latex-visual-widget, ' +
+        '.latex-visual-section, ' +
+        '.latex-visual-math-inline, ' +
+        '.latex-visual-math-display, ' +
+        '.latex-visual-environment, ' +
+        '.latex-visual-command, ' +
+        '.latex-visual-table, ' +
+        '.math-inline-editor, ' +
+        '.math-floating-editor'
+      )) {
+        return true;
       }
-      return true;
     }
     return false;
   }
