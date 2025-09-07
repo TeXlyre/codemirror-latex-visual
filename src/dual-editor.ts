@@ -1,8 +1,7 @@
 import { EditorView, keymap } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
-import { VisualToolbar } from './visual-toolbar';
-import { SourceToolbar } from './source-toolbar';
+import { Toolbar } from './visual-toolbar';
 
 export interface DualEditorOptions {
   initialMode?: 'source' | 'visual';
@@ -19,10 +18,8 @@ export class DualLatexEditor {
   private currentMode: 'source' | 'visual';
   private options: DualEditorOptions;
   private toolbar!: HTMLElement;
-  private visualToolbar!: VisualToolbar;
-  private sourceToolbar!: SourceToolbar;
-  private visualToolbarContainer!: HTMLElement;
-  private sourceToolbarContainer!: HTMLElement;
+  private unifiedToolbar!: Toolbar;
+  private toolbarContainer!: HTMLElement;
   private showCommands: boolean;
   private showToolbar: boolean;
 
@@ -86,11 +83,8 @@ export class DualLatexEditor {
       <button class="toggle-toolbar-btn" title="Toggle Toolbar (Ctrl+Shift+T)">Hide Toolbar</button>
     `;
 
-    const visualToolbarContainer = document.createElement('div');
-    visualToolbarContainer.className = 'visual-toolbar-container';
-
-    const sourceToolbarContainer = document.createElement('div');
-    sourceToolbarContainer.className = 'source-toolbar-container';
+    const toolbarContainer = document.createElement('div');
+    toolbarContainer.className = 'unified-toolbar-container';
 
     const editorsContainer = document.createElement('div');
     editorsContainer.className = 'latex-editors-container';
@@ -100,16 +94,14 @@ export class DualLatexEditor {
 
     editorsContainer.appendChild(cmContainer);
     wrapper.appendChild(toolbar);
-    wrapper.appendChild(visualToolbarContainer);
-    wrapper.appendChild(sourceToolbarContainer);
+    wrapper.appendChild(toolbarContainer);
     wrapper.appendChild(editorsContainer);
 
     this.container.appendChild(wrapper);
     cmContainer.appendChild(this.cmEditor.dom);
 
     this.toolbar = toolbar;
-    this.visualToolbarContainer = visualToolbarContainer;
-    this.sourceToolbarContainer = sourceToolbarContainer;
+    this.toolbarContainer = toolbarContainer;
 
     toolbar.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -138,12 +130,14 @@ export class DualLatexEditor {
         this.currentMode = mode;
         this.updateToolbar();
         this.updateToolbarVisibility();
+        this.unifiedToolbar.updateMode(mode);
         this.options.onModeChange?.(mode);
       }
     });
 
-    this.visualToolbar = new VisualToolbar(this.visualToolbarContainer, this.cmEditor);
-    this.sourceToolbar = new SourceToolbar(this.sourceToolbarContainer, this.cmEditor);
+    this.unifiedToolbar = new Toolbar(this.toolbarContainer, this.cmEditor, {
+      currentMode: this.currentMode
+    });
   }
 
   public toggleMode() {
@@ -179,17 +173,29 @@ export class DualLatexEditor {
       toolbarBtn.classList.toggle('active', !this.showToolbar);
     }
 
-    this.visualToolbarContainer.style.display = this.showToolbar && this.currentMode === 'visual' ? 'block' : 'none';
-    this.sourceToolbarContainer.style.display = this.showToolbar && this.currentMode === 'source' ? 'block' : 'none';
+    this.toolbarContainer.style.display = this.showToolbar ? 'block' : 'none';
   }
 
   setMode(mode: 'source' | 'visual') {
     if (mode === this.currentMode) return;
 
+    // Store current cursor position
+    const currentSelection = this.cmEditor.state.selection.main;
+
     this.currentMode = mode;
     this.visualEditor.setVisualMode(mode === 'visual');
     this.updateToolbar();
     this.updateToolbarVisibility();
+    this.unifiedToolbar.updateMode(mode);
+
+    // Restore cursor position and focus after a brief delay to allow decorations to update
+    setTimeout(() => {
+      this.cmEditor.dispatch({
+        selection: { anchor: currentSelection.from, head: currentSelection.to }
+      });
+      this.cmEditor.focus();
+    }, 10);
+
     this.options.onModeChange?.(mode);
   }
 

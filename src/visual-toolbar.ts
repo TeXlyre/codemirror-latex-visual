@@ -2,33 +2,35 @@ import { EditorView } from '@codemirror/view';
 import { TableSelector, TableDimensions } from './components/table-selector';
 
 export interface ToolbarOptions {
-  showLatexCommands?: boolean;
+  currentMode?: 'source' | 'visual';
 }
 
-export class VisualToolbar {
+export class Toolbar {
   private container: HTMLElement;
   private cmEditor: EditorView;
   private options: ToolbarOptions;
   private tableSelector?: TableSelector;
+  private currentMode: 'source' | 'visual' = 'source';
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: ToolbarOptions = {}) {
     this.container = container;
     this.cmEditor = cmEditor;
     this.options = options;
+    this.currentMode = options.currentMode || 'source';
     this.render();
   }
 
   private render() {
     this.container.innerHTML = `
-      <div class="visual-toolbar">
+      <div class="unified-toolbar">
         <div class="toolbar-group">
-          <button class="toolbar-btn" data-command="bold" title="Bold (\\textbf)">
+          <button class="toolbar-btn" data-command="bold" title="Bold (\\textbf{})">
             <strong>B</strong>
           </button>
-          <button class="toolbar-btn" data-command="italic" title="Italic (\\textit)">
+          <button class="toolbar-btn" data-command="italic" title="Italic (\\textit{})">
             <em>I</em>
           </button>
-          <button class="toolbar-btn" data-command="underline" title="Underline (\\underline)">
+          <button class="toolbar-btn" data-command="underline" title="Underline (\\underline{})">
             <u>U</u>
           </button>
         </div>
@@ -249,7 +251,7 @@ export class VisualToolbar {
     this.cmEditor.focus();
   }
 
-  updateOptions(options: ToolbarOptions) {
-    this.options = { ...this.options, ...options };
+  updateMode(mode: 'source' | 'visual') {
+    this.currentMode = mode;
   }
 }

@@ -3,8 +3,7 @@ export { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
 export { OverlayManager } from './visual-codemirror/overlay-manager';
 export { WidgetFactory } from './visual-codemirror/widget-factory';
 export { NestedContentRenderer } from './visual-codemirror/nested-content-renderer';
-export { VisualToolbar } from './visual-toolbar';
-export { SourceToolbar } from './source-toolbar';
+export { Toolbar } from './visual-toolbar';
 
 export * from './parsers/base-parser';
 export { LatexTokenizer } from './parsers/main-parser';

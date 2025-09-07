@@ -41,15 +41,13 @@
   border-color: #28a745;
 }
 
-.visual-toolbar-container,
-.source-toolbar-container {
+.unified-toolbar-container {
   display: none;
   border-bottom: 1px solid #ddd;
   flex-shrink: 0;
 }
 
-.visual-toolbar,
-.source-toolbar {
+.unified-toolbar {
   display: flex;
   background-color: #fafafa;
   padding: 8px;
