@@ -25,8 +25,7 @@ export class EnvironmentParser extends BaseLatexParser {
     }
 
     const envName = beginMatch[1];
-    const endPattern = `\\end{${envName}}`;
-    const endPos = latex.indexOf(endPattern, position + beginMatch[0].length);
+    const endPos = this.findMatchingEnd(latex, position, envName);
 
     if (endPos === -1) {
       return {
@@ -38,6 +37,7 @@ export class EnvironmentParser extends BaseLatexParser {
       };
     }
 
+    const endPattern = `\\end{${envName}}`;
     const fullLatex = latex.slice(position, endPos + endPattern.length);
     const content = latex.slice(position + beginMatch[0].length, endPos);
 
@@ -55,6 +55,36 @@ export class EnvironmentParser extends BaseLatexParser {
     }
 
     return token;
+  }
+
+  private findMatchingEnd(latex: string, startPos: number, envName: string): number {
+    const beginPattern = `\\begin{${envName}}`;
+    const endPattern = `\\end{${envName}}`;
+
+    let pos = startPos + beginPattern.length;
+    let depth = 1;
+
+    while (pos < latex.length && depth > 0) {
+      const nextBegin = latex.indexOf(beginPattern, pos);
+      const nextEnd = latex.indexOf(endPattern, pos);
+
+      if (nextEnd === -1) {
+        return -1;
+      }
+
+      if (nextBegin !== -1 && nextBegin < nextEnd) {
+        depth++;
+        pos = nextBegin + beginPattern.length;
+      } else {
+        depth--;
+        if (depth === 0) {
+          return nextEnd;
+        }
+        pos = nextEnd + endPattern.length;
+      }
+    }
+
+    return -1;
   }
 
   private parseNestedContent(content: string): LatexToken[] {
