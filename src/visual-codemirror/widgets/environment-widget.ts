@@ -250,7 +250,16 @@ export class EnvironmentWidget extends BaseLatexWidget {
   }
 
   private updateContent(view: EditorView, envName: string, newContent: string) {
-    const newLatex = `\\begin{${envName}}\n${newContent}\n\\end{${envName}}`;
+    const trimmedContent = newContent.trim();
+    const originalLatex = this.token.latex;
+
+    const beginMatch = originalLatex.match(/^(\\begin\{[^}]+\})(\s*)/);
+    const endMatch = originalLatex.match(/(\s*)(\\end\{[^}]+\})$/);
+
+    const leadingWhitespace = beginMatch?.[2] || '';
+    const trailingWhitespace = endMatch?.[1] || '';
+
+    const newLatex = `\\begin{${envName}}${leadingWhitespace}${trimmedContent}${trailingWhitespace}\\end{${envName}}`;
     this.updateTokenInEditor(view, newLatex);
   }
 }
