@@ -173,6 +173,7 @@ export class DualLatexEditor {
       toolbarBtn.classList.toggle('active', !this.showToolbar);
     }
 
+    // Show toolbar if enabled (regardless of mode)
     this.toolbarContainer.style.display = this.showToolbar ? 'block' : 'none';
   }
 
@@ -188,7 +189,6 @@ export class DualLatexEditor {
     this.updateToolbarVisibility();
     this.unifiedToolbar.updateMode(mode);
 
-    // Restore cursor position and focus after a brief delay to allow decorations to update
     setTimeout(() => {
       this.cmEditor.dispatch({
         selection: { anchor: currentSelection.from, head: currentSelection.to }

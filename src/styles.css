@@ -234,6 +234,59 @@
   color: #333;
 }
 
+.toolbar-btn[data-command="itemize"] span {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.toolbar-btn[data-command="enumerate"] span {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.toolbar-btn[data-command="description"] span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* List widget styles */
+.latex-visual-list {
+  margin: 10px 0;
+}
+
+.latex-visual-list-element {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.latex-list-item {
+  margin: 5px 0;
+  cursor: text;
+}
+
+.latex-description-item {
+  margin: 8px 0;
+}
+
+.latex-description-item dt {
+  font-weight: bold;
+  cursor: text;
+  margin-bottom: 2px;
+}
+
+.latex-description-item dd {
+  margin-left: 20px;
+  cursor: text;
+}
+
+.latex-list-item:focus,
+.latex-description-item dt:focus,
+.latex-description-item dd:focus {
+  outline: 1px solid #007acc;
+  outline-offset: 1px;
+  background: rgba(0, 123, 255, 0.05);
+}
+
 .latex-visual-math-inline {
   background: none;
   border: none;

@@ -20,5 +20,6 @@ export { MathWidget } from './visual-codemirror/widgets/math-widget';
 export { EnvironmentWidget } from './visual-codemirror/widgets/environment-widget';
 export { CommandWidget } from './visual-codemirror/widgets/command-widget';
 export { TableWidget } from './visual-codemirror/widgets/table-widget';
+export { ListWidget } from './visual-codemirror/widgets/list-widget';
 
 export { TableSelector, TableDimensions } from './components/table-selector';

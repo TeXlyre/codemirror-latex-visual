@@ -50,11 +50,15 @@ export class EnvironmentParser extends BaseLatexParser {
       name: envName
     };
 
-    if (content.trim() && envName !== 'tabular') {
+    if (content.trim() && !this.isListEnvironment(envName) && envName !== 'tabular') {
       token.children = this.parseNestedContent(content);
     }
 
     return token;
+  }
+
+  private isListEnvironment(envName: string): boolean {
+    return ['enumerate', 'itemize', 'description'].includes(envName);
   }
 
   private findMatchingEnd(latex: string, startPos: number, envName: string): number {

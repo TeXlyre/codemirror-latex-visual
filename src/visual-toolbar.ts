@@ -43,6 +43,17 @@ export class Toolbar {
           </button>
         </div>
         <div class="toolbar-group">
+          <button class="toolbar-btn" data-command="itemize" title="Bullet List (\\begin{itemize})">
+            <span>•</span>
+          </button>
+          <button class="toolbar-btn" data-command="enumerate" title="Numbered List (\\begin{enumerate})">
+            <span>1.</span>
+          </button>
+          <button class="toolbar-btn" data-command="description" title="Description List (\\begin{description})">
+            <span>⋮</span>
+          </button>
+        </div>
+        <div class="toolbar-group">
           <div class="toolbar-table-container">
             <button class="toolbar-btn" data-command="table" title="Insert Table">
               <span>⊞</span>
@@ -131,6 +142,15 @@ export class Toolbar {
       case 'math-display':
         this.insertMath(true, selectedText);
         break;
+      case 'itemize':
+        this.insertList('itemize');
+        break;
+      case 'enumerate':
+        this.insertList('enumerate');
+        break;
+      case 'description':
+        this.insertList('description');
+        break;
       case 'section':
         const select = element as HTMLSelectElement;
         if (select.value) {
@@ -208,6 +228,23 @@ export class Toolbar {
 
     const transaction = state.update({
       changes: { from, to, insert: mathCommand },
+      selection: { anchor: cursorPos }
+    });
+
+    this.cmEditor.dispatch(transaction);
+    this.cmEditor.focus();
+  }
+
+  private insertList(listType: string) {
+    const { state } = this.cmEditor;
+    const { from, to } = state.selection.main;
+
+    const itemContent = listType === 'description' ? '[term] description' : 'item content';
+    const listLatex = `\\begin{${listType}}\n\\item ${itemContent}\n\\end{${listType}}`;
+    const cursorPos = from + `\\begin{${listType}}\n\\item `.length;
+
+    const transaction = state.update({
+      changes: { from, to, insert: listLatex },
       selection: { anchor: cursorPos }
     });
 
