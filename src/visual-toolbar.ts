@@ -11,6 +11,7 @@ export class Toolbar {
   private options: ToolbarOptions;
   private tableSelector?: TableSelector;
   private currentMode: 'source' | 'visual' = 'source';
+  private lastFocusedWidget?: HTMLElement;
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: ToolbarOptions = {}) {
     this.container = container;
@@ -18,6 +19,7 @@ export class Toolbar {
     this.options = options;
     this.currentMode = options.currentMode || 'source';
     this.render();
+    this.setupWidgetFocusTracking();
   }
 
   private render() {
@@ -89,6 +91,25 @@ export class Toolbar {
     }
   }
 
+  private setupWidgetFocusTracking() {
+    document.addEventListener('focusin', (e) => {
+      const target = e.target as HTMLElement;
+      const widget = target.closest('.latex-visual-widget, .latex-command-wrapper, [contenteditable="true"]');
+      if (widget && widget !== this.cmEditor.dom) {
+        this.lastFocusedWidget = widget as HTMLElement;
+      }
+    });
+
+    document.addEventListener('focusout', (e) => {
+      setTimeout(() => {
+        const activeElement = document.activeElement;
+        if (!activeElement || !activeElement.closest('.latex-visual-widget, .latex-command-wrapper, [contenteditable="true"]')) {
+          this.lastFocusedWidget = undefined;
+        }
+      }, 100);
+    });
+  }
+
   private attachEventListeners() {
     this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -108,20 +129,129 @@ export class Toolbar {
 
     this.container.addEventListener('change', (e) => {
       const target = e.target as HTMLElement;
-      if (target.dataset.command) {
-        this.executeCommand(target.dataset.command, target);
-      }
-    });
-
-    this.container.addEventListener('input', (e) => {
-      const target = e.target as HTMLElement;
       if (target.dataset.command === 'textcolor' || target.dataset.command === 'colorbox') {
+        this.executeCommand(target.dataset.command, target);
+      } else if (target.dataset.command) {
         this.executeCommand(target.dataset.command, target);
       }
     });
   }
 
   private executeCommand(command: string, element: HTMLElement) {
+    if (this.lastFocusedWidget && this.currentMode === 'visual') {
+      this.executeCommandOnWidget(command, element);
+    } else {
+      this.executeCommandOnEditor(command, element);
+    }
+  }
+
+  private executeCommandOnWidget(command: string, element: HTMLElement) {
+    if (!this.lastFocusedWidget) return;
+
+    const selection = window.getSelection();
+    const selectedText = selection?.toString() || '';
+
+    if (this.lastFocusedWidget.classList.contains('latex-command-wrapper')) {
+      this.wrapWidgetContent(this.lastFocusedWidget, command, element, selectedText);
+    } else if (this.lastFocusedWidget.contentEditable === 'true') {
+      this.insertIntoEditableElement(this.lastFocusedWidget, command, element, selectedText);
+    } else {
+      const editableChild = this.lastFocusedWidget.querySelector('[contenteditable="true"]') as HTMLElement;
+      if (editableChild) {
+        this.insertIntoEditableElement(editableChild, command, element, selectedText);
+      }
+    }
+  }
+
+  private wrapWidgetContent(widget: HTMLElement, command: string, element: HTMLElement, selectedText: string) {
+    const visualSpan = widget.querySelector('.latex-visual-command') as HTMLElement;
+    if (!visualSpan) return;
+
+    const currentContent = visualSpan.textContent || '';
+
+    let wrappedContent = '';
+    if (selectedText && currentContent.includes(selectedText)) {
+      wrappedContent = currentContent.replace(selectedText, this.getLatexWrapper(command, element, selectedText));
+    } else {
+      wrappedContent = this.getLatexWrapper(command, element, currentContent);
+    }
+
+    visualSpan.innerHTML = '';
+    visualSpan.textContent = wrappedContent;
+
+    this.triggerWidgetUpdate(widget);
+  }
+
+  private insertIntoEditableElement(editableElement: HTMLElement, command: string, element: HTMLElement, selectedText: string) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+
+    if (!editableElement.contains(range.commonAncestorContainer)) {
+      if (selectedText) {
+        editableElement.textContent = (editableElement.textContent || '') + this.getLatexWrapper(command, element, selectedText);
+      } else {
+        const latex = this.getLatexWrapper(command, element, '');
+        editableElement.textContent = (editableElement.textContent || '') + latex;
+      }
+    } else {
+      const textToWrap = selectedText || '';
+      const latex = this.getLatexWrapper(command, element, textToWrap);
+
+      range.deleteContents();
+      const textNode = document.createTextNode(latex);
+      range.insertNode(textNode);
+
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    this.triggerElementUpdate(editableElement);
+  }
+
+  private getLatexWrapper(command: string, element: HTMLElement, content: string): string {
+    switch (command) {
+      case 'bold':
+        return `\\textbf{${content}}`;
+      case 'italic':
+        return `\\textit{${content}}`;
+      case 'underline':
+        return `\\underline{${content}}`;
+      case 'math-inline':
+        return `$${content}$`;
+      case 'math-display':
+        return `$$${content}$$`;
+      case 'textcolor':
+        const colorInput = element as HTMLInputElement;
+        return `\\textcolor{${colorInput.value}}{${content}}`;
+      case 'colorbox':
+        const colorboxInput = element as HTMLInputElement;
+        return `\\colorbox{${colorboxInput.value}}{${content}}`;
+      default:
+        return content;
+    }
+  }
+
+  private triggerWidgetUpdate(widget: HTMLElement) {
+    const inputEvent = new Event('input', { bubbles: true });
+    widget.dispatchEvent(inputEvent);
+
+    const blurEvent = new Event('blur', { bubbles: true });
+    widget.dispatchEvent(blurEvent);
+  }
+
+  private triggerElementUpdate(element: HTMLElement) {
+    const inputEvent = new Event('input', { bubbles: true });
+    element.dispatchEvent(inputEvent);
+
+    const blurEvent = new Event('blur', { bubbles: true });
+    element.dispatchEvent(blurEvent);
+  }
+
+  private executeCommandOnEditor(command: string, element: HTMLElement) {
     const { state } = this.cmEditor;
     const { from, to } = state.selection.main;
     const selectedText = state.doc.sliceString(from, to);
