@@ -114,7 +114,10 @@ export class EnvironmentWidget extends BaseLatexWidget {
       isExpanded = true;
       header.style.display = 'none';
 
-      expandedView = this.createCommandView(view, envName, this.token.content || '');
+      // Get current content from editor instead of cached token
+      const currentContent = this.getCurrentContentFromEditor(view, envName);
+
+      expandedView = this.createCommandView(view, envName, currentContent);
       expandedView.style.margin = '0 0 8px 0';
       expandedView.style.position = 'relative';
 
@@ -142,6 +145,20 @@ export class EnvironmentWidget extends BaseLatexWidget {
         header.style.backgroundColor = '';
       }
     });
+  }
+
+  private getCurrentContentFromEditor(view: EditorView, envName: string): string {
+    const doc = view.state.doc.toString();
+    const beginPattern = `\\begin{${envName}}`;
+    const endPattern = `\\end{${envName}}`;
+
+    const beginIndex = doc.indexOf(this.token.latex);
+    if (beginIndex === -1) return this.token.content || '';
+
+    const fullMatch = doc.slice(beginIndex, beginIndex + this.token.latex.length);
+    const contentMatch = fullMatch.match(new RegExp(`\\\\begin\\{${envName}\\}\\s*([\\s\\S]*?)\\s*\\\\end\\{${envName}\\}`));
+
+    return contentMatch ? contentMatch[1].trim() : this.token.content || '';
   }
 
   private addControlButtons(expandedView: HTMLElement, view: EditorView, envName: string, closeCallback: () => void) {
