@@ -3,15 +3,6 @@ import { EditorView, lineNumbers } from '@codemirror/view';
 import { defaultKeymap, history } from '@codemirror/commands';
 import { keymap } from '@codemirror/view';
 
-// Remove ProseMirror imports - no longer needed
-// import { baseKeymap } from 'prosemirror-commands';
-// import { keymap as pmKeymap } from 'prosemirror-keymap';
-// import { parseLatexToProseMirror } from '../../../dist';
-// import { latexVisualSchema } from '../../../dist';
-// import { EditorView as PMView } from 'prosemirror-view';
-// import { EditorState as PMState } from 'prosemirror-state';
-
-// Update imports for new architecture
 import { DualLatexEditor, VisualCodeMirrorEditor } from '../../..';
 
 import '../../../dist/styles.css';
@@ -43,8 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupSideBySideDemo() {
-  // Source editor (unchanged)
-  const cmEditor = new EditorView({
+  const cmEditorSource = new EditorView({
     state: EditorState.create({
       doc: initialLatex,
       extensions: [
@@ -57,8 +47,7 @@ function setupSideBySideDemo() {
     parent: document.getElementById('codemirror-editor')
   });
 
-  // Visual editor using new CodeMirror-based approach
-  const visualCmEditor = new EditorView({
+  const cmEditorVisual = new EditorView({
     state: EditorState.create({
       doc: initialLatex,
       extensions: [
@@ -68,29 +57,26 @@ function setupSideBySideDemo() {
         EditorView.lineWrapping
       ]
     }),
-    parent: document.getElementById('prosemirror-editor') // Reuse the existing container
+    parent: document.getElementById('prosemirror-editor')
   });
 
-  // Create visual editor that shows overlays
-  const visualEditor = new VisualCodeMirrorEditor(visualCmEditor, {
+  const visualEditor = new VisualCodeMirrorEditor(cmEditorVisual, {
     showCommands: false
   });
 
-  // Set to visual mode immediately
   visualEditor.setVisualMode(true);
 
-  // Optional: Sync changes between the two editors
   let syncing = false;
 
   const syncFromSource = () => {
     if (syncing) return;
     syncing = true;
-    const sourceText = cmEditor.state.doc.toString();
-    const visualText = visualCmEditor.state.doc.toString();
+    const sourceText = cmEditorSource.state.doc.toString();
+    const visualText = cmEditorVisual.state.doc.toString();
 
     if (sourceText !== visualText) {
-      visualCmEditor.dispatch({
-        changes: { from: 0, to: visualCmEditor.state.doc.length, insert: sourceText }
+      cmEditorVisual.dispatch({
+        changes: { from: 0, to: cmEditorVisual.state.doc.length, insert: sourceText }
       });
     }
     syncing = false;
@@ -99,37 +85,36 @@ function setupSideBySideDemo() {
   const syncFromVisual = () => {
     if (syncing) return;
     syncing = true;
-    const sourceText = cmEditor.state.doc.toString();
-    const visualText = visualCmEditor.state.doc.toString();
+    const sourceText = cmEditorSource.state.doc.toString();
+    const visualText = cmEditorVisual.state.doc.toString();
 
     if (sourceText !== visualText) {
-      cmEditor.dispatch({
-        changes: { from: 0, to: cmEditor.state.doc.length, insert: visualText }
+      cmEditorSource.dispatch({
+        changes: { from: 0, to: cmEditorSource.state.doc.length, insert: visualText }
       });
     }
     syncing = false;
   };
 
-  // Set up bidirectional sync
-  cmEditor.dispatch = ((originalDispatch) => {
+  cmEditorSource.dispatch = ((originalDispatch) => {
     return (...args) => {
-      originalDispatch.apply(cmEditor, args);
+      originalDispatch.apply(cmEditorSource, args);
       const transaction = args[0];
       if (transaction && transaction.docChanged && !syncing) {
         setTimeout(syncFromSource, 10);
       }
     };
-  })(cmEditor.dispatch.bind(cmEditor));
+  })(cmEditorSource.dispatch.bind(cmEditorSource));
 
-  visualCmEditor.dispatch = ((originalDispatch) => {
+  cmEditorVisual.dispatch = ((originalDispatch) => {
     return (...args) => {
-      originalDispatch.apply(visualCmEditor, args);
+      originalDispatch.apply(cmEditorVisual, args);
       const transaction = args[0];
       if (transaction && transaction.docChanged && !syncing) {
         setTimeout(syncFromVisual, 10);
       }
     };
-  })(visualCmEditor.dispatch.bind(visualCmEditor));
+  })(cmEditorVisual.dispatch.bind(cmEditorVisual));
 }
 
 function setupDualEditorDemo() {
@@ -150,6 +135,8 @@ function setupDualEditorDemo() {
     cmEditor,
     {
       initialMode: 'source',
+      showCommands: false,
+      showToolbar: true,
       onModeChange: (mode) => {
         console.log('Mode changed to:', mode);
       }

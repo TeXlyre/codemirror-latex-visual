@@ -6,7 +6,7 @@ import { WidgetFactory } from './widget-factory';
 export class OverlayManager {
   private tokenizer = new LatexTokenizer();
 
-  createDecorations(state: EditorState): DecorationSet {
+  createDecorations(state: EditorState, showCommands: boolean = false): DecorationSet {
     const decorations: any[] = [];
     const doc = state.doc;
     const text = doc.toString();
@@ -17,7 +17,6 @@ export class OverlayManager {
 
     try {
       const tokens = this.tokenizer.tokenize(text);
-      const showCommands = (window as any).latexEditorShowCommands || false;
 
       for (const token of tokens) {
         if (token.type === 'text' || token.type === 'paragraph_break') {

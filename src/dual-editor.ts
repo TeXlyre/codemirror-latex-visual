@@ -38,8 +38,6 @@ export class DualLatexEditor {
     this.addCodeMirrorKeymap();
     this.createVisualEditor();
     this.setMode(this.currentMode);
-    this.updateCommandVisibility();
-    this.updateToolbarVisibility();
   }
 
   private addCodeMirrorKeymap() {
@@ -139,6 +137,7 @@ export class DualLatexEditor {
       onModeChange: (mode) => {
         this.currentMode = mode;
         this.updateToolbar();
+        this.updateToolbarVisibility();
         this.options.onModeChange?.(mode);
       }
     });
@@ -156,14 +155,6 @@ export class DualLatexEditor {
     this.showCommands = !this.showCommands;
     this.updateCommandVisibility();
     this.visualEditor.updateOptions({ showCommands: this.showCommands });
-
-    // Force refresh of visual mode if currently active
-    if (this.currentMode === 'visual') {
-      this.visualEditor.setVisualMode(false);
-      setTimeout(() => {
-        this.visualEditor.setVisualMode(true);
-      }, 10);
-    }
   }
 
   public toggleToolbar() {

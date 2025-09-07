@@ -8,12 +8,25 @@ export interface VisualEditorOptions {
 }
 
 const toggleVisualEffect = StateEffect.define<boolean>();
+const updateShowCommandsEffect = StateEffect.define<boolean>();
 
 const visualModeField = StateField.define<boolean>({
   create: () => false,
   update(value, tr) {
     for (let effect of tr.effects) {
       if (effect.is(toggleVisualEffect)) {
+        return effect.value;
+      }
+    }
+    return value;
+  }
+});
+
+const showCommandsField = StateField.define<boolean>({
+  create: () => false,
+  update(value, tr) {
+    for (let effect of tr.effects) {
+      if (effect.is(updateShowCommandsEffect)) {
         return effect.value;
       }
     }
@@ -32,9 +45,10 @@ const visualDecorationsField = StateField.define<DecorationSet>({
       return Decoration.none;
     }
 
-    if (tr.docChanged || tr.effects.some(e => e.is(toggleVisualEffect))) {
+    if (tr.docChanged || tr.effects.some(e => e.is(toggleVisualEffect) || e.is(updateShowCommandsEffect))) {
+      const showCommands = tr.state.field(showCommandsField);
       const overlayManager = new OverlayManager();
-      return overlayManager.createDecorations(tr.state);
+      return overlayManager.createDecorations(tr.state, showCommands);
     }
 
     return decorations.map(tr.changes);
@@ -56,6 +70,7 @@ export class VisualCodeMirrorEditor {
   private setupExtensions() {
     const extensions: Extension[] = [
       visualModeField,
+      showCommandsField,
       visualDecorationsField,
       EditorView.theme({
         '.latex-visual-widget': {
@@ -122,7 +137,10 @@ export class VisualCodeMirrorEditor {
     this.isVisualMode = enabled;
 
     this.cmEditor.dispatch({
-      effects: [toggleVisualEffect.of(enabled)]
+      effects: [
+        toggleVisualEffect.of(enabled),
+        updateShowCommandsEffect.of(this.options.showCommands || false)
+      ]
     });
 
     this.options.onModeChange?.(enabled ? 'visual' : 'source');
@@ -134,6 +152,12 @@ export class VisualCodeMirrorEditor {
 
   updateOptions(options: VisualEditorOptions) {
     this.options = { ...this.options, ...options };
+
+    if (this.isVisualMode) {
+      this.cmEditor.dispatch({
+        effects: [updateShowCommandsEffect.of(this.options.showCommands || false)]
+      });
+    }
   }
 
   destroy() {
