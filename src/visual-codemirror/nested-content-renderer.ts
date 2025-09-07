@@ -4,10 +4,20 @@ import { WidgetFactory } from './widget-factory';
 
 export class NestedContentRenderer {
   static tokenizer = new LatexTokenizer();
+  private static renderDepth = 0;
+  private static maxRenderDepth = 5;
 
   static renderNestedContent(container: HTMLElement, content: string, view: EditorView, showCommands: boolean = false): void {
+    if (this.renderDepth > this.maxRenderDepth) {
+      console.warn('Maximum render depth exceeded, using plain text');
+      container.textContent = content;
+      return;
+    }
+
+    this.renderDepth++;
     const fragment = this.createNestedContent(content, view, showCommands);
     container.appendChild(fragment);
+    this.renderDepth--;
   }
 
   static setupEditableNestedContent(
@@ -17,55 +27,91 @@ export class NestedContentRenderer {
     onUpdate: (newContent: string) => void,
     showCommands: boolean = false
   ): void {
-    const tokens = this.tokenizer.tokenize(content);
-    const hasComplexTokens = tokens.some(token =>
-      token.type !== 'text' && token.type !== 'paragraph_break'
-    );
+    if (this.renderDepth > this.maxRenderDepth) {
+      console.warn('Maximum render depth exceeded, using simple editable');
+      container.textContent = content;
+      this.makeSimpleEditable(container, onUpdate);
+      return;
+    }
 
-    if (hasComplexTokens) {
-      container.innerHTML = '';
-      const fragment = this.createNestedContent(content, view, showCommands);
-      container.appendChild(fragment);
-      this.makeContainerEditable(container, onUpdate);
-    } else {
+    this.renderDepth++;
+
+    if (!content || content.length > 1000) {
+      container.textContent = content;
+      this.makeSimpleEditable(container, onUpdate);
+      this.renderDepth--;
+      return;
+    }
+
+    try {
+      const tokens = this.tokenizer.tokenize(content);
+      const hasComplexTokens = tokens.some(token =>
+        token.type !== 'text' && token.type !== 'paragraph_break'
+      );
+
+      if (hasComplexTokens) {
+        container.innerHTML = '';
+        const fragment = this.createNestedContent(content, view, showCommands);
+        container.appendChild(fragment);
+        this.makeContainerEditable(container, onUpdate);
+      } else {
+        container.textContent = content;
+        this.makeSimpleEditable(container, onUpdate);
+      }
+    } catch (error) {
+      console.warn('Error in nested content rendering, falling back to simple text:', error);
       container.textContent = content;
       this.makeSimpleEditable(container, onUpdate);
     }
+
+    this.renderDepth--;
   }
 
   private static createNestedContent(content: string, view: EditorView, showCommands: boolean = false): DocumentFragment {
     const fragment = document.createDocumentFragment();
 
-    if (!content.trim()) {
+    if (!content || !content.trim()) {
       return fragment;
     }
 
-    const tokens = this.tokenizer.tokenize(content);
+    if (content.length > 1000) {
+      const textNode = document.createTextNode(content);
+      fragment.appendChild(textNode);
+      return fragment;
+    }
 
-    for (const token of tokens) {
-      if (token.type === 'text') {
-        this.appendTextWithLineBreaks(fragment, token.content);
-        continue;
-      }
+    try {
+      const tokens = this.tokenizer.tokenize(content);
 
-      if (token.type === 'paragraph_break') {
-        const br = document.createElement('br');
-        fragment.appendChild(br);
-        continue;
-      }
-
-      const widget = WidgetFactory.createWidget(token, showCommands);
-      if (widget) {
-        const element = widget.toDOM(view);
-        element.dataset.latexOriginal = token.latex;
-        element.dataset.tokenType = token.type;
-        if ('token' in widget) {
-          (element as any)._widgetToken = (widget as any).token;
+      for (const token of tokens) {
+        if (token.type === 'text') {
+          this.appendTextWithLineBreaks(fragment, token.content);
+          continue;
         }
-        fragment.appendChild(element);
-      } else {
-        this.appendTextWithLineBreaks(fragment, token.latex);
+
+        if (token.type === 'paragraph_break') {
+          const br = document.createElement('br');
+          fragment.appendChild(br);
+          continue;
+        }
+
+        const widget = WidgetFactory.createWidget(token, showCommands);
+        if (widget) {
+          const element = widget.toDOM(view);
+          element.dataset.latexOriginal = token.latex;
+          element.dataset.tokenType = token.type;
+          if ('token' in widget) {
+            (element as any)._widgetToken = (widget as any).token;
+          }
+          fragment.appendChild(element);
+        } else {
+          this.appendTextWithLineBreaks(fragment, token.latex);
+        }
       }
+    } catch (error) {
+      console.warn('Error creating nested content, using plain text:', error);
+      const textNode = document.createTextNode(content);
+      fragment.appendChild(textNode);
     }
 
     return fragment;

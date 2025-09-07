@@ -11,6 +11,16 @@ export class EnvironmentParser extends BaseLatexParser {
 
     const beginMatch = latex.slice(position).match(/^\\begin\{([^}]+)\}/);
     if (!beginMatch) {
+      const incompleteMatch = latex.slice(position).match(/^\\begin(\{[^}]*)?$/);
+      if (incompleteMatch) {
+        return {
+          type: 'text',
+          content: incompleteMatch[0],
+          latex: incompleteMatch[0],
+          start: position,
+          end: position + incompleteMatch[0].length
+        };
+      }
       return this.parseAsCommand(latex, position);
     }
 

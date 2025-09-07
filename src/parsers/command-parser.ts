@@ -21,71 +21,49 @@ export class CommandParser extends BaseLatexParser {
   parse(latex: string, position: number): LatexToken | null {
     if (!this.canParse(latex, position)) return null;
 
+    // Check for complete color commands first
     if (latex.startsWith('\\textcolor', position) || latex.startsWith('\\colorbox', position)) {
-      return this.parseColorCommand(latex, position);
+      const colorResult = this.parseColorCommand(latex, position);
+      if (colorResult && colorResult.end > position) {
+        return colorResult;
+      }
     }
 
+    // Try to extract a complete command with braces
     const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, position);
 
-    if (!cmdResult) {
-      const match = /^\\[a-zA-Z]+/.exec(latex.slice(position));
+    // If we don't have a complete command, treat it as text
+    if (!cmdResult || cmdResult.end <= position) {
+      // For incomplete commands like '\b', '\begin', etc., just return as text
+      const match = /^\\[a-zA-Z*]*/.exec(latex.slice(position));
       if (match) {
         return {
-          type: 'command',
-          content: '',
+          type: 'text',
+          content: match[0],
           latex: match[0],
           start: position,
           end: position + match[0].length,
-          name: match[0].slice(1),
-          params: ''
         };
       }
-      const char = latex.charAt(position);
+
+      // Single backslash or backslash with non-letter
       return {
         type: 'text',
-        content: char,
-        latex: char,
+        content: latex.charAt(position),
+        latex: latex.charAt(position),
         start: position,
         end: position + 1
       };
     }
 
-    const isKnown = EDITABLE_COMMANDS.has(cmdResult.name) || cmdResult.name === 'textcolor' || cmdResult.name === 'colorbox' || cmdResult.name === 'color';
-
-    if (!isKnown) {
-      const open = `\\${cmdResult.name}{`;
-      const children = this.parseNestedContent(cmdResult.params || '');
-      const token: LatexToken = {
-        type: 'editable_command',
-        content: cmdResult.params,
-        latex: cmdResult.fullCommand,
-        start: position,
-        end: cmdResult.end,
-        name: cmdResult.name,
-        params: '',
-        children: [
-          {
-            type: 'text',
-            content: open,
-            latex: open,
-            start: position,
-            end: position + open.length
-          },
-          ...children,
-          {
-            type: 'text',
-            content: '}',
-            latex: '}',
-            start: cmdResult.end - 1,
-            end: cmdResult.end
-          }
-        ]
-      };
-      return token;
-    }
+    // We have a complete command, check if it's known
+    const isKnown = EDITABLE_COMMANDS.has(cmdResult.name) ||
+                   cmdResult.name === 'textcolor' ||
+                   cmdResult.name === 'colorbox' ||
+                   cmdResult.name === 'color';
 
     const token: LatexToken = {
-      type: 'editable_command',
+      type: isKnown ? 'editable_command' : 'command',
       content: cmdResult.params,
       latex: cmdResult.fullCommand,
       start: position,
@@ -95,92 +73,7 @@ export class CommandParser extends BaseLatexParser {
       colorArg: cmdResult.name === 'color' ? cmdResult.params : undefined
     };
 
-    if (cmdResult.params) {
-      token.children = this.parseNestedContent(cmdResult.params);
-    }
-
     return token;
-  }
-
-  private parseNestedContent(content: string): LatexToken[] {
-    const tokens: LatexToken[] = [];
-    let pos = 0;
-
-    while (pos < content.length) {
-      if (content.charAt(pos) === '\\') {
-        if (content.startsWith('\\textcolor', pos) || content.startsWith('\\colorbox', pos)) {
-          const parsed = this.parse(content, pos);
-          if (parsed) {
-            tokens.push(parsed);
-            pos = parsed.end;
-            continue;
-          }
-        }
-        const cmdResult = BaseLatexParser.extractCommandWithBraces(content, pos);
-        if (cmdResult) {
-          const isKnown = EDITABLE_COMMANDS.has(cmdResult.name) || cmdResult.name === 'textcolor' || cmdResult.name === 'colorbox' || cmdResult.name === 'color';
-          if (isKnown) {
-            const parsed = this.parse(content, pos);
-            if (parsed) {
-              tokens.push(parsed);
-              pos = parsed.end;
-              continue;
-            }
-          } else {
-            const open = `\\${cmdResult.name}{`;
-            tokens.push({
-              type: 'text',
-              content: open,
-              latex: open,
-              start: pos,
-              end: pos + open.length
-            });
-            const inner = this.parseNestedContent(cmdResult.params || '');
-            tokens.push(...inner);
-            tokens.push({
-              type: 'text',
-              content: '}',
-              latex: '}',
-              start: cmdResult.end - 1,
-              end: cmdResult.end
-            });
-            pos = cmdResult.end;
-            continue;
-          }
-        }
-        const match = /^\\[a-zA-Z]+/.exec(content.slice(pos));
-        if (match) {
-          tokens.push({
-            type: 'text',
-            content: match[0],
-            latex: match[0],
-            start: pos,
-            end: pos + match[0].length
-          });
-          pos = pos + match[0].length;
-          continue;
-        }
-      }
-
-      let textEnd = pos;
-      while (textEnd < content.length && content.charAt(textEnd) !== '\\') {
-        textEnd++;
-      }
-
-      if (textEnd > pos) {
-        tokens.push({
-          type: 'text',
-          content: content.slice(pos, textEnd),
-          latex: content.slice(pos, textEnd),
-          start: pos,
-          end: textEnd
-        });
-      }
-
-      pos = textEnd;
-    }
-
-    return tokens;
   }
 
   private parseColorCommand(latex: string, start: number): LatexToken | null {
@@ -191,27 +84,66 @@ export class CommandParser extends BaseLatexParser {
 
     let pos = start + (isTextColor ? 10 : 9);
 
+    // Skip whitespace
     while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
       pos++;
     }
 
-    if (latex.charAt(pos) !== '{') return null;
+    // Must have first brace
+    if (pos >= latex.length || latex.charAt(pos) !== '{') {
+      return {
+        type: 'text',
+        content: latex.slice(start, pos),
+        latex: latex.slice(start, pos),
+        start,
+        end: pos || start + 1
+      };
+    }
+
     const colorResult = BaseLatexParser.extractBalancedBraces(latex, pos);
-    if (!colorResult) return null;
+    if (!colorResult) {
+      return {
+        type: 'text',
+        content: latex.slice(start, pos + 1),
+        latex: latex.slice(start, pos + 1),
+        start,
+        end: pos + 1
+      };
+    }
 
     pos = colorResult.end;
 
+    // Skip whitespace
     while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
       pos++;
     }
 
-    if (latex.charAt(pos) !== '{') return null;
-    const contentResult = BaseLatexParser.extractBalancedBraces(latex, pos);
-    if (!contentResult) return null;
+    // Must have second brace
+    if (pos >= latex.length || latex.charAt(pos) !== '{') {
+      return {
+        type: 'text',
+        content: latex.slice(start, pos),
+        latex: latex.slice(start, pos),
+        start,
+        end: pos || colorResult.end
+      };
+    }
 
+    const contentResult = BaseLatexParser.extractBalancedBraces(latex, pos);
+    if (!contentResult) {
+      return {
+        type: 'text',
+        content: latex.slice(start, pos + 1),
+        latex: latex.slice(start, pos + 1),
+        start,
+        end: pos + 1
+      };
+    }
+
+    // Only return a command token if we have a complete color command
     const fullCommand = latex.slice(start, contentResult.end);
 
-    const token: LatexToken = {
+    return {
       type: 'editable_command',
       content: contentResult.content,
       latex: fullCommand,
@@ -221,11 +153,5 @@ export class CommandParser extends BaseLatexParser {
       params: contentResult.content,
       colorArg: colorResult.content
     };
-
-    if (contentResult.content) {
-      token.children = this.parseNestedContent(contentResult.content);
-    }
-
-    return token;
   }
 }

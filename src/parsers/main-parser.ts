@@ -16,11 +16,52 @@ export class LatexTokenizer {
     new CommandParser(),
   ];
 
+  private depth = 0;
+  private maxDepth = 10;
+
   tokenize(latex: string): LatexToken[] {
+    if (this.depth > this.maxDepth) {
+      console.warn('Maximum tokenizer depth exceeded, returning text token');
+      return [{
+        type: 'text',
+        content: latex,
+        latex: latex,
+        start: 0,
+        end: latex.length
+      }];
+    }
+
+    this.depth++;
+    const result = this.tokenizeInternal(latex);
+    this.depth--;
+    return result;
+  }
+
+  private tokenizeInternal(latex: string): LatexToken[] {
     const tokens: LatexToken[] = [];
     let pos = 0;
+    let iterations = 0;
+    const maxIterations = latex.length * 2 + 1000;
 
     while (pos < latex.length) {
+      iterations++;
+      if (iterations > maxIterations) {
+        console.warn('Tokenizer iteration limit reached, breaking to prevent infinite loop');
+        const remaining = latex.slice(pos);
+        if (remaining) {
+          tokens.push({
+            type: 'text',
+            content: remaining,
+            latex: remaining,
+            start: pos,
+            end: latex.length
+          });
+        }
+        break;
+      }
+
+      const startPos = pos;
+
       // Handle paragraph breaks first
       const paragraphBreakMatch = latex.slice(pos).match(/^(\n{2,})/);
       if (paragraphBreakMatch) {
@@ -35,12 +76,27 @@ export class LatexTokenizer {
         continue;
       }
 
-      // Try all parsers
       let parsed = false;
       for (const parser of this.parsers) {
         if (parser.canParse(latex, pos)) {
           const token = parser.parse(latex, pos);
-          if (token) {
+          if (token && token.end > pos && token.end <= latex.length) {
+            // Additional validation for math tokens
+            if ((token.type === 'math_inline' || token.type === 'math_display') &&
+                token.latex.length < 3) {
+              // Too short to be valid math, treat as text
+              tokens.push({
+                type: 'text',
+                content: latex.charAt(pos),
+                latex: latex.charAt(pos),
+                start: pos,
+                end: pos + 1
+              });
+              pos++;
+              parsed = true;
+              break;
+            }
+
             tokens.push(token);
             pos = token.end;
             parsed = true;
@@ -49,22 +105,21 @@ export class LatexTokenizer {
         }
       }
 
-      // If no parser handled it, collect as text
       if (!parsed) {
+        // Collect consecutive non-special characters
         let textStart = pos;
         let textEnd = pos;
 
-        // Collect consecutive characters that aren't special LaTeX syntax
         while (textEnd < latex.length) {
+          const char = latex.charAt(textEnd);
+
           // Stop at paragraph breaks
           if (latex.startsWith('\n\n', textEnd)) {
             break;
           }
 
-          // Stop at LaTeX commands, math, environments, comments
-          if (latex.charAt(textEnd) === '\\' ||
-              latex.charAt(textEnd) === '$' ||
-              latex.charAt(textEnd) === '%' ||
+          // Stop at potential LaTeX syntax
+          if (char === '\\' || char === '$' || char === '%' ||
               latex.startsWith('\\begin{', textEnd)) {
             break;
           }
@@ -72,7 +127,6 @@ export class LatexTokenizer {
           textEnd++;
         }
 
-        // Create a single text token for the entire sequence
         if (textEnd > textStart) {
           const textContent = latex.slice(textStart, textEnd);
           tokens.push({
@@ -84,9 +138,31 @@ export class LatexTokenizer {
           });
           pos = textEnd;
         } else {
-          // Fallback: single character
+          // Single character fallback
+          const char = latex.charAt(pos);
+          tokens.push({
+            type: 'text',
+            content: char,
+            latex: char,
+            start: pos,
+            end: pos + 1
+          });
           pos++;
         }
+      }
+
+      // Safety check to prevent infinite loops
+      if (pos <= startPos) {
+        console.warn(`Parser stuck at position ${pos}, forcing advance`);
+        const char = latex.charAt(pos);
+        tokens.push({
+          type: 'text',
+          content: char,
+          latex: char,
+          start: pos,
+          end: pos + 1
+        });
+        pos++;
       }
     }
 

@@ -17,7 +17,21 @@ export class TableParser extends BaseLatexParser {
         isTable ? /^\\begin\{table\}(\[.*?\])?/ : /^\\begin\{tabular\}(\[.*?\])?\{([^}]+)\}/
     );
 
-    if (!beginMatch) return null;
+    if (!beginMatch) {
+      const incompleteMatch = latex.slice(position).match(
+        isTable ? /^\\begin\{table\}(\[.*?)?$/ : /^\\begin\{tabular\}(\[.*?\])?(\{[^}]*)?$/
+      );
+      if (incompleteMatch) {
+        return {
+          type: 'text',
+          content: incompleteMatch[0],
+          latex: incompleteMatch[0],
+          start: position,
+          end: position + incompleteMatch[0].length
+        };
+      }
+      return null;
+    }
 
     const endPattern = `\\end{${envName}}`;
     const endPos = latex.indexOf(endPattern, position + beginMatch[0].length);

@@ -12,6 +12,16 @@ export class SectionParser extends BaseLatexParser {
 
     const match = latex.slice(position).match(/^(\\(?:sub)*section\*?)\{([^}]*)\}/);
     if (!match) {
+      const incompleteMatch = latex.slice(position).match(/^(\\(?:sub)*section\*?)(\{[^}]*)?$/);
+      if (incompleteMatch) {
+        return {
+          type: 'text',
+          content: incompleteMatch[0],
+          latex: incompleteMatch[0],
+          start: position,
+          end: position + incompleteMatch[0].length
+        };
+      }
       return this.parseAsCommand(latex, position);
     }
 

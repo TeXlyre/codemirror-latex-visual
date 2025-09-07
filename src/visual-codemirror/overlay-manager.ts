@@ -19,7 +19,13 @@ export class OverlayManager {
       const tokens = this.tokenizer.tokenize(text);
 
       for (const token of tokens) {
+        // Skip text tokens and incomplete constructs
         if (token.type === 'text' || token.type === 'paragraph_break') {
+          continue;
+        }
+
+        // Don't render incomplete constructs
+        if (!this.isCompleteConstruct(token)) {
           continue;
         }
 
@@ -55,6 +61,59 @@ export class OverlayManager {
       console.warn('Error creating decoration set:', error);
       return Decoration.none;
     }
+  }
+
+  private isCompleteConstruct(token: any): boolean {
+    const latex = token.latex;
+
+    // Don't render incomplete commands
+    if (latex.startsWith('\\') && !latex.includes('{')) {
+      return false;
+    }
+
+    // Don't render commands without closing braces
+    if ((token.type === 'command' || token.type === 'editable_command') &&
+        (!latex.includes('{') || !latex.includes('}'))) {
+      return false;
+    }
+
+    // Don't render incomplete environments
+    if (token.type === 'environment') {
+      const envName = token.name || '';
+      if (!latex.includes(`\\begin{${envName}}`) || !latex.includes(`\\end{${envName}}`)) {
+        return false;
+      }
+    }
+
+    // Don't render incomplete sections
+    if (token.type === 'section') {
+      if (!latex.includes('{') || !latex.includes('}')) {
+        return false;
+      }
+    }
+
+    // Don't render incomplete math - be strict about this
+    if (token.type === 'math_inline') {
+      if (!latex.startsWith('$') || !latex.endsWith('$') || latex.length < 3) {
+        return false;
+      }
+      // Don't render single $
+      if (latex === '$') {
+        return false;
+      }
+    }
+
+    if (token.type === 'math_display') {
+      if (!latex.startsWith('$$') || !latex.endsWith('$$') || latex.length < 5) {
+        return false;
+      }
+      // Don't render just $$
+      if (latex === '$$') {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private findTokenPosition(text: string, token: any): number {

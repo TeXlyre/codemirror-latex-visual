@@ -2,7 +2,6 @@ import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
 import { LatexToken } from '../../parsers/base-parser';
 import { NestedContentRenderer } from '../nested-content-renderer';
-import { LatexTokenizer } from '../../parsers/main-parser';
 
 export class CommandWidget extends BaseLatexWidget {
   private isEditing: boolean = false;
@@ -27,22 +26,6 @@ export class CommandWidget extends BaseLatexWidget {
     }
 
     this.token.latex = latex;
-
-    if (this.token.content) {
-      try {
-        const tokenizer = new LatexTokenizer();
-        const childTokens = tokenizer.tokenize(this.token.content);
-        if (childTokens.length > 1 || (childTokens.length === 1 && childTokens[0].type !== 'text')) {
-          this.token.children = childTokens;
-        } else {
-          this.token.children = undefined;
-        }
-      } catch (e) {
-        this.token.children = undefined;
-      }
-    } else {
-        this.token.children = undefined;
-    }
   }
 
   toDOM(view: EditorView): HTMLElement {
@@ -93,7 +76,7 @@ export class CommandWidget extends BaseLatexWidget {
     const visualSpan = document.createElement('span');
     visualSpan.className = `latex-visual-command ${cmdName}`;
 
-    this.updateVisualContent(visualSpan, view);
+    this.updateVisualContent(visualSpan, content);
     this.applyCommandStyles(visualSpan, cmdName, colorArg);
     wrapper.appendChild(visualSpan);
 
@@ -109,6 +92,26 @@ export class CommandWidget extends BaseLatexWidget {
     });
 
     return wrapper;
+  }
+
+  private updateVisualContent(visualSpan: HTMLElement, content: string): void {
+    visualSpan.innerHTML = '';
+
+    if (!content || content.length > 200) {
+      visualSpan.textContent = content || '';
+      return;
+    }
+
+    try {
+      if (content.includes('\\') && content.length < 100) {
+        NestedContentRenderer.renderNestedContent(visualSpan, content, null as any, this.showCommands);
+      } else {
+        visualSpan.textContent = content;
+      }
+    } catch (error) {
+      console.warn('Error rendering command content, using plain text:', error);
+      visualSpan.textContent = content;
+    }
   }
 
   private setupInlineEditing(wrapper: HTMLElement, visualSpan: HTMLElement, view: EditorView) {
@@ -180,7 +183,7 @@ export class CommandWidget extends BaseLatexWidget {
       if (newLatex && newLatex !== this.token.latex) {
         this.updateTokenInEditor(view, newLatex);
         this._parseAndSetTokenProperties(newLatex);
-        this.updateVisualContent(visualSpan, view);
+        this.updateVisualContent(visualSpan, this.token.content || '');
         this.reapplyCommandStyles(visualSpan);
       }
 
@@ -297,15 +300,6 @@ export class CommandWidget extends BaseLatexWidget {
           element.style.borderRadius = '2px';
         }
         break;
-    }
-  }
-
-  private updateVisualContent(visualSpan: HTMLElement, view: EditorView) {
-    visualSpan.innerHTML = '';
-    if (this.token.children?.length) {
-      NestedContentRenderer.renderNestedContent(visualSpan, this.token.content || '', view, this.showCommands);
-    } else {
-      visualSpan.textContent = this.token.content || '';
     }
   }
 
