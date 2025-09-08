@@ -23,6 +23,7 @@ export class ListWidget extends BaseLatexWidget {
     const wrapper = document.createElement('div');
     wrapper.className = `latex-visual-list latex-list-${this.currentEnvName}`;
     wrapper.style.margin = '0';
+    wrapper.style.padding = '0';
     wrapper.style.lineHeight = '1.4';
 
     this.preserveLineHeight(wrapper, this.token.latex);
@@ -37,8 +38,9 @@ export class ListWidget extends BaseLatexWidget {
     const listTag = this.getListTag();
     const list = document.createElement(listTag);
     list.className = 'latex-visual-list-element';
-    list.style.margin = '10px 0';
+    list.style.margin = '0';
     list.style.paddingLeft = '40px';
+    list.style.lineHeight = '1.4';
 
     const items = this.parseListItems();
 
@@ -103,8 +105,11 @@ export class ListWidget extends BaseLatexWidget {
     li.className = 'latex-list-item';
     li.contentEditable = 'true';
     li.style.outline = 'none';
-    li.style.margin = '5px 0';
+    li.style.margin = '0';
+    li.style.padding = '0';
     li.style.cursor = 'text';
+    li.style.lineHeight = '1.4';
+    li.style.minHeight = '1.4em';
     li.dataset.itemIndex = index.toString();
 
     if (this.currentEnvName === 'description' && content.startsWith('[')) {
@@ -130,7 +135,8 @@ export class ListWidget extends BaseLatexWidget {
   private createDescriptionItem(content: string, index: number, view: EditorView): HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'latex-description-item';
-    wrapper.style.margin = '5px 0';
+    wrapper.style.margin = '0';
+    wrapper.style.lineHeight = '1.4';
     wrapper.dataset.itemIndex = index.toString();
 
     let term = '';
@@ -147,14 +153,21 @@ export class ListWidget extends BaseLatexWidget {
     dt.style.fontWeight = 'bold';
     dt.style.outline = 'none';
     dt.style.cursor = 'text';
+    dt.style.margin = '0';
+    dt.style.padding = '0';
+    dt.style.lineHeight = '1.4';
+    dt.style.minHeight = '1.4em';
     dt.textContent = term;
     dt.dataset.itemPart = 'term';
 
     const dd = document.createElement('dd');
     dd.contentEditable = 'true';
-    dd.style.marginLeft = '20px';
+    dd.style.margin = '0 0 0 20px';
+    dd.style.padding = '0';
     dd.style.outline = 'none';
     dd.style.cursor = 'text';
+    dd.style.lineHeight = '1.4';
+    dd.style.minHeight = '1.4em';
     dd.textContent = description;
     dd.dataset.itemPart = 'description';
 
