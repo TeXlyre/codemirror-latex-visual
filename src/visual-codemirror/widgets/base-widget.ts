@@ -130,8 +130,11 @@ export abstract class BaseLatexWidget extends WidgetType {
       }
     }
 
-    view.dispatch({
-      changes: { from, to, insert: newLatex }
-    });
+    // Use setTimeout to defer the update and avoid re-entrancy issues
+    setTimeout(() => {
+      view.dispatch({
+        changes: { from, to, insert: newLatex }
+      });
+    }, 0);
   }
 }

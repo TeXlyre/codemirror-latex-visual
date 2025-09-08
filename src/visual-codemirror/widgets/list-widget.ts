@@ -38,7 +38,7 @@ export class ListWidget extends BaseLatexWidget {
     const list = document.createElement(listTag);
     list.className = 'latex-visual-list-element';
     list.style.margin = '10px 0';
-    list.style.paddingLeft = '20px';
+    list.style.paddingLeft = '40px';
 
     const items = this.parseListItems();
 
@@ -184,13 +184,13 @@ export class ListWidget extends BaseLatexWidget {
 
     li.addEventListener('input', (e) => {
       e.stopPropagation();
-      this.updateListContent(view);
+      this.deferredUpdateListContent(view);
     });
 
     li.addEventListener('mousedown', (e) => e.stopPropagation());
     li.addEventListener('click', (e) => e.stopPropagation());
     li.addEventListener('focus', (e) => e.stopPropagation());
-    li.addEventListener('blur', () => this.updateListContent(view));
+    li.addEventListener('blur', () => this.deferredUpdateListContent(view));
   }
 
   private setupDescriptionItemEvents(dt: HTMLElement, dd: HTMLElement, view: EditorView) {
@@ -220,17 +220,30 @@ export class ListWidget extends BaseLatexWidget {
 
       element.addEventListener('input', (e) => {
         e.stopPropagation();
-        this.updateListContent(view);
+        this.deferredUpdateListContent(view);
       });
 
       element.addEventListener('mousedown', (e) => e.stopPropagation());
       element.addEventListener('click', (e) => e.stopPropagation());
       element.addEventListener('focus', (e) => e.stopPropagation());
-      element.addEventListener('blur', () => this.updateListContent(view));
+      element.addEventListener('blur', () => this.deferredUpdateListContent(view));
     });
   }
 
+  private deferredUpdateListContent(view: EditorView) {
+    setTimeout(() => {
+      this.updateListContent(view);
+    }, 0);
+  }
+
   private createNewListItem(currentItem: HTMLElement, view: EditorView) {
+    const currentText = (currentItem.textContent || '').trim();
+
+    if (!currentText) {
+      this.exitList(currentItem, view);
+      return;
+    }
+
     const newItem = this.createListItem('', 0, view);
 
     if (currentItem.nextSibling) {
@@ -240,7 +253,7 @@ export class ListWidget extends BaseLatexWidget {
     }
 
     this.updateItemIndices();
-    this.updateListContent(view);
+    this.deferredUpdateListContent(view);
 
     setTimeout(() => {
       const editableElement = newItem.contentEditable === 'true' ? newItem : newItem.querySelector('[contenteditable="true"]');
@@ -249,6 +262,16 @@ export class ListWidget extends BaseLatexWidget {
   }
 
   private createNewDescriptionItem(currentWrapper: HTMLElement, view: EditorView) {
+    const dt = currentWrapper.querySelector('dt');
+    const dd = currentWrapper.querySelector('dd');
+    const termText = (dt?.textContent || '').trim();
+    const descText = (dd?.textContent || '').trim();
+
+    if (!termText && !descText) {
+      this.exitList(currentWrapper, view);
+      return;
+    }
+
     const newWrapper = this.createDescriptionItem('', 0, view);
 
     if (currentWrapper.nextSibling) {
@@ -258,7 +281,7 @@ export class ListWidget extends BaseLatexWidget {
     }
 
     this.updateItemIndices();
-    this.updateListContent(view);
+    this.deferredUpdateListContent(view);
 
     setTimeout(() => {
       const dt = newWrapper.querySelector('dt') as HTMLElement;
@@ -272,7 +295,7 @@ export class ListWidget extends BaseLatexWidget {
 
     item.remove();
     this.updateItemIndices();
-    this.updateListContent(view);
+    this.deferredUpdateListContent(view);
 
     setTimeout(() => {
       const focusItem = prevItem || nextItem;
@@ -289,13 +312,31 @@ export class ListWidget extends BaseLatexWidget {
 
     wrapper.remove();
     this.updateItemIndices();
-    this.updateListContent(view);
+    this.deferredUpdateListContent(view);
 
     setTimeout(() => {
       const focusWrapper = prevWrapper || nextWrapper;
       if (focusWrapper) {
         const dd = focusWrapper.querySelector('dd') as HTMLElement;
         dd?.focus();
+      }
+    }, 10);
+  }
+
+  private exitList(currentItem: HTMLElement, view: EditorView) {
+    currentItem.remove();
+
+    this.deferredUpdateListContent(view);
+
+    setTimeout(() => {
+      const pos = this.findTokenInDocument(view);
+      if (pos) {
+        const newPos = pos.to;
+        view.dispatch({
+          changes: { from: newPos, to: newPos, insert: '\n\n' },
+          selection: { anchor: newPos + 2 }
+        });
+        view.focus();
       }
     }, 10);
   }
