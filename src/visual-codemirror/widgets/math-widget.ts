@@ -114,6 +114,10 @@ export class MathWidget extends BaseLatexWidget {
     mathInput.style.margin = '0 4px';
     mathInput.style.outline = 'none';
     mathInput.style.fontFamily = 'monospace';
+    mathInput.style.minWidth = '3em';
+    mathInput.style.background = 'rgba(255, 255, 255, 0.8)';
+    mathInput.style.padding = '2px 4px';
+    mathInput.style.borderRadius = '2px';
 
     const suffix = document.createElement('span');
     suffix.textContent = delimiter;
@@ -128,13 +132,30 @@ export class MathWidget extends BaseLatexWidget {
     });
 
     mathInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
       if (e.key === 'Escape') {
         mathInput.blur();
         e.preventDefault();
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter' && !e.shiftKey) {
         mathInput.blur();
         e.preventDefault();
       }
+    });
+
+    mathInput.addEventListener('input', (e) => {
+      e.stopPropagation();
+    });
+
+    mathInput.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    mathInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    mathInput.addEventListener('focus', (e) => {
+      e.stopPropagation();
     });
 
     wrapper.appendChild(prefix);

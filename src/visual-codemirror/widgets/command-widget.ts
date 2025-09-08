@@ -34,13 +34,13 @@ export class CommandWidget extends BaseLatexWidget {
     const { name = '', content = '', colorArg = '' } = this.token;
 
     if (this.showCommands) {
-      return this.createRawCommandView(view, name, content, colorArg);
+      return this.createCommandView(view, name, content, colorArg);
     }
 
     return this.createStyledCommandView(view, name, content, colorArg);
   }
 
-  private createRawCommandView(view: EditorView, cmdName: string, content: string, colorArg: string): HTMLElement {
+  private createCommandView(view: EditorView, cmdName: string, content: string, colorArg: string): HTMLElement {
     const wrapper = document.createElement('span');
     wrapper.className = 'latex-command-raw latex-visual-widget';
     wrapper.style.display = 'inline-block';
@@ -53,13 +53,49 @@ export class CommandWidget extends BaseLatexWidget {
     wrapper.style.fontSize = '0.9em';
     wrapper.style.color = '#dc3545';
 
-    wrapper.textContent = this.token.latex;
+    const editableSpan = document.createElement('span');
+    editableSpan.contentEditable = 'true';
+    editableSpan.textContent = this.token.latex;
+    editableSpan.style.outline = 'none';
+    editableSpan.style.background = 'transparent';
+    editableSpan.style.minWidth = '3em';
+    editableSpan.style.display = 'inline-block';
 
-    this.makeEditable(wrapper, view, (newLatex) => {
+    editableSpan.addEventListener('blur', () => {
+      const newLatex = editableSpan.textContent || '';
       if (newLatex !== this.token.latex) {
         this.updateTokenInEditor(view, newLatex);
       }
     });
+
+    editableSpan.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        editableSpan.blur();
+        e.preventDefault();
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        editableSpan.blur();
+        e.preventDefault();
+      }
+    });
+
+    editableSpan.addEventListener('input', (e) => {
+      e.stopPropagation();
+    });
+
+    editableSpan.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+
+    editableSpan.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    editableSpan.addEventListener('focus', (e) => {
+      e.stopPropagation();
+    });
+
+    wrapper.appendChild(editableSpan);
 
     return wrapper;
   }
