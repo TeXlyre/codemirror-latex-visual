@@ -1,7 +1,14 @@
+// src/dual-editor.ts (Phase 1 Refactored)
 import { EditorView, keymap } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
 import { Toolbar } from './visual-toolbar';
+import { ConfigService, DEFAULT_CONFIG, LatexEditorConfig } from './core/config';
+import { EventService } from './core/event-service';
+import { FocusService } from './core/focus-service';
+import { DOMUtils } from './core/dom-utils';
+import { WidgetRegistry } from './core/widget-registry';
+import { errorService, ErrorCategory, ErrorSeverity } from './core/error-service';
 
 export interface DualEditorOptions {
   initialMode?: 'source' | 'visual';
@@ -9,6 +16,7 @@ export interface DualEditorOptions {
   className?: string;
   showCommands?: boolean;
   showToolbar?: boolean;
+  config?: Partial<LatexEditorConfig>;
 }
 
 export class DualLatexEditor {
@@ -17,27 +25,215 @@ export class DualLatexEditor {
   private visualEditor!: VisualCodeMirrorEditor;
   private currentMode: 'source' | 'visual';
   private options: DualEditorOptions;
+
+  // Core services
+  private configService: ConfigService;
+  private eventService: EventService;
+  private focusService: FocusService;
+  private domUtils: DOMUtils;
+  private widgetRegistry: WidgetRegistry;
+
+  // UI components
   private toolbar!: HTMLElement;
   private unifiedToolbar!: Toolbar;
   private toolbarContainer!: HTMLElement;
-  private showCommands: boolean;
-  private showToolbar: boolean;
+
+  // Cleanup functions
+  private cleanupFunctions: Array<() => void> = [];
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: DualEditorOptions = {}) {
     this.container = container;
     this.cmEditor = cmEditor;
     this.options = options;
     this.currentMode = options.initialMode || 'source';
-    this.showCommands = options.showCommands || false;
-    this.showToolbar = options.showToolbar !== false;
 
-    this.setupLayout();
-    this.addCodeMirrorKeymap();
-    this.createVisualEditor();
-    this.setMode(this.currentMode);
+    // Initialize services
+    this.configService = new ConfigService({
+      ...DEFAULT_CONFIG,
+      ...options.config,
+      showCommands: options.showCommands ?? DEFAULT_CONFIG.showCommands,
+      showToolbar: options.showToolbar ?? DEFAULT_CONFIG.showToolbar
+    });
+
+    this.eventService = EventService.getInstance();
+    this.focusService = new FocusService(this.eventService);
+    this.domUtils = new DOMUtils(this.configService.get());
+    this.widgetRegistry = new WidgetRegistry(this.eventService, this.cmEditor);
+
+    this.initialize();
   }
 
-  private addCodeMirrorKeymap() {
+  private initialize(): void {
+    try {
+      this.setupEventListeners();
+      this.setupLayout();
+      this.addCodeMirrorKeymap();
+      this.createVisualEditor();
+      this.setMode(this.currentMode);
+
+      errorService.logError(
+        ErrorCategory.STATE,
+        ErrorSeverity.INFO,
+        'DualLatexEditor initialized successfully',
+        { mode: this.currentMode, options: this.options }
+      );
+    } catch (error) {
+      errorService.logError(
+        ErrorCategory.STATE,
+        ErrorSeverity.FATAL,
+        'Failed to initialize DualLatexEditor',
+        { error, options: this.options }
+      );
+      throw error;
+    }
+  }
+
+  private setupEventListeners(): void {
+    // Listen for config changes
+    const configUnsubscribe = this.configService.subscribe((config) => {
+      this.domUtils = new DOMUtils(config);
+      this.updateFromConfig(config);
+    });
+
+    // Listen for mode changes
+    const modeUnsubscribe = this.eventService.onModeChange((event) => {
+      if (event.triggeredBy === 'api') {
+        this.updateToolbar();
+        this.updateToolbarVisibility();
+      }
+    });
+
+    this.cleanupFunctions.push(configUnsubscribe, modeUnsubscribe);
+  }
+
+  private setupLayout(): void {
+    const config = this.configService.get();
+
+    const wrapper = this.domUtils.createElement('div', {
+      className: `latex-dual-editor ${this.options.className || ''}`,
+      styles: {
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        border: '1px solid #ddd',
+        borderRadius: '6px',
+        overflow: 'hidden'
+      }
+    });
+
+    this.toolbar = this.createToolbar(config);
+    this.toolbarContainer = this.createToolbarContainer();
+    const editorsContainer = this.createEditorsContainer();
+
+    const cmContainer = this.domUtils.createElement('div', {
+      className: 'codemirror-container',
+      styles: {
+        flex: '1',
+        minHeight: '0'
+      }
+    });
+
+    editorsContainer.appendChild(cmContainer);
+    wrapper.appendChild(this.toolbar);
+    wrapper.appendChild(this.toolbarContainer);
+    wrapper.appendChild(editorsContainer);
+
+    this.container.appendChild(wrapper);
+    cmContainer.appendChild(this.cmEditor.dom);
+
+    this.setupToolbarEvents();
+
+    setTimeout(() => {
+      this.cmEditor.requestMeasure();
+    }, 0);
+  }
+
+  private createToolbar(config: LatexEditorConfig): HTMLElement {
+    const toolbar = this.domUtils.createElement('div', {
+      className: 'latex-editor-toolbar',
+      styles: {
+        display: 'flex',
+        backgroundColor: '#f5f5f5',
+        borderBottom: '1px solid #ddd',
+        padding: config.styles.spacing.container,
+        gap: '8px',
+        flexShrink: '0'
+      }
+    });
+
+    const modeSourceBtn = this.domUtils.createButton(
+      'LaTeX Source',
+      () => this.setMode('source'),
+      {
+        className: 'mode-btn',
+        attributes: { 'data-mode': 'source' }
+      }
+    );
+
+    const modeVisualBtn = this.domUtils.createButton(
+      'Visual',
+      () => this.setMode('visual'),
+      {
+        className: 'mode-btn',
+        attributes: { 'data-mode': 'visual' }
+      }
+    );
+
+    const toggleCmdBtn = this.domUtils.createButton(
+      'Show Commands',
+      () => this.toggleCommandVisibility(),
+      {
+        className: 'toggle-cmd-btn',
+        attributes: { title: 'Toggle Command Visibility (Ctrl+Shift+C)' }
+      }
+    );
+
+    const toggleToolbarBtn = this.domUtils.createButton(
+      'Hide Toolbar',
+      () => this.toggleToolbar(),
+      {
+        className: 'toggle-toolbar-btn',
+        attributes: { title: 'Toggle Toolbar (Ctrl+Shift+T)' }
+      }
+    );
+
+    toolbar.appendChild(modeSourceBtn);
+    toolbar.appendChild(modeVisualBtn);
+    toolbar.appendChild(toggleCmdBtn);
+    toolbar.appendChild(toggleToolbarBtn);
+
+    return toolbar;
+  }
+
+  private createToolbarContainer(): HTMLElement {
+    return this.domUtils.createElement('div', {
+      className: 'unified-toolbar-container',
+      styles: {
+        display: 'none',
+        borderBottom: '1px solid #ddd',
+        flexShrink: '0'
+      }
+    });
+  }
+
+  private createEditorsContainer(): HTMLElement {
+    return this.domUtils.createElement('div', {
+      className: 'latex-editors-container',
+      styles: {
+        flex: '1',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '0'
+      }
+    });
+  }
+
+  private setupToolbarEvents(): void {
+    // Events are handled by individual button click handlers
+    // This keeps the event handling centralized and type-safe
+  }
+
+  private addCodeMirrorKeymap(): void {
     const toggleKeymap = keymap.of([
       {
         key: 'Ctrl-e',
@@ -70,67 +266,23 @@ export class DualLatexEditor {
     });
   }
 
-  private setupLayout() {
-    const wrapper = document.createElement('div');
-    wrapper.className = `latex-dual-editor ${this.options.className || ''}`;
+  private createVisualEditor(): void {
+    const config = this.configService.get();
 
-    const toolbar = document.createElement('div');
-    toolbar.className = 'latex-editor-toolbar';
-    toolbar.innerHTML = `
-      <button class="mode-btn" data-mode="source">LaTeX Source</button>
-      <button class="mode-btn" data-mode="visual">Visual</button>
-      <button class="toggle-cmd-btn" title="Toggle Command Visibility (Ctrl+Shift+C)">Show Commands</button>
-      <button class="toggle-toolbar-btn" title="Toggle Toolbar (Ctrl+Shift+T)">Hide Toolbar</button>
-    `;
-
-    const toolbarContainer = document.createElement('div');
-    toolbarContainer.className = 'unified-toolbar-container';
-
-    const editorsContainer = document.createElement('div');
-    editorsContainer.className = 'latex-editors-container';
-
-    const cmContainer = document.createElement('div');
-    cmContainer.className = 'codemirror-container';
-
-    editorsContainer.appendChild(cmContainer);
-    wrapper.appendChild(toolbar);
-    wrapper.appendChild(toolbarContainer);
-    wrapper.appendChild(editorsContainer);
-
-    this.container.appendChild(wrapper);
-    cmContainer.appendChild(this.cmEditor.dom);
-
-    this.toolbar = toolbar;
-    this.toolbarContainer = toolbarContainer;
-
-    toolbar.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const btn = target.closest('.mode-btn') as HTMLButtonElement;
-      const cmdBtn = target.closest('.toggle-cmd-btn') as HTMLButtonElement;
-      const toolbarBtn = target.closest('.toggle-toolbar-btn') as HTMLButtonElement;
-
-      if (btn) {
-        this.setMode(btn.dataset.mode as 'source' | 'visual');
-      } else if (cmdBtn) {
-        this.toggleCommandVisibility();
-      } else if (toolbarBtn) {
-        this.toggleToolbar();
-      }
-    });
-
-    setTimeout(() => {
-      this.cmEditor.requestMeasure();
-    }, 0);
-  }
-
-  private createVisualEditor() {
     this.visualEditor = new VisualCodeMirrorEditor(this.cmEditor, {
-      showCommands: this.showCommands,
+      showCommands: config.showCommands,
       onModeChange: (mode) => {
         this.currentMode = mode;
         this.updateToolbar();
         this.updateToolbarVisibility();
         this.unifiedToolbar.updateMode(mode);
+
+        this.eventService.emitModeChange({
+          oldMode: this.currentMode === 'source' ? 'visual' : 'source',
+          newMode: mode,
+          triggeredBy: 'user'
+        });
+
         this.options.onModeChange?.(mode);
       }
     });
@@ -140,77 +292,137 @@ export class DualLatexEditor {
     });
   }
 
-  public toggleMode() {
+  // Public API methods
+  public toggleMode(): void {
     const newMode = this.currentMode === 'source' ? 'visual' : 'source';
     this.setMode(newMode);
   }
 
-  public toggleCommandVisibility() {
-    this.showCommands = !this.showCommands;
-    this.updateCommandVisibility();
-    this.visualEditor.updateOptions({ showCommands: this.showCommands });
+  public toggleCommandVisibility(): void {
+    const config = this.configService.get();
+    const newShowCommands = !config.showCommands;
+
+    this.configService.update({ showCommands: newShowCommands });
+    this.visualEditor.updateOptions({ showCommands: newShowCommands });
+    this.updateCommandVisibilityUI(newShowCommands);
   }
 
-  public toggleToolbar() {
-    this.showToolbar = !this.showToolbar;
+  public toggleToolbar(): void {
+    const config = this.configService.get();
+    const newShowToolbar = !config.showToolbar;
+
+    this.configService.update({ showToolbar: newShowToolbar });
     this.updateToolbarVisibility();
   }
 
-  private updateCommandVisibility() {
-    (window as any).latexEditorShowCommands = this.showCommands;
-
-    const cmdBtn = this.toolbar.querySelector('.toggle-cmd-btn') as HTMLButtonElement;
-    if (cmdBtn) {
-      cmdBtn.textContent = this.showCommands ? 'Hide LaTeX' : 'Show LaTeX';
-      cmdBtn.classList.toggle('active', this.showCommands);
-    }
-  }
-
-  private updateToolbarVisibility() {
-    const toolbarBtn = this.toolbar.querySelector('.toggle-toolbar-btn') as HTMLButtonElement;
-    if (toolbarBtn) {
-      toolbarBtn.textContent = this.showToolbar ? 'Hide Toolbar' : 'Show Toolbar';
-      toolbarBtn.classList.toggle('active', !this.showToolbar);
-    }
-
-    // Show toolbar if enabled (regardless of mode)
-    this.toolbarContainer.style.display = this.showToolbar ? 'block' : 'none';
-  }
-
-  setMode(mode: 'source' | 'visual') {
+  public setMode(mode: 'source' | 'visual'): void {
     if (mode === this.currentMode) return;
 
-    // Store current cursor position
-    const currentSelection = this.cmEditor.state.selection.main;
+    try {
+      // Store current cursor position
+      const currentSelection = this.cmEditor.state.selection.main;
 
-    this.currentMode = mode;
-    this.visualEditor.setVisualMode(mode === 'visual');
-    this.updateToolbar();
-    this.updateToolbarVisibility();
-    this.unifiedToolbar.updateMode(mode);
+      this.currentMode = mode;
+      this.visualEditor.setVisualMode(mode === 'visual');
+      this.updateToolbar();
+      this.updateToolbarVisibility();
+      this.unifiedToolbar.updateMode(mode);
 
-    setTimeout(() => {
-      this.cmEditor.dispatch({
-        selection: { anchor: currentSelection.from, head: currentSelection.to }
+      // Restore cursor position
+      setTimeout(() => {
+        this.cmEditor.dispatch({
+          selection: { anchor: currentSelection.from, head: currentSelection.to }
+        });
+        this.cmEditor.focus();
+      }, this.configService.get().defaultTimeouts.focus);
+
+      this.eventService.emitModeChange({
+        oldMode: mode === 'source' ? 'visual' : 'source',
+        newMode: mode,
+        triggeredBy: 'api'
       });
-      this.cmEditor.focus();
-    }, 10);
 
-    this.options.onModeChange?.(mode);
+      this.options.onModeChange?.(mode);
+    } catch (error) {
+      errorService.logError(
+        ErrorCategory.STATE,
+        ErrorSeverity.ERROR,
+        `Failed to set mode to ${mode}`,
+        { mode, currentMode: this.currentMode, error }
+      );
+    }
   }
 
-  private updateToolbar() {
+  public getConfig(): LatexEditorConfig {
+    return this.configService.get();
+  }
+
+  public updateConfig(updates: Partial<LatexEditorConfig>): void {
+    this.configService.update(updates);
+  }
+
+  public getWidgetRegistry(): WidgetRegistry {
+    return this.widgetRegistry;
+  }
+
+  public destroy(): void {
+    try {
+      this.cleanupFunctions.forEach(cleanup => cleanup());
+      this.visualEditor.destroy();
+      this.focusService.cleanup();
+      this.widgetRegistry.cleanup();
+      this.eventService.removeAllListeners();
+
+      errorService.logError(
+        ErrorCategory.STATE,
+        ErrorSeverity.INFO,
+        'DualLatexEditor destroyed successfully'
+      );
+    } catch (error) {
+      errorService.logError(
+        ErrorCategory.STATE,
+        ErrorSeverity.ERROR,
+        'Error during DualLatexEditor destruction',
+        { error }
+      );
+    }
+  }
+
+  // Private helper methods
+  private updateFromConfig(config: LatexEditorConfig): void {
+    this.updateCommandVisibilityUI(config.showCommands);
+    this.updateToolbarVisibility();
+  }
+
+  private updateCommandVisibilityUI(showCommands: boolean): void {
+    const cmdBtn = this.toolbar.querySelector('.toggle-cmd-btn') as HTMLButtonElement;
+    if (cmdBtn) {
+      cmdBtn.textContent = showCommands ? 'Hide LaTeX' : 'Show LaTeX';
+      cmdBtn.classList.toggle('active', showCommands);
+    }
+  }
+
+  private updateToolbarVisibility(): void {
+    const config = this.configService.get();
+    const toolbarBtn = this.toolbar.querySelector('.toggle-toolbar-btn') as HTMLButtonElement;
+
+    if (toolbarBtn) {
+      toolbarBtn.textContent = config.showToolbar ? 'Hide Toolbar' : 'Show Toolbar';
+      toolbarBtn.classList.toggle('active', !config.showToolbar);
+    }
+
+    this.toolbarContainer.style.display = config.showToolbar ? 'block' : 'none';
+  }
+
+  private updateToolbar(): void {
     this.toolbar.querySelectorAll('.mode-btn').forEach((btn: Element) => {
       const button = btn as HTMLButtonElement;
       button.classList.toggle('active', button.dataset.mode === this.currentMode);
     });
   }
-
-  destroy() {
-    this.visualEditor.destroy();
-  }
 }
 
+// Export the keymap function for backward compatibility
 export function latexVisualKeymap(dualEditor: DualLatexEditor) {
   return keymap.of([
     {
