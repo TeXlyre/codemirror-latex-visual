@@ -197,13 +197,15 @@ export class ListWidget extends BaseLatexWidget {
 
     li.addEventListener('input', (e) => {
       e.stopPropagation();
-      this.deferredUpdateListContent(view);
     });
 
     li.addEventListener('mousedown', (e) => e.stopPropagation());
     li.addEventListener('click', (e) => e.stopPropagation());
     li.addEventListener('focus', (e) => e.stopPropagation());
-    li.addEventListener('blur', () => this.deferredUpdateListContent(view));
+
+    li.addEventListener('blur', () => {
+      this.deferredUpdateListContent(view);
+    });
   }
 
   private setupDescriptionItemEvents(dt: HTMLElement, dd: HTMLElement, view: EditorView) {
@@ -233,13 +235,15 @@ export class ListWidget extends BaseLatexWidget {
 
       element.addEventListener('input', (e) => {
         e.stopPropagation();
-        this.deferredUpdateListContent(view);
       });
 
       element.addEventListener('mousedown', (e) => e.stopPropagation());
       element.addEventListener('click', (e) => e.stopPropagation());
       element.addEventListener('focus', (e) => e.stopPropagation());
-      element.addEventListener('blur', () => this.deferredUpdateListContent(view));
+
+      element.addEventListener('blur', () => {
+        this.deferredUpdateListContent(view);
+      });
     });
   }
 
@@ -257,6 +261,8 @@ export class ListWidget extends BaseLatexWidget {
       return;
     }
 
+    this.deferredUpdateListContent(view);
+
     const newItem = this.createListItem('', 0, view);
 
     if (currentItem.nextSibling) {
@@ -266,9 +272,9 @@ export class ListWidget extends BaseLatexWidget {
     }
 
     this.updateItemIndices();
-    this.deferredUpdateListContent(view);
 
     setTimeout(() => {
+      this.updateListContent(view);
       const editableElement = newItem.contentEditable === 'true' ? newItem : newItem.querySelector('[contenteditable="true"]');
       (editableElement as HTMLElement)?.focus();
     }, 10);
@@ -285,6 +291,8 @@ export class ListWidget extends BaseLatexWidget {
       return;
     }
 
+    this.deferredUpdateListContent(view);
+
     const newWrapper = this.createDescriptionItem('', 0, view);
 
     if (currentWrapper.nextSibling) {
@@ -294,9 +302,9 @@ export class ListWidget extends BaseLatexWidget {
     }
 
     this.updateItemIndices();
-    this.deferredUpdateListContent(view);
 
     setTimeout(() => {
+      this.updateListContent(view);
       const dt = newWrapper.querySelector('dt') as HTMLElement;
       dt?.focus();
     }, 10);
@@ -308,7 +316,8 @@ export class ListWidget extends BaseLatexWidget {
 
     item.remove();
     this.updateItemIndices();
-    this.deferredUpdateListContent(view);
+
+    this.updateListContent(view);
 
     setTimeout(() => {
       const focusItem = prevItem || nextItem;
@@ -325,7 +334,8 @@ export class ListWidget extends BaseLatexWidget {
 
     wrapper.remove();
     this.updateItemIndices();
-    this.deferredUpdateListContent(view);
+
+    this.updateListContent(view);
 
     setTimeout(() => {
       const focusWrapper = prevWrapper || nextWrapper;
@@ -460,8 +470,6 @@ export class ListWidget extends BaseLatexWidget {
 
     contentDiv.addEventListener('input', (e) => {
       e.stopPropagation();
-      const newContent = contentDiv.textContent || '';
-      this.updateEnvironmentContent(view, newContent);
     });
 
     contentDiv.addEventListener('keydown', (e) => {

@@ -18,8 +18,47 @@ export abstract class BaseLatexWidget extends WidgetType {
   }
 
   updateDOM(dom: HTMLElement, view: EditorView): boolean {
+    const activeElement = document.activeElement;
+    const hasFocus = dom.contains(activeElement);
+    let focusPath: string[] = [];
+
+    if (hasFocus && activeElement) {
+      let current = activeElement as HTMLElement;
+      while (current && current !== dom) {
+        const parent = current.parentElement;
+        if (parent) {
+          const index = Array.from(parent.children).indexOf(current);
+          focusPath.unshift(`${current.tagName.toLowerCase()}:${index}`);
+        }
+        current = parent!;
+      }
+    }
+
     const newElement = this.toDOM(view);
     dom.replaceWith(newElement);
+
+    if (hasFocus && focusPath.length > 0) {
+      setTimeout(() => {
+        let target: HTMLElement = newElement;
+        for (const pathPart of focusPath) {
+          const [tagName, indexStr] = pathPart.split(':');
+          const index = parseInt(indexStr);
+          const children = Array.from(target.children).filter(child =>
+            child.tagName.toLowerCase() === tagName
+          );
+          if (children[index]) {
+            target = children[index] as HTMLElement;
+          } else {
+            break;
+          }
+        }
+
+        if (target && (target.contentEditable === 'true' || target.tabIndex >= 0)) {
+          target.focus();
+        }
+      }, 0);
+    }
+
     return true;
   }
 
@@ -119,10 +158,8 @@ export abstract class BaseLatexWidget extends WidgetType {
 
     const { from, to } = pos;
 
-    // Update the token's content immediately to prevent rerender conflicts
     this.token.latex = newLatex;
 
-    // Extract new content from the latex if possible
     if (newLatex.includes('{') && newLatex.includes('}')) {
       const contentMatch = newLatex.match(/\{([^}]*)\}$/);
       if (contentMatch) {
@@ -130,7 +167,6 @@ export abstract class BaseLatexWidget extends WidgetType {
       }
     }
 
-    // Use setTimeout to defer the update and avoid re-entrancy issues
     setTimeout(() => {
       view.dispatch({
         changes: { from, to, insert: newLatex }
