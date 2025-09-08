@@ -114,63 +114,6 @@ export class CommandWidget extends BaseLatexWidget {
     }
   }
 
-  private setupInlineEditing(wrapper: HTMLElement, visualSpan: HTMLElement, view: EditorView) {
-    const startEditing = (clickX?: number) => {
-      if (this.isEditing) return;
-      this.isEditing = true;
-
-      visualSpan.style.display = 'none';
-
-      this.editableSpan = document.createElement('span');
-      this.editableSpan.contentEditable = 'true';
-      this.editableSpan.style.outline = '2px solid #007acc';
-      this.editableSpan.style.outlineOffset = '1px';
-      this.editableSpan.style.background = 'rgba(255, 255, 255, 0.95)';
-      this.editableSpan.style.padding = '2px 4px';
-      this.editableSpan.style.margin = '-2px -4px';
-      this.editableSpan.style.borderRadius = '3px';
-      this.editableSpan.style.fontFamily = 'monospace';
-      this.editableSpan.style.fontSize = '0.9em';
-      this.editableSpan.style.color = '#dc3545';
-      this.editableSpan.style.minWidth = '3em';
-      this.editableSpan.style.whiteSpace = 'nowrap';
-      this.editableSpan.textContent = this.token.latex;
-
-      wrapper.appendChild(this.editableSpan);
-
-      setTimeout(() => {
-        this.editableSpan!.focus();
-        if (clickX !== undefined) {
-          this.positionCursorFromClick(this.editableSpan!, clickX);
-        } else {
-          this.selectEditableContent(this.editableSpan!);
-        }
-      }, 10);
-
-      this.setupEditingEvents(view, wrapper, visualSpan);
-    };
-
-    wrapper.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      startEditing(e.clientX);
-    });
-
-    wrapper.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      startEditing();
-    });
-
-    wrapper.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === 'F2') && !this.isEditing) {
-        e.preventDefault();
-        e.stopPropagation();
-        startEditing();
-      }
-    });
-  }
-
   private setupEditingEvents(view: EditorView, wrapper: HTMLElement, visualSpan: HTMLElement) {
     if (!this.editableSpan) return;
 
@@ -192,7 +135,9 @@ export class CommandWidget extends BaseLatexWidget {
         this.editableSpan.parentNode.removeChild(this.editableSpan);
       }
       this.editableSpan = undefined;
-      wrapper.focus();
+
+      // Remove focus from wrapper to prevent stuck editing state
+      wrapper.blur();
     };
 
     const cancelEditing = () => {
@@ -204,10 +149,27 @@ export class CommandWidget extends BaseLatexWidget {
         this.editableSpan.parentNode.removeChild(this.editableSpan);
       }
       this.editableSpan = undefined;
-      wrapper.focus();
+      wrapper.blur();
     };
 
-    this.editableSpan.addEventListener('blur', finishEditing);
+    // Enhanced blur detection
+    let blurTimeout: number;
+
+    this.editableSpan.addEventListener('blur', (e) => {
+      // Delay to allow for refocus within the same widget
+      blurTimeout = window.setTimeout(() => {
+        if (this.isEditing && document.activeElement !== this.editableSpan) {
+          finishEditing();
+        }
+      }, 150);
+    });
+
+    this.editableSpan.addEventListener('focus', () => {
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+      }
+    });
+
     this.editableSpan.addEventListener('keydown', (e) => {
       e.stopPropagation();
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -228,6 +190,84 @@ export class CommandWidget extends BaseLatexWidget {
 
     this.editableSpan.addEventListener('mousedown', (e) => e.stopPropagation());
     this.editableSpan.addEventListener('click', (e) => e.stopPropagation());
+
+    // Global click handler to detect clicks outside
+    const handleGlobalClick = (e: Event) => {
+      if (this.isEditing && this.editableSpan && !this.editableSpan.contains(e.target as Node)) {
+        finishEditing();
+        document.removeEventListener('click', handleGlobalClick, true);
+      }
+    };
+
+    // Add global click listener after a short delay
+    setTimeout(() => {
+      document.addEventListener('click', handleGlobalClick, true);
+    }, 100);
+  }
+
+  private setupInlineEditing(wrapper: HTMLElement, visualSpan: HTMLElement, view: EditorView) {
+    const startEditing = (clickX?: number) => {
+      if (this.isEditing) return;
+      this.isEditing = true;
+
+      visualSpan.style.display = 'none';
+
+      this.editableSpan = document.createElement('span');
+      this.editableSpan.contentEditable = 'true';
+      this.editableSpan.style.outline = '2px solid #007acc';
+      this.editableSpan.style.outlineOffset = '1px';
+      this.editableSpan.style.background = 'rgba(255, 255, 255, 0.95)';
+      this.editableSpan.style.padding = '2px 4px';
+      this.editableSpan.style.margin = '-2px -4px';
+      this.editableSpan.style.borderRadius = '3px';
+      this.editableSpan.style.fontFamily = 'monospace';
+      this.editableSpan.style.fontSize = '0.9em';
+      this.editableSpan.style.color = '#dc3545';
+      this.editableSpan.style.minWidth = '3em';
+      this.editableSpan.style.whiteSpace = 'nowrap';
+      this.editableSpan.style.zIndex = '1000';
+      this.editableSpan.style.position = 'relative';
+      this.editableSpan.textContent = this.token.latex;
+
+      wrapper.appendChild(this.editableSpan);
+
+      setTimeout(() => {
+        if (this.editableSpan) {
+          this.editableSpan.focus();
+          if (clickX !== undefined) {
+            this.positionCursorFromClick(this.editableSpan, clickX);
+          } else {
+            this.selectEditableContent(this.editableSpan);
+          }
+        }
+      }, 10);
+
+      this.setupEditingEvents(view, wrapper, visualSpan);
+    };
+
+    wrapper.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!this.isEditing) {
+        startEditing(e.clientX);
+      }
+    });
+
+    wrapper.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!this.isEditing) {
+        startEditing();
+      }
+    });
+
+    wrapper.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === 'F2') && !this.isEditing) {
+        e.preventDefault();
+        e.stopPropagation();
+        startEditing();
+      }
+    });
   }
 
   private positionCursorFromClick(editableSpan: HTMLElement, clickX: number) {
