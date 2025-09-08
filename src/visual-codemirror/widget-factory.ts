@@ -1,6 +1,5 @@
-import { EditorView, WidgetType } from '@codemirror/view';
+import { WidgetType } from '@codemirror/view';
 import { LatexToken } from '../parsers/base-parser';
-import { LatexTokenizer } from '../parsers/main-parser';
 import { SectionWidget } from './widgets/section-widget';
 import { MathWidget } from './widgets/math-widget';
 import { EnvironmentWidget } from './widgets/environment-widget';
@@ -9,7 +8,6 @@ import { TableWidget } from './widgets/table-widget';
 import { ListWidget } from './widgets/list-widget';
 
 export class WidgetFactory {
-  private static tokenizer = new LatexTokenizer();
 
   static createWidget(token: LatexToken, showCommands: boolean = false): WidgetType | null {
     if (!this.isCompleteToken(token)) {
@@ -91,10 +89,8 @@ export class WidgetFactory {
         return false;
       }
       const content = latex.slice(2, -2);
-      if (content.includes('$$')) {
-        return false;
-      }
-      return true;
+      return !content.includes('$$');
+
     }
 
     return true;

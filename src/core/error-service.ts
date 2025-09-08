@@ -1,4 +1,4 @@
-// src/core/error-service.ts
+// src/core/error-service.ts (Updated for Phase 2)
 export enum ErrorSeverity {
   INFO = 'info',
   WARN = 'warn',
@@ -38,7 +38,7 @@ export class FallbackTextRecovery implements ErrorRecoveryStrategy {
   recover(error: LatexError, context: any): any {
     if (typeof context?.content === 'string') {
       return {
-        type: 'text',
+        type: 'text' as const,
         content: context.content,
         latex: context.content,
         start: context.start || 0,

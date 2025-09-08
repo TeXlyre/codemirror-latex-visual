@@ -1,3 +1,6 @@
+// src/parsers/base-parser.ts (Updated for Phase 2)
+import { errorService, ErrorCategory, ErrorSeverity } from '../core/error-service';
+
 export interface LatexToken {
   type: 'text' | 'math_inline' | 'math_display' | 'section' | 'environment' | 'command' | 'comment' | 'paragraph_break' | 'mixed_paragraph' | 'editable_command' | 'unknown_command' | 'table';
   content: string;
@@ -27,6 +30,12 @@ export interface CommandParseResult extends ParseResult {
   name: string;
   params: string;
   fullCommand: string;
+}
+
+export interface ValidationResult {
+  isComplete: boolean;
+  isValid: boolean;
+  errors: string[];
 }
 
 export abstract class BaseLatexParser {
@@ -91,6 +100,97 @@ export abstract class BaseLatexParser {
     }
 
     return { name, params, fullCommand, content: params, end: start + fullCommand.length };
+  }
+
+  protected validateToken(token: LatexToken): ValidationResult {
+    const errors: string[] = [];
+    let isComplete = true;
+    let isValid = true;
+
+    try {
+      switch (token.type) {
+        case 'command':
+        case 'editable_command':
+          if (!token.latex.includes('{') || !token.latex.includes('}')) {
+            isComplete = false;
+            errors.push('Incomplete command braces');
+          }
+          break;
+
+        case 'environment':
+          if (!token.name) {
+            isValid = false;
+            errors.push('Environment missing name');
+          } else if (!token.latex.includes(`\\begin{${token.name}}`) || !token.latex.includes(`\\end{${token.name}}`)) {
+            isComplete = false;
+            errors.push('Incomplete environment tags');
+          }
+          break;
+
+        case 'math_inline':
+          if (!token.latex.startsWith('$') || !token.latex.endsWith('$') || token.latex.length < 3) {
+            isComplete = false;
+            errors.push('Incomplete inline math delimiters');
+          }
+          break;
+
+        case 'math_display':
+          if (!token.latex.startsWith('$$') || !token.latex.endsWith('$$') || token.latex.length < 5) {
+            isComplete = false;
+            errors.push('Incomplete display math delimiters');
+          }
+          break;
+
+        case 'section':
+          if (!token.latex.includes('{') || !token.latex.includes('}')) {
+            isComplete = false;
+            errors.push('Incomplete section braces');
+          }
+          break;
+      }
+
+    } catch (error) {
+      isValid = false;
+      errors.push(`Validation error: ${error}`);
+    }
+
+    return { isComplete, isValid, errors };
+  }
+
+  protected createFallbackToken(content: string, start: number): LatexToken {
+    return {
+      type: 'text',
+      content,
+      latex: content,
+      start,
+      end: start + content.length
+    };
+  }
+
+  protected handleParseError(error: any, content: string, position: number): LatexToken {
+    const latexError = errorService.logError(
+      ErrorCategory.PARSER,
+      ErrorSeverity.ERROR,
+      `Failed to parse ${this.constructor.name}`,
+      { content: content.substring(0, 100), position, error }
+    );
+
+    const recovered = errorService.tryRecover<LatexToken>(latexError, { content, position });
+    return recovered || this.createFallbackToken(content.charAt(position), position);
+  }
+
+  protected logValidationWarning(token: LatexToken, validation: ValidationResult): void {
+    if (!validation.isComplete || !validation.isValid) {
+      errorService.logError(
+        ErrorCategory.PARSER,
+        validation.isValid ? ErrorSeverity.WARN : ErrorSeverity.ERROR,
+        `Token validation failed for ${token.type}`,
+        {
+          token: { type: token.type, latex: token.latex.substring(0, 50) },
+          validation
+        }
+      );
+    }
   }
 
   abstract canParse(latex: string, position: number): boolean;

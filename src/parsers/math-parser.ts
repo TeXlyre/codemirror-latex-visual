@@ -1,4 +1,6 @@
+// src/parsers/math-parser.ts (Updated for Phase 2)
 import { BaseLatexParser, LatexToken } from './base-parser';
+import { errorService, ErrorCategory, ErrorSeverity } from '../core/error-service';
 
 export class MathParser extends BaseLatexParser {
   canParse(latex: string, position: number): boolean {
@@ -8,127 +10,162 @@ export class MathParser extends BaseLatexParser {
   parse(latex: string, position: number): LatexToken | null {
     if (!this.canParse(latex, position)) return null;
 
-    // Determine if this is $$ or just $
-    const isDisplayMath = latex.charAt(position + 1) === '$';
+    try {
+      const isDisplayMath = latex.charAt(position + 1) === '$';
 
-    if (isDisplayMath) {
-      return this.parseDisplayMath(latex, position);
-    } else {
-      return this.parseInlineMath(latex, position);
+      if (isDisplayMath) {
+        return this.parseDisplayMath(latex, position);
+      } else {
+        return this.parseInlineMath(latex, position);
+      }
+    } catch (error) {
+      return this.handleParseError(error, latex, position);
     }
   }
 
   private parseDisplayMath(latex: string, start: number): LatexToken {
-    // We start with $$ at position start
-    let pos = start + 2; // Skip opening $$
-    let escaped = false;
+    try {
+      let pos = start + 2;
+      let escaped = false;
 
-    // Scan character by character looking for closing $$
-    while (pos < latex.length - 1) {
-      const char = latex.charAt(pos);
+      while (pos < latex.length - 1) {
+        const char = latex.charAt(pos);
 
-      if (escaped) {
-        escaped = false;
-        pos++;
-        continue;
-      }
-
-      if (char === '\\') {
-        escaped = true;
-        pos++;
-        continue;
-      }
-
-      // Check for closing $$
-      if (char === '$' && latex.charAt(pos + 1) === '$') {
-        // Found closing $$
-        const content = latex.slice(start + 2, pos);
-
-        if (content.length > 0) {
-          // Valid display math
-          return {
-            type: 'math_display',
-            content: content,
-            latex: latex.slice(start, pos + 2),
-            start: start,
-            end: pos + 2
-          };
-        } else {
-          // Empty $$$$, treat as text
-          break;
+        if (escaped) {
+          escaped = false;
+          pos++;
+          continue;
         }
+
+        if (char === '\\') {
+          escaped = true;
+          pos++;
+          continue;
+        }
+
+        if (char === '$' && latex.charAt(pos + 1) === '$') {
+          const content = latex.slice(start + 2, pos);
+
+          if (content.length > 0) {
+            const token: LatexToken = {
+              type: 'math_display',
+              content: content,
+              latex: latex.slice(start, pos + 2),
+              start: start,
+              end: pos + 2
+            };
+
+            const validation = this.validateToken(token);
+            if (!validation.isComplete || !validation.isValid) {
+              this.logValidationWarning(token, validation);
+            }
+
+            return token;
+          } else {
+            errorService.logError(
+              ErrorCategory.PARSER,
+              ErrorSeverity.WARN,
+              'Empty display math content found',
+              { position: start, latex: '$$$$' }
+            );
+            break;
+          }
+        }
+
+        pos++;
       }
 
-      pos++;
-    }
+      errorService.logError(
+        ErrorCategory.PARSER,
+        ErrorSeverity.WARN,
+        'Incomplete display math construct',
+        { position: start, foundClosing: false }
+      );
 
-    // No closing $$ found or empty content
-    return {
-      type: 'text',
-      content: '$$',
-      latex: '$$',
-      start: start,
-      end: start + 2
-    };
+      return this.createFallbackToken('$$', start);
+
+    } catch (error) {
+      return this.handleParseError(error, latex, start);
+    }
   }
 
   private parseInlineMath(latex: string, start: number): LatexToken {
-    // We start with $ at position start
-    let pos = start + 1; // Skip opening $
-    let escaped = false;
+    try {
+      let pos = start + 1;
+      let escaped = false;
 
-    // Scan character by character looking for closing $
-    while (pos < latex.length) {
-      const char = latex.charAt(pos);
+      while (pos < latex.length) {
+        const char = latex.charAt(pos);
 
-      if (escaped) {
-        escaped = false;
-        pos++;
-        continue;
-      }
-
-      if (char === '\\') {
-        escaped = true;
-        pos++;
-        continue;
-      }
-
-      // Check for $
-      if (char === '$') {
-        // Make sure this isn't the start of $$
-        if (pos + 1 < latex.length && latex.charAt(pos + 1) === '$') {
-          // This is $$, which means our $ doesn't have a proper closing
-          break;
+        if (escaped) {
+          escaped = false;
+          pos++;
+          continue;
         }
 
-        // Found closing $
-        const content = latex.slice(start + 1, pos);
-
-        if (content.length > 0) {
-          // Valid inline math
-          return {
-            type: 'math_inline',
-            content: content,
-            latex: latex.slice(start, pos + 1),
-            start: start,
-            end: pos + 1
-          };
-        } else {
-          // Empty $$, treat as text
-          break;
+        if (char === '\\') {
+          escaped = true;
+          pos++;
+          continue;
         }
+
+        if (char === '$') {
+          // Check if this is the start of display math ($$) that would invalidate our inline math
+          if (pos + 1 < latex.length && latex.charAt(pos + 1) === '$') {
+            // We found $$, which means our inline math is incomplete
+            errorService.logError(
+              ErrorCategory.PARSER,
+              ErrorSeverity.WARN,
+              'Inline math terminated by display math delimiter',
+              { position: start, terminatorPosition: pos }
+            );
+            break;
+          }
+
+          // This is a valid closing $ for inline math
+          const content = latex.slice(start + 1, pos);
+
+          if (content.length > 0) {
+            const token: LatexToken = {
+              type: 'math_inline',
+              content: content,
+              latex: latex.slice(start, pos + 1),
+              start: start,
+              end: pos + 1
+            };
+
+            const validation = this.validateToken(token);
+            if (!validation.isComplete || !validation.isValid) {
+              this.logValidationWarning(token, validation);
+            }
+
+            return token;
+          } else {
+            errorService.logError(
+              ErrorCategory.PARSER,
+              ErrorSeverity.WARN,
+              'Empty inline math content found',
+              { position: start }
+            );
+            break;
+          }
+        }
+
+        pos++;
       }
 
-      pos++;
+      // If we get here, we didn't find a closing $
+      errorService.logError(
+        ErrorCategory.PARSER,
+        ErrorSeverity.WARN,
+        'Incomplete inline math construct - no closing delimiter found',
+        { position: start, searchedUntil: pos }
+      );
+
+      return this.createFallbackToken('$', start);
+
+    } catch (error) {
+      return this.handleParseError(error, latex, start);
     }
-
-    // No closing $ found or empty content
-    return {
-      type: 'text',
-      content: '$',
-      latex: '$',
-      start: start,
-      end: start + 1
-    };
   }
 }

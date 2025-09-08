@@ -1,4 +1,6 @@
+// src/parsers/command-parser.ts (Updated for Phase 2)
 import { BaseLatexParser, LatexToken } from './base-parser';
+import { errorService, ErrorCategory, ErrorSeverity } from '../core/error-service';
 
 export const EDITABLE_COMMANDS = new Set([
   'textbf', 'textit', 'emph', 'underline', 'textsc', 'textsf', 'texttt',
@@ -21,137 +23,120 @@ export class CommandParser extends BaseLatexParser {
   parse(latex: string, position: number): LatexToken | null {
     if (!this.canParse(latex, position)) return null;
 
-    // Check for complete color commands first
-    if (latex.startsWith('\\textcolor', position) || latex.startsWith('\\colorbox', position)) {
-      const colorResult = this.parseColorCommand(latex, position);
-      if (colorResult && colorResult.end > position) {
-        return colorResult;
-      }
-    }
-
-    // Try to extract a complete command with braces
-    const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, position);
-
-    // If we don't have a complete command, treat it as text
-    if (!cmdResult || cmdResult.end <= position) {
-      // For incomplete commands like '\b', '\begin', etc., just return as text
-      const match = /^\\[a-zA-Z*]*/.exec(latex.slice(position));
-      if (match) {
-        return {
-          type: 'text',
-          content: match[0],
-          latex: match[0],
-          start: position,
-          end: position + match[0].length,
-        };
+    try {
+      if (latex.startsWith('\\textcolor', position) || latex.startsWith('\\colorbox', position)) {
+        const colorResult = this.parseColorCommand(latex, position);
+        if (colorResult && colorResult.end > position) {
+          const validation = this.validateToken(colorResult);
+          if (!validation.isComplete || !validation.isValid) {
+            this.logValidationWarning(colorResult, validation);
+          }
+          return colorResult;
+        }
       }
 
-      // Single backslash or backslash with non-letter
-      return {
-        type: 'text',
-        content: latex.charAt(position),
-        latex: latex.charAt(position),
+      const cmdResult = BaseLatexParser.extractCommandWithBraces(latex, position);
+
+      if (!cmdResult || cmdResult.end <= position) {
+        return this.handleIncompleteCommand(latex, position);
+      }
+
+      const isKnown = EDITABLE_COMMANDS.has(cmdResult.name) ||
+                     cmdResult.name === 'textcolor' ||
+                     cmdResult.name === 'colorbox' ||
+                     cmdResult.name === 'color';
+
+      const token: LatexToken = {
+        type: isKnown ? 'editable_command' : 'command',
+        content: cmdResult.params,
+        latex: cmdResult.fullCommand,
         start: position,
-        end: position + 1
+        end: cmdResult.end,
+        name: cmdResult.name,
+        params: '',
+        colorArg: cmdResult.name === 'color' ? cmdResult.params : undefined
       };
+
+      const validation = this.validateToken(token);
+      if (!validation.isComplete || !validation.isValid) {
+        this.logValidationWarning(token, validation);
+      }
+
+      return token;
+
+    } catch (error) {
+      return this.handleParseError(error, latex, position);
+    }
+  }
+
+  private handleIncompleteCommand(latex: string, position: number): LatexToken {
+    const match = /^\\[a-zA-Z*]*/.exec(latex.slice(position));
+    if (match) {
+      errorService.logError(
+        ErrorCategory.PARSER,
+        ErrorSeverity.WARN,
+        'Incomplete command found',
+        { command: match[0], position }
+      );
+
+      return this.createFallbackToken(match[0], position);
     }
 
-    // We have a complete command, check if it's known
-    const isKnown = EDITABLE_COMMANDS.has(cmdResult.name) ||
-                   cmdResult.name === 'textcolor' ||
-                   cmdResult.name === 'colorbox' ||
-                   cmdResult.name === 'color';
-
-    const token: LatexToken = {
-      type: isKnown ? 'editable_command' : 'command',
-      content: cmdResult.params,
-      latex: cmdResult.fullCommand,
-      start: position,
-      end: cmdResult.end,
-      name: cmdResult.name,
-      params: '',
-      colorArg: cmdResult.name === 'color' ? cmdResult.params : undefined
-    };
-
-    return token;
+    return this.createFallbackToken(latex.charAt(position), position);
   }
 
   private parseColorCommand(latex: string, start: number): LatexToken | null {
-    const isTextColor = latex.startsWith('\\textcolor', start);
-    const isColorBox = latex.startsWith('\\colorbox', start);
+    try {
+      const isTextColor = latex.startsWith('\\textcolor', start);
+      const isColorBox = latex.startsWith('\\colorbox', start);
 
-    if (!isTextColor && !isColorBox) return null;
+      if (!isTextColor && !isColorBox) return null;
 
-    let pos = start + (isTextColor ? 10 : 9);
+      let pos = start + (isTextColor ? 10 : 9);
 
-    // Skip whitespace
-    while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
-      pos++;
-    }
+      while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
+        pos++;
+      }
 
-    // Must have first brace
-    if (pos >= latex.length || latex.charAt(pos) !== '{') {
+      if (pos >= latex.length || latex.charAt(pos) !== '{') {
+        return this.createFallbackToken(latex.slice(start, pos), start);
+      }
+
+      const colorResult = BaseLatexParser.extractBalancedBraces(latex, pos);
+      if (!colorResult) {
+        return this.createFallbackToken(latex.slice(start, pos + 1), start);
+      }
+
+      pos = colorResult.end;
+
+      while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
+        pos++;
+      }
+
+      if (pos >= latex.length || latex.charAt(pos) !== '{') {
+        return this.createFallbackToken(latex.slice(start, pos), start);
+      }
+
+      const contentResult = BaseLatexParser.extractBalancedBraces(latex, pos);
+      if (!contentResult) {
+        return this.createFallbackToken(latex.slice(start, pos + 1), start);
+      }
+
+      const fullCommand = latex.slice(start, contentResult.end);
+
       return {
-        type: 'text',
-        content: latex.slice(start, pos),
-        latex: latex.slice(start, pos),
+        type: 'editable_command',
+        content: contentResult.content,
+        latex: fullCommand,
         start,
-        end: pos || start + 1
+        end: contentResult.end,
+        name: isTextColor ? 'textcolor' : 'colorbox',
+        params: contentResult.content,
+        colorArg: colorResult.content
       };
+
+    } catch (error) {
+      return this.handleParseError(error, latex, start);
     }
-
-    const colorResult = BaseLatexParser.extractBalancedBraces(latex, pos);
-    if (!colorResult) {
-      return {
-        type: 'text',
-        content: latex.slice(start, pos + 1),
-        latex: latex.slice(start, pos + 1),
-        start,
-        end: pos + 1
-      };
-    }
-
-    pos = colorResult.end;
-
-    // Skip whitespace
-    while (pos < latex.length && /\s/.test(latex.charAt(pos))) {
-      pos++;
-    }
-
-    // Must have second brace
-    if (pos >= latex.length || latex.charAt(pos) !== '{') {
-      return {
-        type: 'text',
-        content: latex.slice(start, pos),
-        latex: latex.slice(start, pos),
-        start,
-        end: pos || colorResult.end
-      };
-    }
-
-    const contentResult = BaseLatexParser.extractBalancedBraces(latex, pos);
-    if (!contentResult) {
-      return {
-        type: 'text',
-        content: latex.slice(start, pos + 1),
-        latex: latex.slice(start, pos + 1),
-        start,
-        end: pos + 1
-      };
-    }
-
-    // Only return a command token if we have a complete color command
-    const fullCommand = latex.slice(start, contentResult.end);
-
-    return {
-      type: 'editable_command',
-      content: contentResult.content,
-      latex: fullCommand,
-      start,
-      end: contentResult.end,
-      name: isTextColor ? 'textcolor' : 'colorbox',
-      params: contentResult.content,
-      colorArg: colorResult.content
-    };
   }
 }
