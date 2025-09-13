@@ -58,7 +58,7 @@ export class MathHoverManager {
       // Show widget near cursor
       const coords = this.view.coordsAtPos(cursorPos);
       if (coords) {
-        this.showWidget(cursorMath, coords.left + 20, coords.top - 10);
+        this.showWidget(cursorMath, coords.left + 20, coords.top + 20);
       }
       return;
     }
@@ -70,7 +70,7 @@ export class MathHoverManager {
       if (mouseMath) {
         const coords = this.view.coordsAtPos(mousePos);
         if (coords) {
-          this.showWidget(mouseMath, coords.left + 10, coords.top - 10);
+          this.showWidget(mouseMath, coords.left + 10, coords.top + 20);
         }
         return;
       }
