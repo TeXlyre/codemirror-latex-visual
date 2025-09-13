@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="CodeMirror 6 LaTeX Visual Editor with MathLive">
-  <title>CodeMirror 6 LaTeX Visual Editor</title>
+  <meta name="description" content="CodeMirror 6 LaTeX Visual Editor with MathLive and Math Hover">
+  <title>CodeMirror 6 LaTeX Visual Editor with Math Hover</title>
 </head>
 <body>
   <header>
     <h1>CodeMirror LaTeX Visual Editor</h1>
-    <p>Visual editing for LaTeX documents with interactive math editing</p>
+    <p>Visual editing for LaTeX documents with interactive math editing and hover preview</p>
     <div class="links">
       <a href="https://github.com/texlyre/codemirror-latex-visual" target="_blank" rel="noopener noreferrer">GitHub</a>
       <a href="https://www.npmjs.com/package/codemirror-latex-visual" target="_blank" rel="noopener noreferrer">npm</a>
@@ -32,15 +32,23 @@
       </div>
 
       <div class="single-editor-demo">
-        <h2>Single Editor with Mode Toggle</h2>
-        <p>Toggle between source and visual editing modes on the same editor. Press <kbd>Ctrl+E</kbd> to switch modes. In visual mode, LaTeX elements are replaced with visual widgets. Press <kbd>Ctrl+Shift+C</kbd> to toggle command visibility. Click any math equation to edit it with MathLive.</p>
+        <h2>Single Editor with Mode Toggle & Math Hover</h2>
+        <p>Toggle between source and visual editing modes on the same editor. Press <kbd>Ctrl+E</kbd> to switch modes. In visual mode, LaTeX elements are replaced with visual widgets. Press <kbd>Ctrl+Shift+C</kbd> to toggle command visibility. Press <kbd>Ctrl+Shift+M</kbd> to toggle math hover (source mode only).</p>
+        
+        <!-- Math Hover Control Panel will be inserted here by JavaScript -->
+        
         <div id="dual-editor"></div>
       </div>
     </section>
 
     <section class="features">
-      <h2>Single Editor Architecture Features</h2>
+      <h2>Enhanced Features with Math Hover</h2>
       <ul>
+        <li><strong>Math Hover Preview:</strong> Hover over math expressions in source mode to see rendered preview</li>
+        <li><strong>Interactive Math Editing:</strong> Click on hover previews to edit with MathLive's interface</li>
+        <li><strong>Mode-Aware Operation:</strong> Math hover automatically enables/disables based on editor mode</li>
+        <li><strong>Smart Positioning:</strong> Hover previews avoid screen edges and position intelligently</li>
+        <li><strong>Keyboard Shortcuts:</strong> Use Ctrl+Shift+M to toggle math hover functionality</li>
         <li><strong>Single CodeMirror Editor:</strong> Uses one editor with visual overlays that can be toggled on/off</li>
         <li><strong>No Synchronization:</strong> Visual widgets are overlays on the same document - no sync needed</li>
         <li><strong>Interactive Math:</strong> Click math equations to edit with MathLive's interface</li>
@@ -53,7 +61,7 @@
     </section>
 
     <section class="usage">
-      <h2>Updated Usage</h2>
+      <h2>Updated Usage with Math Hover</h2>
       <pre><code>import { EditorState, EditorView } from '@codemirror/state';
 import { DualLatexEditor, VisualCodeMirrorEditor } from 'codemirror-latex-visual';
 import 'codemirror-latex-visual/dist/styles.css';
@@ -67,23 +75,69 @@ const cmEditor = new EditorView({
   parent: document.getElementById('cm-container')
 });
 
-// Option 1: Dual editor with mode switching
+// Dual editor with math hover enabled
 const dualEditor = new DualLatexEditor(
   document.getElementById('editor-wrapper'),
   cmEditor,
   {
     initialMode: 'source',
+    enableMathHover: true,        // Enable math hover (default: true)
     showCommands: false,
-    onModeChange: (mode) => console.log('Switched to:', mode)
+    showToolbar: true,
+    onModeChange: (mode) => {
+      console.log('Switched to:', mode);
+      console.log('Math hover available:', mode === 'source');
+    }
   }
 );
 
-// Option 2: Direct visual overlay control
-const visualEditor = new VisualCodeMirrorEditor(cmEditor, {
-  showCommands: false
-});
-visualEditor.setVisualMode(true); // Enable overlays
-visualEditor.setVisualMode(false); // Disable overlays</code></pre>
+// Programmatic control
+dualEditor.toggleMathHover();           // Toggle math hover on/off
+const isEnabled = dualEditor.isMathHoverEnabled();  // Check status</code></pre>
+    </section>
+
+    <section class="keyboard-shortcuts">
+      <h2>Keyboard Shortcuts</h2>
+      <div class="shortcuts-grid">
+        <div class="shortcut-group">
+          <h3>Mode Controls</h3>
+          <ul>
+            <li><kbd>Ctrl+E</kbd> / <kbd>Cmd+E</kbd> - Toggle source/visual mode</li>
+            <li><kbd>Ctrl+Shift+C</kbd> / <kbd>Cmd+Shift+C</kbd> - Toggle command visibility</li>
+            <li><kbd>Ctrl+Shift+T</kbd> / <kbd>Cmd+Shift+T</kbd> - Toggle toolbar</li>
+          </ul>
+        </div>
+        <div class="shortcut-group">
+          <h3>Math Hover</h3>
+          <ul>
+            <li><kbd>Ctrl+Shift+M</kbd> / <kbd>Cmd+Shift+M</kbd> - Toggle math hover</li>
+            <li><kbd>Escape</kbd> - Close math hover preview</li>
+            <li>Hover 300ms over $...$ or $$...$$ to show preview</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="math-hover-guide">
+      <h2>Math Hover Guide</h2>
+      <div class="guide-steps">
+        <div class="step">
+          <h4>1. Enable Source Mode</h4>
+          <p>Math hover only works in source mode. Switch using <kbd>Ctrl+E</kbd> or the toolbar button.</p>
+        </div>
+        <div class="step">
+          <h4>2. Hover Over Math</h4>
+          <p>Hover over any <code>$...$</code> or <code>$$...$$</code> expression for 300ms to see the preview.</p>
+        </div>
+        <div class="step">
+          <h4>3. Click to Edit</h4>
+          <p>Click on the preview to enable editing with MathLive's interface.</p>
+        </div>
+        <div class="step">
+          <h4>4. Save or Cancel</h4>
+          <p>Use the Save/Cancel buttons or press <kbd>Escape</kbd> to finish editing.</p>
+        </div>
+      </div>
     </section>
   </main>
 

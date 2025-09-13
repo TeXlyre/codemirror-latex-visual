@@ -596,3 +596,295 @@ math-field.focused {
 .ML__popover {
   z-index: 1001;
 }
+
+/* Math hover widget styles */
+.math-hover-preview {
+  position: fixed;
+  z-index: 10000;
+  background: white;
+  border: 2px solid #007acc;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  min-width: 100px;
+  font-size: 14px;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.math-hover-preview:hover {
+  border-color: #0056b3;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Math preview container */
+.math-preview-container {
+  position: relative;
+  display: inline-block;
+  min-height: 20px;
+}
+
+.math-preview-container.display {
+  display: block;
+  margin: 10px 0;
+  min-height: 40px;
+  text-align: center;
+}
+
+.math-preview-container.inline {
+  display: inline-block;
+  margin: 0 2px;
+  min-height: 20px;
+}
+
+/* Math field in hover widget */
+.math-hover-preview math-field {
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: 0;
+  font-size: inherit;
+  min-width: 2em;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.math-hover-preview math-field:hover {
+  background: rgba(0, 123, 255, 0.05);
+  border-radius: 4px;
+}
+
+.math-hover-preview math-field:focus,
+.math-hover-preview math-field.focused {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 4px;
+}
+
+.math-hover-preview math-field[readonly="false"] {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #007acc;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+/* Edit button (similar to visual editor) */
+.math-edit-button {
+  position: absolute;
+  background: #007acc;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  user-select: none;
+}
+
+.math-edit-button:hover {
+  background: #0056b3;
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.math-edit-button:active {
+  transform: scale(0.95);
+}
+
+/* Display math edit button positioning */
+.math-preview-container.display .math-edit-button {
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+/* Inline math edit button positioning */
+.math-preview-container.inline .math-edit-button {
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+}
+
+/* Show edit button on hover */
+.math-preview-container:hover .math-edit-button,
+.math-edit-button:hover {
+  opacity: 1;
+}
+
+/* Editor buttons for math hover */
+.math-hover-preview .math-editor-buttons {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 8px;
+  border-top: 1px solid #e9ecef;
+}
+
+.math-hover-preview .math-editor-btn {
+  border: none;
+  border-radius: 4px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  min-width: 60px;
+}
+
+.math-hover-preview .math-editor-btn-cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.math-hover-preview .math-editor-btn-cancel:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.math-hover-preview .math-editor-btn-done {
+  background: #007acc;
+  color: white;
+}
+
+.math-hover-preview .math-editor-btn-done:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.math-hover-preview .math-editor-btn:active {
+  transform: translateY(0);
+}
+
+/* Animation for math hover appearance */
+@keyframes mathHoverSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.math-hover-preview {
+  animation: mathHoverSlideIn 0.25s ease-out;
+}
+
+/* Visual feedback for hoverable math in source mode */
+.cm-editor .cm-line {
+  position: relative;
+}
+
+/* Subtle background for math expressions when math hover is enabled */
+.cm-editor[data-math-hover-enabled="true"] .cm-line:has-text("$") {
+  background: rgba(0, 123, 255, 0.02);
+  transition: background 0.2s ease;
+}
+
+.cm-editor[data-math-hover-enabled="true"] .cm-line:hover {
+  background: rgba(0, 123, 255, 0.05);
+}
+
+/* Prevent text selection while hovering over math preview */
+.math-hover-preview * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Allow text selection in editable mathfield */
+.math-hover-preview math-field[readonly="false"] * {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* Special cursor for math expressions in source mode */
+.cm-editor[data-math-hover-enabled="true"] {
+  cursor: default;
+}
+
+.cm-editor[data-math-hover-enabled="true"] .cm-line:has-text("$") {
+  cursor: help;
+}
+
+/* Responsive adjustments for math hover */
+@media (max-width: 480px) {
+  .math-hover-preview {
+    max-width: calc(100vw - 20px);
+    left: 10px !important;
+    right: 10px;
+    transform: none;
+  }
+  
+  .math-preview-container.display .math-edit-button {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    top: 4px;
+    right: 4px;
+  }
+  
+  .math-preview-container.inline .math-edit-button {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    top: -6px;
+    right: -6px;
+  }
+}
+
+/* Enhanced visual states */
+.math-hover-preview.editing {
+  border-color: #28a745;
+  box-shadow: 0 6px 24px rgba(40, 167, 69, 0.2);
+}
+
+.math-hover-preview.editing .math-preview-container {
+  background: rgba(40, 167, 69, 0.05);
+  border-radius: 4px;
+}
+
+/* Tooltip for edit button */
+.math-edit-button::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  margin-bottom: 4px;
+}
+
+.math-edit-button:hover::after {
+  opacity: 1;
+  visibility: visible;
+}

@@ -155,3 +155,240 @@ footer a:hover {
     padding: 1rem;
   }
 }
+
+/* Math hover control panel */
+.math-hover-controls {
+  background: white;
+  border: 2px solid #007acc;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.math-hover-controls h3 {
+  margin-top: 0;
+  color: #007acc;
+  font-size: 1.2em;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+}
+
+.control-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  padding: 8px 16px;
+  border: 2px solid #007acc;
+  background: white;
+  color: #007acc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.control-btn:hover {
+  background: #007acc;
+  color: white;
+}
+
+.control-btn:active {
+  transform: translateY(1px);
+}
+
+.control-btn.active {
+  background: #007acc;
+  color: white;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.control-btn:disabled {
+  background: #f5f5f5;
+  color: #999;
+  border-color: #ddd;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.control-btn:disabled:hover {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.status-indicator {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-indicator.status-enabled,
+.status-indicator.mode-source {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-indicator.status-disabled,
+.status-indicator.mode-visual {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.control-info {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 15px;
+  margin-top: 10px;
+  transition: opacity 0.3s ease;
+}
+
+.control-info p {
+  margin-top: 0;
+  font-weight: 500;
+  color: #495057;
+}
+
+.control-info ul {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.control-info li {
+  margin-bottom: 8px;
+  color: #6c757d;
+}
+
+.control-info code {
+  background: #e9ecef;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9em;
+  color: #e83e8c;
+}
+
+.control-info kbd {
+  background: #212529;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  font-family: monospace;
+}
+
+/* Notification styles */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #007acc;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10001;
+  font-size: 14px;
+  max-width: 300px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+/* Enhanced math hover preview styles for demo */
+.math-hover-preview {
+  animation: mathHoverSlideIn 0.25s ease-out;
+}
+
+@keyframes mathHoverSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .math-hover-controls {
+    padding: 15px;
+  }
+  
+  .control-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .control-btn {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .status-indicator {
+    text-align: center;
+  }
+}
+
+/* Enhanced visual indicators for math expressions in source mode */
+.cm-editor .cm-line {
+  position: relative;
+}
+
+/* Subtle highlight for math expressions that have hover enabled */
+.cm-editor.cm-focused .cm-line:has-text("$") {
+  background: rgba(0, 123, 255, 0.02);
+}
+
+/* Special styling for the dual editor when math hover is active */
+.latex-dual-editor[data-math-hover="true"] .cm-editor {
+  cursor: help;
+}
+
+.latex-dual-editor[data-math-hover="false"] .cm-editor {
+  cursor: text;
+}
+
+/* Demo section improvements */
+.single-editor-demo {
+  margin-top: 2rem;
+  position: relative;
+}
+
+.single-editor-demo::before {
+  content: "Math Hover Active - Try hovering over math expressions in source mode!";
+  display: block;
+  background: linear-gradient(135deg, #007acc, #0056b3);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 6px 6px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+/* Override for when math hover is disabled */
+.single-editor-demo[data-math-hover="false"]::before {
+  content: "Math Hover Disabled - Enable it using the controls above or Ctrl+Shift+M";
+  background: linear-gradient(135deg, #6c757d, #495057);
+}

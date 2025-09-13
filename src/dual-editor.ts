@@ -1,4 +1,4 @@
-// src/dual-editor.ts (Phase 1 Refactored)
+// src/dual-editor.ts
 import { EditorView, keymap } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
@@ -9,6 +9,7 @@ import { FocusService } from './core/focus-service';
 import { DOMUtils } from './core/dom-utils';
 import { WidgetRegistry } from './core/widget-registry';
 import { errorService, ErrorCategory, ErrorSeverity } from './core/error-service';
+import { MathHoverManager, createMathHoverExtension } from './visual-codemirror/widgets/math-hover-widget';
 
 export interface DualEditorOptions {
   initialMode?: 'source' | 'visual';
@@ -16,6 +17,7 @@ export interface DualEditorOptions {
   className?: string;
   showCommands?: boolean;
   showToolbar?: boolean;
+  enableMathHover?: boolean;
   config?: Partial<LatexEditorConfig>;
 }
 
@@ -37,6 +39,9 @@ export class DualLatexEditor {
   private toolbar!: HTMLElement;
   private unifiedToolbar!: Toolbar;
   private toolbarContainer!: HTMLElement;
+
+  // Math hover functionality
+  private mathHoverManager?: MathHoverManager;
 
   // Cleanup functions
   private cleanupFunctions: Array<() => void> = [];
@@ -68,6 +73,7 @@ export class DualLatexEditor {
       this.setupEventListeners();
       this.setupLayout();
       this.addCodeMirrorKeymap();
+      this.setupMathHover();
       this.createVisualEditor();
       this.setMode(this.currentMode);
 
@@ -104,6 +110,30 @@ export class DualLatexEditor {
     });
 
     this.cleanupFunctions.push(configUnsubscribe, modeUnsubscribe);
+  }
+
+  private setupMathHover(): void {
+    try {
+      // Add math hover extension to CodeMirror
+      this.cmEditor.dispatch({
+        effects: StateEffect.appendConfig.of(createMathHoverExtension())
+      });
+
+      // Create math hover manager
+      this.mathHoverManager = new MathHoverManager(this.cmEditor);
+
+      // Set initial state based on options
+      const enableMathHover = this.options.enableMathHover ?? true;
+      this.mathHoverManager.setEnabled(enableMathHover && this.currentMode === 'source');
+
+    } catch (error) {
+      errorService.logError(
+        ErrorCategory.STATE,
+        ErrorSeverity.ERROR,
+        'Failed to setup math hover functionality',
+        { error }
+      );
+    }
   }
 
   private setupLayout(): void {
@@ -188,6 +218,15 @@ export class DualLatexEditor {
       }
     );
 
+    const toggleMathHoverBtn = this.domUtils.createButton(
+      'Math Hover',
+      () => this.toggleMathHover(),
+      {
+        className: 'toggle-math-hover-btn',
+        attributes: { title: 'Toggle Math Hover Preview (Ctrl+Shift+M)' }
+      }
+    );
+
     const toggleToolbarBtn = this.domUtils.createButton(
       'Hide Toolbar',
       () => this.toggleToolbar(),
@@ -200,6 +239,7 @@ export class DualLatexEditor {
     toolbar.appendChild(modeSourceBtn);
     toolbar.appendChild(modeVisualBtn);
     toolbar.appendChild(toggleCmdBtn);
+    toolbar.appendChild(toggleMathHoverBtn);
     toolbar.appendChild(toggleToolbarBtn);
 
     return toolbar;
@@ -252,6 +292,14 @@ export class DualLatexEditor {
         }
       },
       {
+        key: 'Ctrl-Shift-m',
+        mac: 'Cmd-Shift-m',
+        run: () => {
+          this.toggleMathHover();
+          return true;
+        }
+      },
+      {
         key: 'Ctrl-Shift-t',
         mac: 'Cmd-Shift-t',
         run: () => {
@@ -277,6 +325,13 @@ export class DualLatexEditor {
         this.updateToolbarVisibility();
         this.unifiedToolbar.updateMode(mode);
 
+        // Update math hover state
+        if (this.mathHoverManager) {
+          const enableMathHover = this.options.enableMathHover ?? true;
+          this.mathHoverManager.setEnabled(enableMathHover && mode === 'source');
+          this.updateMathHoverButtonState();
+        }
+
         this.eventService.emitModeChange({
           oldMode: this.currentMode === 'source' ? 'visual' : 'source',
           newMode: mode,
@@ -290,6 +345,9 @@ export class DualLatexEditor {
     this.unifiedToolbar = new Toolbar(this.toolbarContainer, this.cmEditor, {
       currentMode: this.currentMode
     });
+
+    // Initialize toolbar button states
+    this.updateMathHoverButtonState();
   }
 
   // Public API methods
@@ -305,6 +363,24 @@ export class DualLatexEditor {
     this.configService.update({ showCommands: newShowCommands });
     this.visualEditor.updateOptions({ showCommands: newShowCommands });
     this.updateCommandVisibilityUI(newShowCommands);
+  }
+
+  public toggleMathHover(): void {
+    if (!this.mathHoverManager) return;
+
+    const currentState = this.mathHoverManager.getEnabled();
+    const newState = !currentState;
+
+    // Only allow math hover in source mode
+    if (this.currentMode === 'source') {
+      this.mathHoverManager.setEnabled(newState);
+      this.options.enableMathHover = newState;
+    } else {
+      // If in visual mode, just update the option for when we switch back
+      this.options.enableMathHover = newState;
+    }
+
+    this.updateMathHoverButtonState();
   }
 
   public toggleToolbar(): void {
@@ -327,6 +403,13 @@ export class DualLatexEditor {
       this.updateToolbar();
       this.updateToolbarVisibility();
       this.unifiedToolbar.updateMode(mode);
+
+      // Update math hover based on mode
+      if (this.mathHoverManager) {
+        const enableMathHover = this.options.enableMathHover ?? true;
+        this.mathHoverManager.setEnabled(enableMathHover && mode === 'source');
+        this.updateMathHoverButtonState();
+      }
 
       // Restore cursor position
       setTimeout(() => {
@@ -365,6 +448,10 @@ export class DualLatexEditor {
     return this.widgetRegistry;
   }
 
+  public isMathHoverEnabled(): boolean {
+    return this.mathHoverManager?.getEnabled() ?? false;
+  }
+
   public destroy(): void {
     try {
       this.cleanupFunctions.forEach(cleanup => cleanup());
@@ -372,6 +459,11 @@ export class DualLatexEditor {
       this.focusService.cleanup();
       this.widgetRegistry.cleanup();
       this.eventService.removeAllListeners();
+      
+      // Cleanup math hover
+      if (this.mathHoverManager) {
+        this.mathHoverManager.destroy();
+      }
 
       errorService.logError(
         ErrorCategory.STATE,
@@ -402,6 +494,25 @@ export class DualLatexEditor {
     }
   }
 
+  private updateMathHoverButtonState(): void {
+    const mathHoverBtn = this.toolbar.querySelector('.toggle-math-hover-btn') as HTMLButtonElement;
+    if (!mathHoverBtn || !this.mathHoverManager) return;
+
+    const isEnabled = this.options.enableMathHover ?? true;
+    const isActive = this.mathHoverManager.getEnabled();
+    
+    mathHoverBtn.textContent = isEnabled ? 'Math Hover: On' : 'Math Hover: Off';
+    mathHoverBtn.classList.toggle('active', isEnabled);
+    
+    // Disable button in visual mode
+    mathHoverBtn.disabled = this.currentMode === 'visual';
+    if (this.currentMode === 'visual') {
+      mathHoverBtn.title = 'Math Hover (only available in source mode)';
+    } else {
+      mathHoverBtn.title = 'Toggle Math Hover Preview (Ctrl+Shift+M)';
+    }
+  }
+
   private updateToolbarVisibility(): void {
     const config = this.configService.get();
     const toolbarBtn = this.toolbar.querySelector('.toggle-toolbar-btn') as HTMLButtonElement;
@@ -419,6 +530,9 @@ export class DualLatexEditor {
       const button = btn as HTMLButtonElement;
       button.classList.toggle('active', button.dataset.mode === this.currentMode);
     });
+
+    // Update math hover button state when mode changes
+    this.updateMathHoverButtonState();
   }
 }
 
@@ -438,6 +552,14 @@ export function latexVisualKeymap(dualEditor: DualLatexEditor) {
       mac: 'Cmd-Shift-c',
       run: () => {
         dualEditor.toggleCommandVisibility();
+        return true;
+      }
+    },
+    {
+      key: 'Ctrl-Shift-m',
+      mac: 'Cmd-Shift-m',
+      run: () => {
+        dualEditor.toggleMathHover();
         return true;
       }
     },

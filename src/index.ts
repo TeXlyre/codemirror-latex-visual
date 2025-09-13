@@ -1,4 +1,4 @@
-// src/index.ts (Phase 1 Updated)
+// src/index.ts
 
 // Core services - new exports
 export { ConfigService, DEFAULT_CONFIG } from './core/config';
@@ -15,6 +15,9 @@ export { OverlayManager } from './visual-codemirror/overlay-manager';
 export { WidgetFactory } from './visual-codemirror/widget-factory';
 export { NestedContentRenderer } from './visual-codemirror/nested-content-renderer';
 export { Toolbar } from './visual-toolbar';
+
+// Math hover widget
+export { MathHoverManager, createMathHoverExtension } from './visual-codemirror/widgets/math-hover-widget';
 
 // Parser exports
 export * from './parsers/base-parser';
@@ -37,6 +40,9 @@ export { ListWidget } from './visual-codemirror/widgets/list-widget';
 
 // Component exports
 export { TableSelector, TableDimensions } from './components/table-selector';
+
+// Utility exports
+export { createEditableMath } from './math-field-utils';
 
 // Type exports for better TypeScript support
 export type {
