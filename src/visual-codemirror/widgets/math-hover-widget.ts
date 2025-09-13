@@ -1,4 +1,4 @@
-// src/visual-codemirror/widgets/math-hover-widget.ts - Clean implementation
+// src/visual-codemirror/widgets/math-hover-widget.ts - Clean simple implementation
 import { EditorView } from '@codemirror/view';
 import { StateField, StateEffect, Extension } from '@codemirror/state';
 import { createEditableMath } from '../../math-field-utils';
@@ -29,29 +29,77 @@ export class MathHoverManager {
   private isEnabled: boolean = false;
   private widget: HTMLElement | null = null;
   private isEditing: boolean = false;
-  private timer: number | null = null;
+  private checkTimer: number | null = null;
 
   constructor(view: EditorView) {
     this.view = view;
-    this.view.dom.addEventListener('mousemove', this.onMouseMove.bind(this));
+    
+    // Simple approach: check regularly for both mouse and cursor
+    this.startChecking();
   }
 
-  private onMouseMove(e: MouseEvent): void {
-    if (!this.isEnabled || this.isEditing) return;
-
-    if (this.timer) clearTimeout(this.timer);
-
-    this.timer = window.setTimeout(() => {
-      const pos = this.view.posAtCoords({ x: e.clientX, y: e.clientY });
-      if (pos) {
-        const math = this.findMath(pos);
-        if (math) {
-          this.showWidget(math, e.clientX, e.clientY);
-        } else {
-          this.hideWidget();
-        }
+  private startChecking(): void {
+    // Check every 200ms for either hover or cursor in math
+    const check = () => {
+      if (this.isEnabled && !this.isEditing) {
+        this.checkForMath();
       }
-    }, 300);
+      this.checkTimer = window.setTimeout(check, 200);
+    };
+    
+    check();
+  }
+
+  private checkForMath(): void {
+    const cursorPos = this.view.state.selection.main.from;
+    const cursorMath = this.findMath(cursorPos);
+    
+    if (cursorMath) {
+      // Show widget near cursor
+      const coords = this.view.coordsAtPos(cursorPos);
+      if (coords) {
+        this.showWidget(cursorMath, coords.left + 20, coords.top - 10);
+      }
+      return;
+    }
+
+    // Check mouse position if available
+    const mousePos = this.getMousePosition();
+    if (mousePos) {
+      const mouseMath = this.findMath(mousePos);
+      if (mouseMath) {
+        const coords = this.view.coordsAtPos(mousePos);
+        if (coords) {
+          this.showWidget(mouseMath, coords.left + 10, coords.top - 10);
+        }
+        return;
+      }
+    }
+
+    // No math found, hide widget
+    if (this.widget && !this.widget.matches(':hover')) {
+      this.hideWidget();
+    }
+  }
+
+  private getMousePosition(): number | null {
+    // Get current mouse coordinates if available
+    const rect = this.view.dom.getBoundingClientRect();
+    const lastMouseEvent = (window as any).lastMouseEvent;
+    
+    if (lastMouseEvent && 
+        lastMouseEvent.clientX >= rect.left && 
+        lastMouseEvent.clientX <= rect.right &&
+        lastMouseEvent.clientY >= rect.top && 
+        lastMouseEvent.clientY <= rect.bottom) {
+      
+      return this.view.posAtCoords({ 
+        x: lastMouseEvent.clientX, 
+        y: lastMouseEvent.clientY 
+      });
+    }
+    
+    return null;
   }
 
   private findMath(pos: number): MathInfo | null {
@@ -88,9 +136,15 @@ export class MathHoverManager {
   }
 
   private showWidget(math: MathInfo, x: number, y: number): void {
+    // Don't recreate if same math
+    if (this.widget && this.widget.dataset.mathContent === math.content) {
+      return;
+    }
+
     this.hideWidget();
 
     this.widget = document.createElement('div');
+    this.widget.dataset.mathContent = math.content;
     this.widget.style.cssText = `
       position: fixed;
       z-index: 10000;
@@ -99,8 +153,8 @@ export class MathHoverManager {
       border-radius: 8px;
       padding: 12px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-      left: ${Math.min(x + 10, window.innerWidth - 300)}px;
-      top: ${Math.max(y + 10, 10)}px;
+      left: ${Math.min(x, window.innerWidth - 300)}px;
+      top: ${Math.max(y, 10)}px;
       cursor: pointer;
     `;
 
@@ -110,7 +164,6 @@ export class MathHoverManager {
 
     const editButton = document.createElement('button');
     editButton.innerHTML = '✏️';
-    editButton.title = 'Edit math';
     editButton.style.cssText = `
       position: absolute;
       top: 8px;
@@ -124,9 +177,6 @@ export class MathHoverManager {
       cursor: pointer;
       opacity: 0;
       transition: opacity 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       font-size: 12px;
       z-index: 1;
     `;
@@ -135,42 +185,34 @@ export class MathHoverManager {
     this.widget.appendChild(editButton);
     document.body.appendChild(this.widget);
 
-    // Show edit button on hover
+    // Show button on hover
     this.widget.addEventListener('mouseenter', () => {
-      if (this.timer) clearTimeout(this.timer);
       editButton.style.opacity = '1';
     });
 
     this.widget.addEventListener('mouseleave', () => {
       editButton.style.opacity = '0';
-      if (!this.isEditing) {
-        setTimeout(() => this.hideWidget(), 200);
-      }
     });
 
-    // Both widget and button can trigger editing
-    this.widget.addEventListener('click', () => this.startEditing(math));
+    // Click handlers
+    this.widget.addEventListener('click', () => this.edit(math));
     editButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.startEditing(math);
+      this.edit(math);
     });
   }
 
-  private startEditing(math: MathInfo): void {
+  private edit(math: MathInfo): void {
     if (!this.widget || this.isEditing) return;
 
     this.isEditing = true;
 
     // Smart positioning to avoid keyboard
     const currentTop = parseInt(this.widget.style.top);
-    const keyboardSpace = 320;
-    const minTop = 10;
-    
-    if (currentTop + 200 > window.innerHeight - keyboardSpace) {
-      this.widget.style.top = Math.max(minTop, window.innerHeight - keyboardSpace - 220) + 'px';
+    if (currentTop > window.innerHeight - 400) {
+      this.widget.style.top = Math.max(10, window.innerHeight - 400) + 'px';
     }
 
-    // Rebuild widget for editing
     this.widget.innerHTML = '';
     this.widget.style.cursor = 'auto';
 
@@ -187,56 +229,52 @@ export class MathHoverManager {
       padding-top: 8px;
     `;
 
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.cssText = `
+    const cancel = document.createElement('button');
+    cancel.textContent = 'Cancel';
+    cancel.style.cssText = `
       padding: 6px 12px;
       border: none;
       border-radius: 4px;
       background: #6c757d;
       color: white;
       cursor: pointer;
-      font-size: 12px;
     `;
 
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
-    saveBtn.style.cssText = `
+    const save = document.createElement('button');
+    save.textContent = 'Save';
+    save.style.cssText = `
       padding: 6px 12px;
       border: none;
       border-radius: 4px;
       background: #007acc;
       color: white;
       cursor: pointer;
-      font-size: 12px;
     `;
 
-    buttons.appendChild(cancelBtn);
-    buttons.appendChild(saveBtn);
+    buttons.appendChild(cancel);
+    buttons.appendChild(save);
     this.widget.appendChild(mathfield);
     this.widget.appendChild(buttons);
 
     setTimeout(() => (mathfield as any).focus(), 100);
 
-    const finish = (save: boolean) => {
-      if (save) {
+    const finish = (doSave: boolean) => {
+      if (doSave) {
         const newContent = (mathfield as any).getValue('latex');
-        if (newContent !== math.content) {
-          const delimiter = math.isDisplay ? '$$' : '$';
-          const newLatex = delimiter + newContent + delimiter;
-          
-          this.view.dispatch({
-            changes: { from: math.from, to: math.to, insert: newLatex }
-          });
-        }
+        const delimiter = math.isDisplay ? '$$' : '$';
+        const newLatex = delimiter + newContent + delimiter;
+        
+        this.view.dispatch({
+          changes: { from: math.from, to: math.to, insert: newLatex }
+        });
       }
       
       this.isEditing = false;
       this.hideWidget();
     };
 
-    saveBtn.addEventListener('click', () => finish(true));
-    cancelBtn.addEventListener('click', () => finish(false));
+    save.addEventListener('click', () => finish(true));
+    cancel.addEventListener('click', () => finish(false));
 
     const escHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -246,35 +284,25 @@ export class MathHoverManager {
     };
     document.addEventListener('keydown', escHandler);
 
-    const clickHandler = (e: Event) => {
+    const outsideHandler = (e: Event) => {
       const target = e.target as Element;
-      const inWidget = this.widget?.contains(target);
-      const inMathLive = target.closest('.ML__popover, .ML__menu, .ML__keyboard');
-      
-      if (!inWidget && !inMathLive) {
+      if (!this.widget?.contains(target) && !target.closest('.ML__popover, .ML__menu, .ML__keyboard')) {
         finish(false);
-        document.removeEventListener('click', clickHandler, true);
+        document.removeEventListener('click', outsideHandler, true);
         document.removeEventListener('keydown', escHandler);
       }
     };
-
+    
     setTimeout(() => {
-      document.addEventListener('click', clickHandler, true);
+      document.addEventListener('click', outsideHandler, true);
     }, 100);
   }
 
   private hideWidget(): void {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-    
     if (this.widget) {
       this.widget.remove();
       this.widget = null;
     }
-    
-    this.isEditing = false;
   }
 
   setEnabled(enabled: boolean): void {
@@ -291,9 +319,19 @@ export class MathHoverManager {
   }
 
   destroy(): void {
+    if (this.checkTimer) {
+      clearTimeout(this.checkTimer);
+    }
     this.hideWidget();
     this.setEnabled(false);
   }
+}
+
+// Track mouse position globally for hover detection
+if (typeof window !== 'undefined') {
+  document.addEventListener('mousemove', (e) => {
+    (window as any).lastMouseEvent = e;
+  });
 }
 
 export function createMathHoverExtension(): Extension {
