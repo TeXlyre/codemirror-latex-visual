@@ -15,6 +15,7 @@ export class Toolbar {
   private currentMode: 'source' | 'visual' = 'source';
   private theme: 'light' | 'dark' = 'light';
   private lastFocusedWidget?: HTMLElement;
+  private lastSelection?: { element: HTMLElement; range: Range } | null;
 
   private onContainerClick = (e: Event) => {
     const target = e.target as HTMLElement;
@@ -50,7 +51,7 @@ export class Toolbar {
     this.container.addEventListener('click', this.onContainerClick);
     this.container.addEventListener('change', this.onContainerChange);
     this.render();
-    this.setupWidgetFocusTracking();
+    this.setupEnhancedFocusTracking();
   }
 
   private render() {
@@ -347,23 +348,111 @@ export class Toolbar {
     }
   }
 
-  private setupWidgetFocusTracking() {
+  private setupEnhancedFocusTracking() {
     document.addEventListener('focusin', (e) => {
-      const target = e.target as HTMLElement;
-      const widget = target.closest('.latex-visual-widget, .latex-command-wrapper, [contenteditable="true"]');
-      if (widget && widget !== this.cmEditor.dom) {
-        this.lastFocusedWidget = widget as HTMLElement;
-      }
+      this.updateFocusState(e);
+    }, true);
+
+    document.addEventListener('selectionchange', () => {
+      this.updateSelectionState();
+    });
+
+    document.addEventListener('click', (e) => {
+      setTimeout(() => this.updateFocusState(e), 10);
+    }, true);
+
+    document.addEventListener('keyup', () => {
+      this.updateSelectionState();
     });
 
     document.addEventListener('focusout', (e) => {
       setTimeout(() => {
-        const activeElement = document.activeElement;
-        if (!activeElement || !activeElement.closest('.latex-visual-widget, .latex-command-wrapper, [contenteditable="true"]')) {
+        if (!this.isValidFocusTarget(document.activeElement as HTMLElement)) {
           this.lastFocusedWidget = undefined;
+          this.lastSelection = null;
         }
       }, 100);
     });
+  }
+
+  private updateFocusState(e: Event) {
+    const target = e.target as HTMLElement;
+    const focusTarget = this.findFocusTarget(target);
+    
+    if (focusTarget && this.isValidFocusTarget(focusTarget)) {
+      this.lastFocusedWidget = focusTarget;
+      this.updateSelectionState();
+    }
+  }
+
+  private findFocusTarget(element: HTMLElement): HTMLElement | null {
+    const candidates = [
+      '.latex-visual-widget',
+      '.latex-command-wrapper', 
+      '.latex-table-cell',
+      '.latex-list-item',
+      '.latex-description-item dt',
+      '.latex-description-item dd',
+      '.env-content',
+      '[contenteditable="true"]'
+    ];
+    
+    for (const selector of candidates) {
+      const match = element.closest(selector) as HTMLElement;
+      if (match && match !== this.cmEditor.dom) {
+        return match;
+      }
+    }
+    
+    return null;
+  }
+
+  private isValidFocusTarget(element: HTMLElement | null): boolean {
+    if (!element) return false;
+    
+    return (
+      element.contentEditable === 'true' ||
+      element.classList.contains('latex-visual-widget') ||
+      element.classList.contains('latex-command-wrapper') ||
+      element.classList.contains('latex-table-cell') ||
+      element.classList.contains('latex-list-item') ||
+      element.closest('.latex-visual-widget, .latex-command-wrapper') !== null
+    ) && element !== this.cmEditor.dom && !element.contains(this.cmEditor.dom);
+  }
+
+  private updateSelectionState() {
+    if (!this.lastFocusedWidget) return;
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const editableElement = this.findEditableElement(this.lastFocusedWidget);
+      
+      if (editableElement && editableElement.contains(range.commonAncestorContainer)) {
+        this.lastSelection = {
+          element: editableElement,
+          range: range.cloneRange()
+        };
+      }
+    }
+  }
+
+  private findEditableElement(widget: HTMLElement): HTMLElement | null {
+    if (widget.contentEditable === 'true') {
+      return widget;
+    }
+    
+    const editableChild = widget.querySelector('[contenteditable="true"]') as HTMLElement;
+    if (editableChild) {
+      return editableChild;
+    }
+    
+    const editableParent = widget.closest('[contenteditable="true"]') as HTMLElement;
+    if (editableParent && editableParent !== this.cmEditor.dom) {
+      return editableParent;
+    }
+    
+    return null;
   }
 
   private executeCommand(command: string, element: HTMLElement) {
@@ -377,68 +466,59 @@ export class Toolbar {
   private executeCommandOnWidget(command: string, element: HTMLElement) {
     if (!this.lastFocusedWidget) return;
 
-    const selection = window.getSelection();
-    const selectedText = selection?.toString() || '';
+    const editableElement = this.findEditableElement(this.lastFocusedWidget);
+    if (!editableElement) return;
 
-    if (this.lastFocusedWidget.classList.contains('latex-command-wrapper')) {
-      this.wrapWidgetContent(this.lastFocusedWidget, command, element, selectedText);
-    } else if (this.lastFocusedWidget.contentEditable === 'true') {
-      this.insertIntoEditableElement(this.lastFocusedWidget, command, element, selectedText);
-    } else {
-      const editableChild = this.lastFocusedWidget.querySelector('[contenteditable="true"]') as HTMLElement;
-      if (editableChild) {
-        this.insertIntoEditableElement(editableChild, command, element, selectedText);
+    const selection = window.getSelection();
+    let selectedText = '';
+    let range: Range | null = null;
+
+    if (selection && selection.rangeCount > 0) {
+      range = selection.getRangeAt(0);
+      if (editableElement.contains(range.commonAncestorContainer)) {
+        selectedText = selection.toString();
       }
     }
-  }
 
-  private wrapWidgetContent(widget: HTMLElement, command: string, element: HTMLElement, selectedText: string) {
-    const visualSpan = widget.querySelector('.latex-visual-command') as HTMLElement;
-    if (!visualSpan) return;
-
-    const currentContent = visualSpan.textContent || '';
-
-    let wrappedContent = '';
-    if (selectedText && currentContent.includes(selectedText)) {
-      wrappedContent = currentContent.replace(selectedText, this.getLatexWrapper(command, element, selectedText));
-    } else {
-      wrappedContent = this.getLatexWrapper(command, element, currentContent);
+    if (!range && this.lastSelection && this.lastSelection.element === editableElement) {
+      range = this.lastSelection.range;
+      selectedText = range.toString();
     }
 
-    visualSpan.innerHTML = '';
-    visualSpan.textContent = wrappedContent;
+    if (!range) {
+      range = document.createRange();
+      range.selectNodeContents(editableElement);
+      range.collapse(false);
+    }
 
-    this.triggerWidgetUpdate(widget);
+    this.insertContentAtRange(editableElement, range, command, element, selectedText);
+    this.triggerElementUpdate(editableElement);
   }
 
-  private insertIntoEditableElement(editableElement: HTMLElement, command: string, element: HTMLElement, selectedText: string) {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-
-    if (!editableElement.contains(range.commonAncestorContainer)) {
-      if (selectedText) {
-        editableElement.textContent = (editableElement.textContent || '') + this.getLatexWrapper(command, element, selectedText);
-      } else {
-        const latex = this.getLatexWrapper(command, element, '');
-        editableElement.textContent = (editableElement.textContent || '') + latex;
-      }
-    } else {
-      const textToWrap = selectedText || '';
-      const latex = this.getLatexWrapper(command, element, textToWrap);
-
+  private insertContentAtRange(editableElement: HTMLElement, range: Range, command: string, element: HTMLElement, selectedText: string) {
+    const latex = this.getLatexWrapper(command, element, selectedText);
+    
+    if (selectedText && range.toString() === selectedText) {
       range.deleteContents();
       const textNode = document.createTextNode(latex);
       range.insertNode(textNode);
-
+      
       range.setStartAfter(textNode);
       range.setEndAfter(textNode);
-      selection.removeAllRanges();
-      selection.addRange(range);
+    } else {
+      range.collapse(false);
+      const textNode = document.createTextNode(latex);
+      range.insertNode(textNode);
+      
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
     }
-
-    this.triggerElementUpdate(editableElement);
+    
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    
+    editableElement.focus();
   }
 
   private getLatexWrapper(command: string, element: HTMLElement, content: string): string {
@@ -459,25 +539,33 @@ export class Toolbar {
       case 'colorbox':
         const colorboxInput = element as HTMLInputElement;
         return `\\colorbox{${colorboxInput.value}}{${content}}`;
+      case 'itemize':
+        return `\\begin{itemize}\n\\item ${content || 'item content'}\n\\end{itemize}`;
+      case 'enumerate':
+        return `\\begin{enumerate}\n\\item ${content || 'item content'}\n\\end{enumerate}`;
+      case 'description':
+        return `\\begin{description}\n\\item[${content || 'term'}] description\n\\end{description}`;
+      case 'section':
+        const select = element as HTMLSelectElement;
+        if (select.value) {
+          const result = `\\${select.value}{${content || 'Section Title'}}`;
+          select.value = '';
+          return result;
+        }
+        return content;
       default:
         return content;
     }
-  }
-
-  private triggerWidgetUpdate(widget: HTMLElement) {
-    const inputEvent = new Event('input', { bubbles: true });
-    widget.dispatchEvent(inputEvent);
-
-    const blurEvent = new Event('blur', { bubbles: true });
-    widget.dispatchEvent(blurEvent);
   }
 
   private triggerElementUpdate(element: HTMLElement) {
     const inputEvent = new Event('input', { bubbles: true });
     element.dispatchEvent(inputEvent);
 
-    const blurEvent = new Event('blur', { bubbles: true });
-    element.dispatchEvent(blurEvent);
+    setTimeout(() => {
+      const blurEvent = new Event('blur', { bubbles: true });
+      element.dispatchEvent(blurEvent);
+    }, 10);
   }
 
   private executeCommandOnEditor(command: string, element: HTMLElement) {
@@ -628,6 +716,30 @@ export class Toolbar {
   }
 
   private insertTable(dimensions: TableDimensions) {
+    if (this.lastFocusedWidget && this.currentMode === 'visual') {
+      const editableElement = this.findEditableElement(this.lastFocusedWidget);
+      if (editableElement) {
+        const alignment = 'l'.repeat(dimensions.cols);
+        const emptyRow = Array(dimensions.cols).fill('').join(' & ');
+        const rows = Array(dimensions.rows).fill(emptyRow).join(' \\\\\n');
+        const tableLatex = `\\begin{tabular}{${alignment}}\n${rows}\n\\end{tabular}`;
+        
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          if (editableElement.contains(range.commonAncestorContainer)) {
+            this.insertContentAtRange(editableElement, range, 'table', { value: tableLatex } as any, '');
+            this.triggerElementUpdate(editableElement);
+            return;
+          }
+        }
+        
+        editableElement.textContent = (editableElement.textContent || '') + tableLatex;
+        this.triggerElementUpdate(editableElement);
+        return;
+      }
+    }
+
     const { state } = this.cmEditor;
     const { from, to } = state.selection.main;
 
@@ -649,6 +761,10 @@ export class Toolbar {
 
   updateMode(mode: 'source' | 'visual') {
     this.currentMode = mode;
+    if (mode === 'source') {
+      this.lastFocusedWidget = undefined;
+      this.lastSelection = null;
+    }
   }
 
   updateTheme(theme: 'light' | 'dark') {
