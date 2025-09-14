@@ -1,8 +1,10 @@
+// src/visual-toolbar.ts
 import { EditorView } from '@codemirror/view';
 import { TableSelector, TableDimensions } from './components/table-selector';
 
 export interface ToolbarOptions {
   currentMode?: 'source' | 'visual';
+  theme?: 'light' | 'dark';
 }
 
 export class Toolbar {
@@ -11,75 +13,329 @@ export class Toolbar {
   private options: ToolbarOptions;
   private tableSelector?: TableSelector;
   private currentMode: 'source' | 'visual' = 'source';
+  private theme: 'light' | 'dark' = 'light';
   private lastFocusedWidget?: HTMLElement;
+
+  private onContainerClick = (e: Event) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest('[data-command]') as HTMLElement;
+
+    if (btn) {
+      const command = btn.dataset.command;
+      if (command === 'table') {
+        e.preventDefault();
+        this.toggleTableSelector();
+      } else if (command !== 'textcolor' && command !== 'colorbox') {
+        e.preventDefault();
+        this.executeCommand(command!, btn);
+      }
+    }
+  };
+
+  private onContainerChange = (e: Event) => {
+    const target = e.target as HTMLElement;
+    if (target.dataset.command === 'textcolor' || target.dataset.command === 'colorbox') {
+      this.executeCommand(target.dataset.command, target);
+    } else if (target.dataset.command) {
+      this.executeCommand(target.dataset.command, target);
+    }
+  };
 
   constructor(container: HTMLElement, cmEditor: EditorView, options: ToolbarOptions = {}) {
     this.container = container;
     this.cmEditor = cmEditor;
     this.options = options;
     this.currentMode = options.currentMode || 'source';
+    this.theme = options.theme || 'light';
+    this.container.addEventListener('click', this.onContainerClick);
+    this.container.addEventListener('change', this.onContainerChange);
     this.render();
     this.setupWidgetFocusTracking();
   }
 
   private render() {
+    const isDark = this.theme === 'dark';
+    const bgColor = isDark ? '#374151' : '#fafafa';
+    const borderColor = isDark ? '#4b5563' : '#ddd';
+    const textColor = isDark ? '#f9fafb' : '#333';
+    const buttonBg = isDark ? '#1f2937' : 'white';
+    const buttonBorder = isDark ? '#4b5563' : '#ccc';
+    const hoverColor = isDark ? '#4da6ff' : '#007acc';
+
     this.container.innerHTML = `
-      <div class="unified-toolbar">
-        <div class="toolbar-group">
-          <button class="toolbar-btn" data-command="bold" title="Bold (\\textbf{})">
+      <div class="unified-toolbar" style="
+        display: flex;
+        background-color: ${bgColor};
+        padding: 8px;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        color: ${textColor};
+      ">
+        <div class="toolbar-group" style="
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          border-right: 1px solid ${borderColor};
+          padding-right: 12px;
+        ">
+          <button class="toolbar-btn" data-command="bold" title="Bold (\\textbf{})" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+          ">
             <strong>B</strong>
           </button>
-          <button class="toolbar-btn" data-command="italic" title="Italic (\\textit{})">
+          <button class="toolbar-btn" data-command="italic" title="Italic (\\textit{})" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+          ">
             <em>I</em>
           </button>
-          <button class="toolbar-btn" data-command="underline" title="Underline (\\underline{})">
+          <button class="toolbar-btn" data-command="underline" title="Underline (\\underline{})" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+          ">
             <u>U</u>
           </button>
         </div>
-        <div class="toolbar-group">
-          <button class="toolbar-btn" data-command="math-inline" title="Inline Math ($...$)">
+        <div class="toolbar-group" style="
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          border-right: 1px solid ${borderColor};
+          padding-right: 12px;
+        ">
+          <button class="toolbar-btn" data-command="math-inline" title="Inline Math ($...$)" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+          ">
             <span>∫</span>
           </button>
-          <button class="toolbar-btn" data-command="math-display" title="Display Math ($$...$$)">
+          <button class="toolbar-btn" data-command="math-display" title="Display Math ($$...$$)" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+          ">
             <span>∬</span>
           </button>
         </div>
-        <div class="toolbar-group">
-          <button class="toolbar-btn" data-command="itemize" title="Bullet List (\\begin{itemize})">
+        <div class="toolbar-group" style="
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          border-right: 1px solid ${borderColor};
+          padding-right: 12px;
+        ">
+          <button class="toolbar-btn" data-command="itemize" title="Bullet List (\\begin{itemize})" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+          ">
             <span>•</span>
           </button>
-          <button class="toolbar-btn" data-command="enumerate" title="Numbered List (\\begin{enumerate})">
+          <button class="toolbar-btn" data-command="enumerate" title="Numbered List (\\begin{enumerate})" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+          ">
             <span>1.</span>
           </button>
-          <button class="toolbar-btn" data-command="description" title="Description List (\\begin{description})">
+          <button class="toolbar-btn" data-command="description" title="Description List (\\begin{description})" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            background: ${buttonBg};
+            color: ${textColor};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+          ">
             <span>⋮</span>
           </button>
         </div>
-        <div class="toolbar-group">
-          <div class="toolbar-table-container">
-            <button class="toolbar-btn" data-command="table" title="Insert Table">
+        <div class="toolbar-group" style="
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          border-right: 1px solid ${borderColor};
+          padding-right: 12px;
+        ">
+          <div class="toolbar-table-container" style="position: relative;">
+            <button class="toolbar-btn" data-command="table" title="Insert Table" style="
+              width: 32px;
+              height: 32px;
+              border: 1px solid ${buttonBorder};
+              background: ${buttonBg};
+              color: ${textColor};
+              border-radius: 4px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 14px;
+              transition: all 0.2s;
+            ">
               <span>⊞</span>
             </button>
-            <div class="table-selector-dropdown"></div>
+            <div class="table-selector-dropdown" style="
+              display: none;
+              position: absolute;
+              top: 100%;
+              left: 0;
+              z-index: 1000;
+              background: ${buttonBg};
+              border: 1px solid ${buttonBorder};
+              border-radius: 4px;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, ${isDark ? '0.4' : '0.15'});
+              padding: 8px;
+              min-width: 180px;
+              max-height: 300px;
+              overflow: visible;
+            "></div>
           </div>
         </div>
-        <div class="toolbar-group">
-          <select class="toolbar-select" data-command="section">
+        <div class="toolbar-group" style="
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          border-right: 1px solid ${borderColor};
+          padding-right: 12px;
+        ">
+          <select class="toolbar-select" data-command="section" style="
+            padding: 6px 8px;
+            border: 1px solid ${buttonBorder};
+            border-radius: 4px;
+            background: ${buttonBg};
+            color: ${textColor};
+            cursor: pointer;
+            font-size: 13px;
+          ">
             <option value="">Heading</option>
             <option value="section">Section</option>
             <option value="subsection">Subsection</option>
             <option value="subsubsection">Subsubsection</option>
           </select>
         </div>
-        <div class="toolbar-group">
-          <input type="color" class="toolbar-color" data-command="textcolor" title="Text Color (\\textcolor)" value="#000000">
-          <input type="color" class="toolbar-color" data-command="colorbox" title="Background Color (\\colorbox)" value="#ffff00">
+        <div class="toolbar-group" style="
+          display: flex;
+          gap: 4px;
+          align-items: center;
+        ">
+          <input type="color" class="toolbar-color" data-command="textcolor" title="Text Color (\\textcolor)" value="#000000" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 2px;
+            background: ${buttonBg};
+          ">
+          <input type="color" class="toolbar-color" data-command="colorbox" title="Background Color (\\colorbox)" value="#ffff00" style="
+            width: 32px;
+            height: 32px;
+            border: 1px solid ${buttonBorder};
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 2px;
+            background: ${buttonBg};
+          ">
         </div>
       </div>
     `;
 
-    this.attachEventListeners();
     this.setupTableSelector();
+    this.applyHoverEffects(hoverColor);
+  }
+
+  private applyHoverEffects(hoverColor: string): void {
+    const buttons = this.container.querySelectorAll('.toolbar-btn, .toolbar-select');
+    buttons.forEach((button: Element) => {
+      const btn = button as HTMLElement;
+      
+      btn.addEventListener('mouseenter', () => {
+        btn.style.borderColor = hoverColor;
+        if (btn.classList.contains('toolbar-btn')) {
+          btn.style.backgroundColor = this.theme === 'dark' ? '#2563eb' : '#f0f0f0';
+        }
+      });
+      
+      btn.addEventListener('mouseleave', () => {
+        btn.style.borderColor = this.theme === 'dark' ? '#4b5563' : '#ccc';
+        btn.style.backgroundColor = this.theme === 'dark' ? '#1f2937' : 'white';
+      });
+    });
   }
 
   private setupTableSelector() {
@@ -107,33 +363,6 @@ export class Toolbar {
           this.lastFocusedWidget = undefined;
         }
       }, 100);
-    });
-  }
-
-  private attachEventListeners() {
-    this.container.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const btn = target.closest('[data-command]') as HTMLElement;
-
-      if (btn) {
-        const command = btn.dataset.command;
-        if (command === 'table') {
-          e.preventDefault();
-          this.toggleTableSelector();
-        } else if (command !== 'textcolor' && command !== 'colorbox') {
-          e.preventDefault();
-          this.executeCommand(command!, btn);
-        }
-      }
-    });
-
-    this.container.addEventListener('change', (e) => {
-      const target = e.target as HTMLElement;
-      if (target.dataset.command === 'textcolor' || target.dataset.command === 'colorbox') {
-        this.executeCommand(target.dataset.command, target);
-      } else if (target.dataset.command) {
-        this.executeCommand(target.dataset.command, target);
-      }
     });
   }
 
@@ -420,5 +649,10 @@ export class Toolbar {
 
   updateMode(mode: 'source' | 'visual') {
     this.currentMode = mode;
+  }
+
+  updateTheme(theme: 'light' | 'dark') {
+    this.theme = theme;
+    this.render();
   }
 }

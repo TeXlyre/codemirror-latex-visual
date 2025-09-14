@@ -3,6 +3,12 @@ body {
   margin: 0;
   padding: 0;
   background: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark {
+  background-color: #111827;
+  color: #f9fafb;
 }
 
 header {
@@ -10,6 +16,12 @@ header {
   color: #333;
   padding: 2rem 1rem;
   text-align: center;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark header {
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  color: #f9fafb;
 }
 
 header h1 {
@@ -39,15 +51,30 @@ header p {
   font-weight: 500;
 }
 
+body.theme-dark .links a {
+  color: #f9fafb;
+  border-color: #f9fafb;
+}
+
 .links a:hover {
   background-color: #333;
   color: #ffd700;
+}
+
+body.theme-dark .links a:hover {
+  background-color: #f9fafb;
+  color: #1f2937;
 }
 
 main {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1rem;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark main {
+  background-color: #111827;
 }
 
 section {
@@ -56,10 +83,22 @@ section {
   border-radius: 8px;
   padding: 2rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+body.theme-dark section {
+  background-color: #1f2937;
+  color: #f9fafb;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 h1, h2 {
   margin-top: 0;
+}
+
+body.theme-dark h1, 
+body.theme-dark h2 {
+  color: #f9fafb;
 }
 
 .editors-grid {
@@ -73,6 +112,11 @@ h1, h2 {
   border: 1px solid #ddd;
   border-radius: 6px;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .editor-panel {
+  border-color: #4b5563;
 }
 
 .editor-panel h3 {
@@ -82,6 +126,13 @@ h1, h2 {
   border-bottom: 1px solid #ddd;
   font-size: 0.9rem;
   font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .editor-panel h3 {
+  background: #374151;
+  border-bottom-color: #4b5563;
+  color: #f9fafb;
 }
 
 #codemirror-editor,
@@ -98,80 +149,35 @@ h1, h2 {
   height: 500px;
 }
 
-pre {
-  background-color: #f8f8f8;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  padding: 1rem;
-  overflow-x: auto;
-  font-size: 0.9rem;
-}
-
-code {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-}
-
-kbd {
-  background: #f1f1f1;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  padding: 2px 4px;
-  font-size: 0.85em;
-  font-family: monospace;
-}
-
-ul {
-  padding-left: 1.5rem;
-}
-
-li {
-  margin-bottom: 0.5rem;
-}
-
-footer {
-  background: #333;
-  color: white;
-  text-align: center;
-  padding: 1rem;
-  margin-top: 2rem;
-  font-size: 0.9rem;
-}
-
-footer a {
-  color: #ffd700;
-  text-decoration: none;
-}
-
-footer a:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 768px) {
-  .editors-grid {
-    grid-template-columns: 1fr;
-  }
-
-  section {
-    padding: 1rem;
-  }
-}
-
-/* Math hover control panel */
-.math-hover-controls {
+/* Theme control panel styles */
+.theme-controls {
   background: white;
   border: 2px solid #007acc;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-.math-hover-controls h3 {
+body.theme-dark .theme-controls {
+  background: #1f2937;
+  border-color: #4da6ff;
+  color: #f9fafb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.theme-controls h3 {
   margin-top: 0;
   color: #007acc;
   font-size: 1.2em;
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 10px;
+}
+
+body.theme-dark .theme-controls h3 {
+  color: #4da6ff;
+  border-bottom-color: #4b5563;
 }
 
 .control-section {
@@ -228,12 +234,36 @@ footer a:hover {
   color: #999;
 }
 
+body.theme-dark .control-btn {
+  background: #1f2937;
+  color: #f9fafb;
+  border-color: #4b5563;
+}
+
+body.theme-dark .control-btn:hover {
+  background: #374151;
+  border-color: #4da6ff;
+}
+
+body.theme-dark .control-btn.active {
+  background: #4da6ff;
+  border-color: #4da6ff;
+  color: white;
+}
+
+body.theme-dark .control-btn:disabled {
+  background: #374151;
+  color: #6b7280;
+  border-color: #4b5563;
+}
+
 .status-indicator {
   padding: 6px 12px;
   border-radius: 4px;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+  transition: all 0.3s ease;
 }
 
 .status-indicator.status-enabled,
@@ -250,19 +280,154 @@ footer a:hover {
   border: 1px solid #f5c6cb;
 }
 
+.status-indicator.theme-light {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-indicator.theme-dark {
+  background: #1a202c;
+  color: #4da6ff;
+  border: 1px solid #4da6ff;
+}
+
+/* Theme preview samples */
+.theme-preview {
+  display: flex;
+  gap: 15px;
+  margin: 15px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .theme-preview {
+  background: #374151;
+}
+
+.theme-sample {
+  flex: 1;
+  padding: 12px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.theme-sample.active {
+  border-color: #007acc;
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+body.theme-dark .theme-sample.active {
+  border-color: #4da6ff;
+  box-shadow: 0 0 0 2px rgba(77, 166, 255, 0.2);
+}
+
+.light-sample {
+  background: #ffffff;
+  color: #000000;
+}
+
+.dark-sample {
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+.sample-header {
+  font-weight: bold;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.sample-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8em;
+}
+
+.sample-math {
+  background: #6f42c1;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.dark-sample .sample-math {
+  background: #a78bfa;
+  color: #000;
+}
+
+.sample-env {
+  background: #28a745;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.7em;
+}
+
+.dark-sample .sample-env {
+  background: #10b981;
+}
+
+/* Math hover control panel */
+.math-hover-controls {
+  background: white;
+  border: 2px solid #007acc;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .math-hover-controls {
+  background: #1f2937;
+  border-color: #4da6ff;
+  color: #f9fafb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.math-hover-controls h3 {
+  margin-top: 0;
+  color: #007acc;
+  font-size: 1.2em;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+}
+
+body.theme-dark .math-hover-controls h3 {
+  color: #4da6ff;
+  border-bottom-color: #4b5563;
+}
+
 .control-info {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 15px;
   margin-top: 10px;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .control-info {
+  background: #374151;
+  border-color: #4b5563;
 }
 
 .control-info p {
   margin-top: 0;
   font-weight: 500;
   color: #495057;
+}
+
+body.theme-dark .control-info p {
+  color: #d1d5db;
 }
 
 .control-info ul {
@@ -275,6 +440,10 @@ footer a:hover {
   color: #6c757d;
 }
 
+body.theme-dark .control-info li {
+  color: #9ca3af;
+}
+
 .control-info code {
   background: #e9ecef;
   padding: 2px 4px;
@@ -282,6 +451,11 @@ footer a:hover {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 0.9em;
   color: #e83e8c;
+}
+
+body.theme-dark .control-info code {
+  background: #4b5563;
+  color: #fbbf24;
 }
 
 .control-info kbd {
@@ -293,16 +467,89 @@ footer a:hover {
   font-family: monospace;
 }
 
+body.theme-dark .control-info kbd {
+  background: #6b7280;
+  color: #f9fafb;
+}
+
+pre {
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark pre {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+kbd {
+  background: #f1f1f1;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 0.85em;
+  font-family: monospace;
+}
+
+body.theme-dark kbd {
+  background: #4b5563;
+  border-color: #6b7280;
+  color: #f9fafb;
+}
+
+ul {
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+footer {
+  background: #333;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark footer {
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+footer a {
+  color: #ffd700;
+  text-decoration: none;
+}
+
+body.theme-dark footer a {
+  color: #4da6ff;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
 /* Notification styles */
 .notification {
   position: fixed;
   top: 20px;
   right: 20px;
-  background: #007acc;
-  color: white;
   padding: 12px 20px;
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   z-index: 10001;
   font-size: 14px;
   max-width: 300px;
@@ -311,28 +558,176 @@ footer a:hover {
   transition: all 0.3s ease;
 }
 
-/* Enhanced math hover preview styles for demo */
-.math-hover-preview {
-  animation: mathHoverSlideIn 0.25s ease-out;
+/* Features section enhancements */
+.features {
+  transition: all 0.3s ease;
 }
 
-@keyframes mathHoverSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+body.theme-dark .features {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+.features ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.features li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  align-items: flex-start;
+}
+
+body.theme-dark .features li {
+  border-bottom-color: #4b5563;
+}
+
+.features li::before {
+  content: "✓";
+  color: #28a745;
+  font-weight: bold;
+  margin-right: 10px;
+  font-size: 1.1em;
+}
+
+body.theme-dark .features li::before {
+  color: #10b981;
+}
+
+.features li:last-child {
+  border-bottom: none;
+}
+
+/* Usage section enhancements */
+.usage {
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .usage {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+/* Keyboard shortcuts section */
+.keyboard-shortcuts {
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .keyboard-shortcuts {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.shortcut-group h3 {
+  color: #007acc;
+  margin-bottom: 1rem;
+}
+
+body.theme-dark .shortcut-group h3 {
+  color: #4da6ff;
+}
+
+.shortcut-group ul {
+  list-style: none;
+  padding: 0;
+}
+
+.shortcut-group li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+body.theme-dark .shortcut-group li {
+  border-bottom-color: #4b5563;
+}
+
+.shortcut-group li:last-child {
+  border-bottom: none;
+}
+
+/* Math hover guide section */
+.math-hover-guide {
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .math-hover-guide {
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+.guide-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.step {
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007acc;
+  transition: all 0.3s ease;
+}
+
+body.theme-dark .step {
+  background: #374151;
+  border-left-color: #4da6ff;
+}
+
+.step h4 {
+  margin-top: 0;
+  color: #007acc;
+}
+
+body.theme-dark .step h4 {
+  color: #4da6ff;
+}
+
+.step p {
+  margin-bottom: 0;
+  color: #6c757d;
+}
+
+body.theme-dark .step p {
+  color: #d1d5db;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .editors-grid {
+    grid-template-columns: 1fr;
+  }
+
+  section {
+    padding: 1rem;
+  }
+
+  .theme-preview {
+    flex-direction: column;
+  }
+  
+  .theme-sample {
+    margin-bottom: 10px;
+  }
+  
+  .theme-controls,
   .math-hover-controls {
     padding: 15px;
   }
-  
+
   .control-group {
     flex-direction: column;
     align-items: stretch;
@@ -347,48 +742,177 @@ footer a:hover {
   .status-indicator {
     text-align: center;
   }
+
+  .shortcuts-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .guide-steps {
+    grid-template-columns: 1fr;
+  }
+
+  header {
+    padding: 1.5rem 1rem;
+  }
+
+  header h1 {
+    font-size: 2rem;
+  }
 }
 
-/* Enhanced visual indicators for math expressions in source mode */
-.cm-editor .cm-line {
-  position: relative;
+@media (max-width: 480px) {
+  main {
+    padding: 1rem 0.5rem;
+  }
+
+  .theme-controls,
+  .math-hover-controls {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+    padding: 10px;
+  }
+
+  .control-section {
+    gap: 10px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+  }
+
+  .notification {
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
 }
 
-/* Subtle highlight for math expressions that have hover enabled */
-.cm-editor.cm-focused .cm-line:has-text("$") {
-  background: rgba(0, 123, 255, 0.02);
+/* Smooth transitions for all theme changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Special styling for the dual editor when math hover is active */
-.latex-dual-editor[data-math-hover="true"] .cm-editor {
-  cursor: help;
+/* Print styles */
+@media print {
+  .theme-controls,
+  .math-hover-controls,
+  .notification {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  section {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
 }
 
-.latex-dual-editor[data-math-hover="false"] .cm-editor {
-  cursor: text;
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .theme-controls,
+  .math-hover-controls {
+    border-width: 3px;
+  }
+
+  .control-btn {
+    border-width: 2px;
+    font-weight: bold;
+  }
+
+  .status-indicator {
+    border-width: 2px;
+    font-weight: bold;
+  }
 }
 
-/* Demo section improvements */
-.single-editor-demo {
-  margin-top: 2rem;
-  position: relative;
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .notification {
+    transition: none;
+  }
+
+  .control-btn,
+  .theme-sample,
+  .status-indicator {
+    transition: none;
+  }
 }
 
-.single-editor-demo::before {
-  content: "Math Hover Active - Try hovering over math expressions in source mode!";
-  display: block;
-  background: linear-gradient(135deg, #007acc, #0056b3);
-  color: white;
-  padding: 10px 15px;
-  border-radius: 6px 6px 0 0;
-  font-size: 14px;
-  font-weight: 500;
-  text-align: center;
-  margin-bottom: 0;
+/* Focus visible support for better accessibility */
+.control-btn:focus-visible,
+.theme-sample:focus-visible {
+  outline: 2px solid #007acc;
+  outline-offset: 2px;
 }
 
-/* Override for when math hover is disabled */
-.single-editor-demo[data-math-hover="false"]::before {
-  content: "Math Hover Disabled - Enable it using the controls above or Ctrl+Shift+M";
-  background: linear-gradient(135deg, #6c757d, #495057);
+body.theme-dark .control-btn:focus-visible,
+body.theme-dark .theme-sample:focus-visible {
+  outline-color: #4da6ff;
+}
+
+/* Enhanced hover effects */
+.control-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-dark .control-btn:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-sample:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-dark .theme-sample:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Loading states and animations */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.control-btn:active {
+  animation: pulse 0.2s ease-in-out;
+}
+
+/* Ensure proper text contrast in all themes */
+body.theme-dark {
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+}
+
+body:not(.theme-dark) {
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+}
+
+/* Apply consistent text colors */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary, inherit);
+}
+
+p, li, span {
+  color: var(--text-secondary, inherit);
+}
+
+.text-muted {
+  color: var(--text-muted, #6b7280);
 }

@@ -1,4 +1,6 @@
 import { MathfieldElement } from 'mathlive';
+
+// Disable sounds globally
 MathfieldElement.soundsDirectory = null;
 
 // Ensure clipboard polyfill is available globally
@@ -56,22 +58,29 @@ if (typeof window !== 'undefined' && !navigator.clipboard) {
 export function createEditableMath(latex: string, displayMode: boolean = false): HTMLElement {
   const mathfield = new MathfieldElement();
 
+  // Set the LaTeX content
   mathfield.value = latex;
+  
+  // Make it fully editable by default
   mathfield.readOnly = false;
 
+  // Enable virtual keyboard (burger menu)
   mathfield.mathVirtualKeyboardPolicy = 'auto';
 
+  // Enable smart features
   mathfield.smartMode = true;
   mathfield.smartFence = true;
   mathfield.smartSuperscript = true;
   mathfield.letterShapeStyle = 'tex';
 
+  // Style based on display mode
   if (displayMode) {
     mathfield.classList.add('math-display-field');
   } else {
     mathfield.classList.add('math-inline-field');
   }
 
+  // Add focus/blur handlers for visual feedback
   mathfield.addEventListener('focusin', () => {
     mathfield.classList.add('focused');
   });

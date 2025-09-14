@@ -1,66 +1,137 @@
+/* Theme Variables */
+:root {
+  --latex-bg: #ffffff;
+  --latex-fg: #000000;
+  --latex-surface: #f8f9fa;
+  --latex-border: #ddd;
+  --latex-primary: #007acc;
+  --latex-secondary: #6c757d;
+  --latex-success: #28a745;
+  --latex-warning: #fd7e14;
+  --latex-danger: #dc3545;
+  --latex-math: #6f42c1;
+  --latex-environment: #28a745;
+  --latex-command: #007acc;
+  --latex-table: #6f42c1;
+}
+
+.latex-dual-editor.theme-dark {
+  --latex-bg: #1f2937;
+  --latex-fg: #f9fafb;
+  --latex-surface: #374151;
+  --latex-border: #4b5563;
+  --latex-primary: #4da6ff;
+  --latex-secondary: #9ca3af;
+  --latex-success: #10b981;
+  --latex-warning: #f59e0b;
+  --latex-danger: #ef4444;
+  --latex-math: #a78bfa;
+  --latex-environment: #10b981;
+  --latex-command: #4da6ff;
+  --latex-table: #a78bfa;
+}
+
+/* MathLive theming */
+:root {
+  --ml-color: var(--latex-fg);
+  --ml-background: var(--latex-bg);
+  --ml-accent: var(--latex-primary);
+  --ml-highlight: var(--latex-primary);
+  --ml-primary: var(--latex-primary);
+  --ml-text: var(--latex-fg);
+  --ml-surface: var(--latex-surface);
+}
+
+.theme-dark {
+  --ml-highlight: #4da6ff;
+  --ml-primary: #4da6ff;
+  --ml-text: #f9fafb;
+  --ml-surface: #374151;
+}
+
+/* Base editor styles */
 .latex-dual-editor {
   display: flex;
   flex-direction: column;
   height: 100%;
-  border: 1px solid #ddd;
+  border: 1px solid var(--latex-border);
   border-radius: 6px;
   overflow: hidden;
+  background-color: var(--latex-bg);
+  color: var(--latex-fg);
 }
 
 .latex-editor-toolbar {
   display: flex;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+  background-color: var(--latex-surface);
+  border-bottom: 1px solid var(--latex-border);
   padding: 8px;
   gap: 8px;
   flex-shrink: 0;
 }
 
-.mode-btn, .toggle-cmd-btn, .toggle-toolbar-btn {
+.mode-btn, .toggle-cmd-btn, .toggle-math-hover-btn, .toggle-toolbar-btn {
   padding: 6px 12px;
-  border: 1px solid #ccc;
-  background: white;
+  border: 1px solid var(--latex-border);
+  background: var(--latex-bg);
+  color: var(--latex-fg);
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
+  transition: all 0.2s ease;
 }
 
-.mode-btn:hover, .toggle-cmd-btn:hover, .toggle-toolbar-btn:hover {
-  background: #f8f8f8;
+.mode-btn:hover, .toggle-cmd-btn:hover, .toggle-math-hover-btn:hover, .toggle-toolbar-btn:hover {
+  background: var(--latex-surface);
+  border-color: var(--latex-primary);
 }
 
 .mode-btn.active {
-  background: #007acc;
+  background: var(--latex-primary);
   color: white;
-  border-color: #007acc;
+  border-color: var(--latex-primary);
 }
 
-.toggle-cmd-btn.active, .toggle-toolbar-btn.active {
-  background: #28a745;
+.toggle-cmd-btn.active {
+  background: var(--latex-success);
   color: white;
-  border-color: #28a745;
+  border-color: var(--latex-success);
+}
+
+.toggle-math-hover-btn.active {
+  background: var(--latex-success);
+  color: white;
+  border-color: var(--latex-success);
+}
+
+.toggle-toolbar-btn.active {
+  background: var(--latex-warning);
+  color: white;
+  border-color: var(--latex-warning);
 }
 
 .unified-toolbar-container {
   display: none;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--latex-border);
   flex-shrink: 0;
+  background-color: var(--latex-surface);
 }
 
 .unified-toolbar {
   display: flex;
-  background-color: #fafafa;
+  background-color: var(--latex-surface);
   padding: 8px;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  color: var(--latex-fg);
 }
 
 .toolbar-group {
   display: flex;
   gap: 4px;
   align-items: center;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--latex-border);
   padding-right: 12px;
 }
 
@@ -72,8 +143,9 @@
 .toolbar-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #ccc;
-  background: white;
+  border: 1px solid var(--latex-border);
+  background: var(--latex-bg);
+  color: var(--latex-fg);
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -84,19 +156,20 @@
 }
 
 .toolbar-btn:hover {
-  background: #f0f0f0;
-  border-color: #007acc;
+  background: var(--latex-surface);
+  border-color: var(--latex-primary);
 }
 
 .toolbar-btn:active {
-  background: #e0e0e0;
+  transform: translateY(1px);
 }
 
 .toolbar-select {
   padding: 6px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--latex-border);
   border-radius: 4px;
-  background: white;
+  background: var(--latex-bg);
+  color: var(--latex-fg);
   cursor: pointer;
   font-size: 13px;
 }
@@ -104,10 +177,11 @@
 .toolbar-color {
   width: 32px;
   height: 32px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--latex-border);
   border-radius: 4px;
   cursor: pointer;
   padding: 2px;
+  background: var(--latex-bg);
 }
 
 .toolbar-table-container {
@@ -120,14 +194,18 @@
   top: 100%;
   left: 0;
   z-index: 1000;
-  background: white;
-  border: 1px solid #ccc;
+  background: var(--latex-bg);
+  border: 1px solid var(--latex-border);
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   padding: 8px;
   min-width: 180px;
   max-height: 300px;
   overflow: visible;
+}
+
+.theme-dark .table-selector-dropdown {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .table-selector {
@@ -143,28 +221,28 @@
   grid-template-rows: repeat(8, 16px);
   gap: 1px;
   margin-bottom: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--latex-border);
   padding: 2px;
-  background: white;
+  background: var(--latex-bg);
 }
 
 .table-grid-cell {
   width: 16px;
   height: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--latex-border);
   cursor: pointer;
-  background: #f8f8f8;
+  background: var(--latex-surface);
   transition: background-color 0.1s ease;
 }
 
 .table-grid-cell.highlighted {
-  background: #007acc;
-  border-color: #005c99;
+  background: var(--latex-primary);
+  border-color: var(--latex-primary);
 }
 
 .table-selector-label {
   font-size: 12px;
-  color: #666;
+  color: var(--latex-secondary);
   font-weight: 500;
   text-align: center;
   white-space: nowrap;
@@ -184,6 +262,8 @@
 
 .codemirror-container .cm-editor {
   height: 100%;
+  background-color: var(--latex-bg);
+  color: var(--latex-fg);
 }
 
 /* Visual mode styles for CodeMirror */
@@ -196,8 +276,9 @@
   display: block;
   font-weight: bold;
   margin: 1em 0 0.5em 0;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--latex-border);
   padding-bottom: 0.2em;
+  color: var(--latex-fg);
 }
 
 .latex-visual-section-1 {
@@ -216,37 +297,23 @@
   display: block;
   margin: 20px 0 10px 0;
   padding: 8px 12px;
-  background: rgba(0, 123, 255, 0.1);
-  border-left: 4px solid #007acc;
+  background: var(--latex-surface);
+  border-left: 4px solid var(--latex-primary);
   border-radius: 4px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: var(--latex-fg);
 }
 
 .latex-cmd-prefix,
 .latex-cmd-suffix {
-  color: #007acc;
+  color: var(--latex-command);
   font-weight: 600;
   user-select: none;
 }
 
 .latex-cmd-content {
   font-weight: bold;
-  color: #333;
-}
-
-.toolbar-btn[data-command="itemize"] span {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.toolbar-btn[data-command="enumerate"] span {
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.toolbar-btn[data-command="description"] span {
-  font-size: 16px;
-  line-height: 1;
+  color: var(--latex-fg);
 }
 
 /* List widget styles */
@@ -254,6 +321,7 @@
   margin: 0;
   padding: 0;
   line-height: 1.4;
+  color: var(--latex-fg);
 }
 
 .latex-visual-list-element {
@@ -269,6 +337,7 @@
   position: relative;
   line-height: 1.4;
   min-height: 1.4em;
+  color: var(--latex-fg);
 }
 
 .latex-description-item {
@@ -285,6 +354,7 @@
   padding: 0;
   line-height: 1.4;
   min-height: 1.4em;
+  color: var(--latex-fg);
 }
 
 .latex-description-item dd {
@@ -293,14 +363,15 @@
   cursor: text;
   line-height: 1.4;
   min-height: 1.4em;
+  color: var(--latex-fg);
 }
 
 .latex-list-item:focus,
 .latex-description-item dt:focus,
 .latex-description-item dd:focus {
-  outline: 1px solid #007acc;
+  outline: 1px solid var(--latex-primary);
   outline-offset: 1px;
-  background: rgba(0, 123, 255, 0.05);
+  background: rgba(var(--latex-primary-rgb, 0, 122, 204), 0.05);
 }
 
 .latex-visual-math-inline {
@@ -308,6 +379,7 @@
   border: none;
   margin: 0 1px;
   cursor: pointer;
+  color: var(--latex-math);
 }
 
 .latex-visual-math-display {
@@ -317,37 +389,41 @@
   margin: 10px 0;
   text-align: center;
   cursor: pointer;
+  color: var(--latex-math);
 }
 
 .latex-math-command-wrapper {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  background: rgba(111, 66, 193, 0.1);
-  border: 1px solid rgba(111, 66, 193, 0.3);
+  background: var(--latex-surface);
+  border: 1px solid var(--latex-math);
   border-radius: 4px;
   padding: 8px;
+  color: var(--latex-fg);
 }
 
 .latex-visual-environment {
   display: block;
   margin: 10px 0;
   padding: 10px;
-  border-left: 3px solid #28a745;
-  background: rgba(40, 167, 69, 0.05);
+  border-left: 3px solid var(--latex-environment);
+  background: var(--latex-surface);
   border-radius: 4px;
+  color: var(--latex-fg);
 }
 
 .latex-env-command {
   margin: 10px 0;
   padding: 10px;
-  background: rgba(40, 167, 69, 0.1);
-  border: 1px solid rgba(40, 167, 69, 0.3);
+  background: var(--latex-surface);
+  border: 1px solid var(--latex-environment);
   border-radius: 4px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: var(--latex-fg);
 }
 
 .env-begin,
 .env-end {
-  color: #28a745;
+  color: var(--latex-environment);
   font-weight: 600;
   margin: 5px 0;
 }
@@ -355,7 +431,7 @@
 .env-content {
   margin: 10px 0;
   padding-left: 20px;
-  border-left: 2px solid rgba(40, 167, 69, 0.3);
+  border-left: 2px solid var(--latex-border);
 }
 
 .env-header {
@@ -363,13 +439,15 @@
   font-size: 0.9em;
   margin-bottom: 8px;
   text-transform: capitalize;
+  color: var(--latex-fg);
 }
 
 .latex-visual-command {
   display: inline;
   padding: 1px 2px;
   border-radius: 2px;
-  background: none;
+  background: var(--latex-surface);
+  color: var(--latex-fg);
 }
 
 .latex-visual-command.textbf {
@@ -394,7 +472,7 @@
 
 .latex-visual-command.texttt {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--latex-surface);
   border-radius: 2px;
   padding: 1px 2px;
 }
@@ -403,12 +481,12 @@
   display: inline-block;
   margin: 0 2px;
   padding: 2px 6px;
-  background: rgba(220, 53, 69, 0.1);
-  border: 1px solid rgba(220, 53, 69, 0.3);
+  background: var(--latex-surface);
+  border: 1px solid var(--latex-danger);
   border-radius: 3px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 0.9em;
-  color: #dc3545;
+  color: var(--latex-danger);
 }
 
 .latex-command-wrapper {
@@ -417,24 +495,23 @@
   cursor: text;
   border-radius: 2px;
   transition: background-color 0.2s ease;
+  color: var(--latex-fg);
 }
 
 .latex-command-wrapper:focus {
-  background: rgba(0, 123, 255, 0.05) !important;
+  background: rgba(var(--latex-primary-rgb, 0, 122, 204), 0.05) !important;
   outline: none;
 }
 
 .latex-command-wrapper:hover {
-  background: rgba(0, 123, 255, 0.03);
+  background: rgba(var(--latex-primary-rgb, 0, 122, 204), 0.03);
 }
 
-/* Make command widgets more visually distinct when focused */
 .latex-command-wrapper[tabindex="0"] {
   padding: 1px 2px;
   margin: -1px -2px;
 }
 
-/* Ensure editable spans have proper z-index */
 .latex-command-wrapper span[contenteditable="true"] {
   position: relative;
   z-index: 1000;
@@ -446,33 +523,42 @@
   border-collapse: collapse;
   margin: 10px 0;
   width: 100%;
-  border: 1px solid #ddd;
+  border: 1px solid var(--latex-border);
+  background-color: var(--latex-bg);
 }
 
 .latex-table-cell {
-  border: 1px solid #ddd;
+  border: 1px solid var(--latex-border);
   padding: 8px 12px;
   min-width: 60px;
+  background-color: var(--latex-bg);
+  color: var(--latex-fg);
 }
 
 .latex-table-command {
   margin: 10px 0;
   padding: 10px;
-  background: rgba(111, 66, 193, 0.1);
-  border: 1px solid rgba(111, 66, 193, 0.3);
+  background: var(--latex-surface);
+  border: 1px solid var(--latex-table);
   border-radius: 4px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: var(--latex-fg);
 }
 
 .table-begin,
 .table-end {
-  color: #6f42c1;
+  color: var(--latex-table);
   font-weight: 600;
   margin: 5px 0;
   font-size: 0.9em;
 }
 
-/* MathLive styles */
+/* MathLive styles with theming */
+math-field {
+  color: var(--latex-fg);
+  background: var(--latex-bg);
+}
+
 math-field.math-inline-field {
   background: none;
   border: none;
@@ -482,6 +568,7 @@ math-field.math-inline-field {
   cursor: pointer;
   min-width: 3em;
   pointer-events: auto;
+  color: var(--latex-math);
 }
 
 math-field.math-display-field {
@@ -496,6 +583,7 @@ math-field.math-display-field {
   pointer-events: auto;
   box-sizing: border-box;
   display: block;
+  color: var(--latex-math);
 }
 
 math-field:hover {
@@ -505,17 +593,17 @@ math-field:hover {
 math-field:focus,
 math-field:focus-within,
 math-field.focused {
-  outline: 2px solid #007acc;
+  outline: 2px solid var(--latex-primary);
   outline-offset: 1px;
   background: none;
-  border-color: #007acc;
+  border-color: var(--latex-primary);
 }
 
 .math-edit-indicator {
   position: absolute;
   width: 14px;
   height: 14px;
-  background: #007acc;
+  background: var(--latex-primary);
   color: white;
   font-size: 8px;
   display: flex;
@@ -538,11 +626,15 @@ math-field.focused {
   min-width: 250px;
   min-height: 80px;
   z-index: 10000;
-  background: white;
-  border: 2px solid #007acc;
+  background: var(--latex-bg);
+  border: 2px solid var(--latex-primary);
   border-radius: 6px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   padding: 10px;
+}
+
+.theme-dark .mathfield-editor-overlay {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .math-editor-buttons {
@@ -563,12 +655,12 @@ math-field.focused {
 }
 
 .math-editor-btn-cancel {
-  background: #6c757d;
+  background: var(--latex-secondary);
   color: white;
 }
 
 .math-editor-btn-done {
-  background: #007acc;
+  background: var(--latex-primary);
   color: white;
 }
 
@@ -588,21 +680,12 @@ math-field.focused {
   min-height: 2em;
 }
 
-/* MathLive virtual keyboard */
-.ML__keyboard {
-  z-index: 1000;
-}
-
-.ML__popover {
-  z-index: 1001;
-}
-
 /* Math hover widget styles */
 .math-hover-preview {
   position: fixed;
   z-index: 10000;
-  background: white;
-  border: 2px solid #007acc;
+  background: var(--latex-bg);
+  border: 2px solid var(--latex-primary);
   border-radius: 8px;
   padding: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -612,14 +695,22 @@ math-field.focused {
   line-height: 1.4;
   transition: all 0.2s ease;
   cursor: default;
+  color: var(--latex-fg);
+}
+
+.theme-dark .math-hover-preview {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .math-hover-preview:hover {
-  border-color: #0056b3;
+  border-color: var(--latex-primary);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
 }
 
-/* Math preview container */
+.theme-dark .math-hover-preview:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
 .math-preview-container {
   position: relative;
   display: inline-block;
@@ -639,7 +730,6 @@ math-field.focused {
   min-height: 20px;
 }
 
-/* Math field in hover widget */
 .math-hover-preview math-field {
   background: none;
   border: none;
@@ -649,32 +739,32 @@ math-field.focused {
   min-width: 2em;
   pointer-events: auto;
   transition: all 0.2s ease;
+  color: var(--latex-fg);
 }
 
 .math-hover-preview math-field:hover {
-  background: rgba(0, 123, 255, 0.05);
+  background: var(--latex-surface);
   border-radius: 4px;
 }
 
 .math-hover-preview math-field:focus,
 .math-hover-preview math-field.focused {
-  outline: 2px solid #007acc;
+  outline: 2px solid var(--latex-primary);
   outline-offset: 1px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--latex-bg);
   border-radius: 4px;
 }
 
 .math-hover-preview math-field[readonly="false"] {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #007acc;
+  background: var(--latex-bg);
+  border: 1px solid var(--latex-primary);
   border-radius: 4px;
   padding: 6px;
 }
 
-/* Edit button (similar to visual editor) */
 .math-edit-button {
   position: absolute;
-  background: #007acc;
+  background: var(--latex-primary);
   color: white;
   border: none;
   border-radius: 50%;
@@ -691,7 +781,7 @@ math-field.focused {
 }
 
 .math-edit-button:hover {
-  background: #0056b3;
+  background: var(--latex-primary);
   transform: scale(1.1);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
@@ -700,7 +790,6 @@ math-field.focused {
   transform: scale(0.95);
 }
 
-/* Display math edit button positioning */
 .math-preview-container.display .math-edit-button {
   top: 6px;
   right: 6px;
@@ -709,7 +798,6 @@ math-field.focused {
   font-size: 12px;
 }
 
-/* Inline math edit button positioning */
 .math-preview-container.inline .math-edit-button {
   top: -8px;
   right: -8px;
@@ -718,13 +806,11 @@ math-field.focused {
   font-size: 10px;
 }
 
-/* Show edit button on hover */
 .math-preview-container:hover .math-edit-button,
 .math-edit-button:hover {
   opacity: 1;
 }
 
-/* Editor buttons for math hover */
 .math-hover-preview .math-editor-buttons {
   margin-top: 12px;
   display: flex;
@@ -732,7 +818,7 @@ math-field.focused {
   gap: 8px;
   flex-shrink: 0;
   padding-top: 8px;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--latex-border);
 }
 
 .math-hover-preview .math-editor-btn {
@@ -748,22 +834,22 @@ math-field.focused {
 }
 
 .math-hover-preview .math-editor-btn-cancel {
-  background: #6c757d;
+  background: var(--latex-secondary);
   color: white;
 }
 
 .math-hover-preview .math-editor-btn-cancel:hover {
-  background: #5a6268;
+  background: var(--latex-secondary);
   transform: translateY(-1px);
 }
 
 .math-hover-preview .math-editor-btn-done {
-  background: #007acc;
+  background: var(--latex-primary);
   color: white;
 }
 
 .math-hover-preview .math-editor-btn-done:hover {
-  background: #0056b3;
+  background: var(--latex-primary);
   transform: translateY(-1px);
 }
 
@@ -792,17 +878,15 @@ math-field.focused {
   position: relative;
 }
 
-/* Subtle background for math expressions when math hover is enabled */
 .cm-editor[data-math-hover-enabled="true"] .cm-line:has-text("$") {
-  background: rgba(0, 123, 255, 0.02);
+  background: rgba(var(--latex-primary-rgb, 0, 122, 204), 0.02);
   transition: background 0.2s ease;
 }
 
 .cm-editor[data-math-hover-enabled="true"] .cm-line:hover {
-  background: rgba(0, 123, 255, 0.05);
+  background: rgba(var(--latex-primary-rgb, 0, 122, 204), 0.05);
 }
 
-/* Prevent text selection while hovering over math preview */
 .math-hover-preview * {
   user-select: none;
   -webkit-user-select: none;
@@ -810,7 +894,6 @@ math-field.focused {
   -ms-user-select: none;
 }
 
-/* Allow text selection in editable mathfield */
 .math-hover-preview math-field[readonly="false"] * {
   user-select: text;
   -webkit-user-select: text;
@@ -818,7 +901,6 @@ math-field.focused {
   -ms-user-select: text;
 }
 
-/* Special cursor for math expressions in source mode */
 .cm-editor[data-math-hover-enabled="true"] {
   cursor: default;
 }
@@ -827,40 +909,14 @@ math-field.focused {
   cursor: help;
 }
 
-/* Responsive adjustments for math hover */
-@media (max-width: 480px) {
-  .math-hover-preview {
-    max-width: calc(100vw - 20px);
-    left: 10px !important;
-    right: 10px;
-    transform: none;
-  }
-  
-  .math-preview-container.display .math-edit-button {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-    top: 4px;
-    right: 4px;
-  }
-  
-  .math-preview-container.inline .math-edit-button {
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
-    top: -6px;
-    right: -6px;
-  }
-}
-
 /* Enhanced visual states */
 .math-hover-preview.editing {
-  border-color: #28a745;
-  box-shadow: 0 6px 24px rgba(40, 167, 69, 0.2);
+  border-color: var(--latex-success);
+  box-shadow: 0 6px 24px rgba(var(--latex-success-rgb, 40, 167, 69), 0.2);
 }
 
 .math-hover-preview.editing .math-preview-container {
-  background: rgba(40, 167, 69, 0.05);
+  background: rgba(var(--latex-success-rgb, 40, 167, 69), 0.05);
   border-radius: 4px;
 }
 
@@ -887,4 +943,154 @@ math-field.focused {
 .math-edit-button:hover::after {
   opacity: 1;
   visibility: visible;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .latex-dual-editor {
+    border-radius: 0;
+  }
+
+  .latex-editor-toolbar {
+    padding: 6px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn, .toggle-cmd-btn, .toggle-math-hover-btn, .toggle-toolbar-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .unified-toolbar {
+    padding: 6px;
+    gap: 8px;
+  }
+
+  .toolbar-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .math-hover-preview {
+    max-width: calc(100vw - 20px);
+    left: 10px !important;
+    right: 10px;
+    transform: none;
+  }
+  
+  .math-preview-container.display .math-edit-button {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    top: 4px;
+    right: 4px;
+  }
+  
+  .math-preview-container.inline .math-edit-button {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    top: -6px;
+    right: -6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .latex-editor-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mode-btn, .toggle-cmd-btn, .toggle-math-hover-btn, .toggle-toolbar-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .unified-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-group {
+    border-right: none;
+    border-bottom: 1px solid var(--latex-border);
+    padding-right: 0;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    justify-content: center;
+  }
+
+  .toolbar-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+}
+
+/* Print styles */
+@media print {
+  .latex-dual-editor {
+    border: none;
+    box-shadow: none;
+  }
+
+  .latex-editor-toolbar,
+  .unified-toolbar-container {
+    display: none !important;
+  }
+
+  .latex-visual-widget {
+    break-inside: avoid;
+  }
+
+  .math-hover-preview,
+  .mathfield-editor-overlay {
+    display: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .latex-dual-editor {
+    border-width: 2px;
+  }
+
+  .mode-btn, .toggle-cmd-btn, .toggle-math-hover-btn, .toggle-toolbar-btn {
+    border-width: 2px;
+    font-weight: bold;
+  }
+
+  .latex-visual-section {
+    border-bottom-width: 2px;
+  }
+
+  .latex-visual-environment {
+    border-left-width: 4px;
+  }
+
+  .math-hover-preview {
+    border-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .math-hover-preview {
+    animation: none;
+  }
+
+  .toolbar-btn,
+  .mode-btn,
+  .toggle-cmd-btn,
+  .toggle-math-hover-btn,
+  .toggle-toolbar-btn {
+    transition: none;
+  }
 }

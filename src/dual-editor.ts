@@ -3,7 +3,7 @@ import { EditorView, keymap } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
 import { Toolbar } from './visual-toolbar';
-import { ConfigService, DEFAULT_CONFIG, LatexEditorConfig } from './core/config';
+import { ConfigService, DEFAULT_CONFIG, LatexEditorConfig, DARK_THEME_COLORS, LIGHT_THEME_COLORS } from './core/config';
 import { EventService } from './core/event-service';
 import { FocusService } from './core/focus-service';
 import { DOMUtils } from './core/dom-utils';
@@ -18,6 +18,7 @@ export interface DualEditorOptions {
   showCommands?: boolean;
   showToolbar?: boolean;
   enableMathHover?: boolean;
+  theme?: 'light' | 'dark';
   config?: Partial<LatexEditorConfig>;
 }
 
@@ -53,11 +54,23 @@ export class DualLatexEditor {
     this.currentMode = options.initialMode || 'source';
 
     // Initialize services
+    const initialTheme = options.theme || 'light';
+    const themeColors = initialTheme === 'dark' ? DARK_THEME_COLORS : LIGHT_THEME_COLORS;
+    
     this.configService = new ConfigService({
       ...DEFAULT_CONFIG,
       ...options.config,
+      theme: initialTheme,
       showCommands: options.showCommands ?? DEFAULT_CONFIG.showCommands,
-      showToolbar: options.showToolbar ?? DEFAULT_CONFIG.showToolbar
+      showToolbar: options.showToolbar ?? DEFAULT_CONFIG.showToolbar,
+      styles: {
+        ...DEFAULT_CONFIG.styles,
+        ...options.config?.styles,
+        colors: {
+          ...themeColors,
+          ...options.config?.styles?.colors
+        }
+      }
     });
 
     this.eventService = EventService.getInstance();
@@ -76,6 +89,7 @@ export class DualLatexEditor {
       this.setupMathHover();
       this.createVisualEditor();
       this.setMode(this.currentMode);
+      this.applyTheme();
 
       errorService.logError(
         ErrorCategory.STATE,
@@ -99,6 +113,13 @@ export class DualLatexEditor {
     const configUnsubscribe = this.configService.subscribe((config) => {
       this.domUtils = new DOMUtils(config);
       this.updateFromConfig(config);
+      this.applyTheme();
+      if (this.visualEditor) {
+        this.visualEditor.updateOptions({ config });
+      }
+      if (this.unifiedToolbar && typeof (this.unifiedToolbar as any).updateTheme === 'function') {
+        (this.unifiedToolbar as any).updateTheme(config.theme);
+      }
     });
 
     // Listen for mode changes
@@ -140,14 +161,16 @@ export class DualLatexEditor {
     const config = this.configService.get();
 
     const wrapper = this.domUtils.createElement('div', {
-      className: `latex-dual-editor ${this.options.className || ''}`,
+      className: `latex-dual-editor theme-${config.theme} ${this.options.className || ''}`,
       styles: {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        border: '1px solid #ddd',
+        border: `1px solid ${config.styles.colors.border}`,
         borderRadius: '6px',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        backgroundColor: config.styles.colors.background,
+        color: config.styles.colors.foreground
       }
     });
 
@@ -183,8 +206,8 @@ export class DualLatexEditor {
       className: 'latex-editor-toolbar',
       styles: {
         display: 'flex',
-        backgroundColor: '#f5f5f5',
-        borderBottom: '1px solid #ddd',
+        backgroundColor: config.styles.colors.surface,
+        borderBottom: `1px solid ${config.styles.colors.border}`,
         padding: config.styles.spacing.container,
         gap: '8px',
         flexShrink: '0'
@@ -196,7 +219,12 @@ export class DualLatexEditor {
       () => this.setMode('source'),
       {
         className: 'mode-btn',
-        attributes: { 'data-mode': 'source' }
+        attributes: { 'data-mode': 'source' },
+        styles: {
+          backgroundColor: config.styles.colors.background,
+          color: config.styles.colors.foreground,
+          borderColor: config.styles.colors.border
+        }
       }
     );
 
@@ -205,7 +233,12 @@ export class DualLatexEditor {
       () => this.setMode('visual'),
       {
         className: 'mode-btn',
-        attributes: { 'data-mode': 'visual' }
+        attributes: { 'data-mode': 'visual' },
+        styles: {
+          backgroundColor: config.styles.colors.background,
+          color: config.styles.colors.foreground,
+          borderColor: config.styles.colors.border
+        }
       }
     );
 
@@ -214,7 +247,12 @@ export class DualLatexEditor {
       () => this.toggleCommandVisibility(),
       {
         className: 'toggle-cmd-btn',
-        attributes: { title: 'Toggle Command Visibility (Ctrl+Shift+C)' }
+        attributes: { title: 'Toggle Command Visibility (Ctrl+Shift+C)' },
+        styles: {
+          backgroundColor: config.styles.colors.background,
+          color: config.styles.colors.foreground,
+          borderColor: config.styles.colors.border
+        }
       }
     );
 
@@ -223,7 +261,12 @@ export class DualLatexEditor {
       () => this.toggleMathHover(),
       {
         className: 'toggle-math-hover-btn',
-        attributes: { title: 'Toggle Math Hover Preview (Ctrl+Shift+M)' }
+        attributes: { title: 'Toggle Math Hover Preview (Ctrl+Shift+M)' },
+        styles: {
+          backgroundColor: config.styles.colors.background,
+          color: config.styles.colors.foreground,
+          borderColor: config.styles.colors.border
+        }
       }
     );
 
@@ -232,7 +275,12 @@ export class DualLatexEditor {
       () => this.toggleToolbar(),
       {
         className: 'toggle-toolbar-btn',
-        attributes: { title: 'Toggle Toolbar (Ctrl+Shift+T)' }
+        attributes: { title: 'Toggle Toolbar (Ctrl+Shift+T)' },
+        styles: {
+          backgroundColor: config.styles.colors.background,
+          color: config.styles.colors.foreground,
+          borderColor: config.styles.colors.border
+        }
       }
     );
 
@@ -246,12 +294,14 @@ export class DualLatexEditor {
   }
 
   private createToolbarContainer(): HTMLElement {
+    const config = this.configService.get();
     return this.domUtils.createElement('div', {
       className: 'unified-toolbar-container',
       styles: {
         display: 'none',
-        borderBottom: '1px solid #ddd',
-        flexShrink: '0'
+        borderBottom: `1px solid ${config.styles.colors.border}`,
+        flexShrink: '0',
+        backgroundColor: config.styles.colors.surface
       }
     });
   }
@@ -319,6 +369,7 @@ export class DualLatexEditor {
 
     this.visualEditor = new VisualCodeMirrorEditor(this.cmEditor, {
       showCommands: config.showCommands,
+      config: config,
       onModeChange: (mode) => {
         this.currentMode = mode;
         this.updateToolbar();
@@ -343,7 +394,8 @@ export class DualLatexEditor {
     });
 
     this.unifiedToolbar = new Toolbar(this.toolbarContainer, this.cmEditor, {
-      currentMode: this.currentMode
+      currentMode: this.currentMode,
+      theme: config.theme
     });
 
     // Initialize toolbar button states
@@ -391,6 +443,11 @@ export class DualLatexEditor {
     this.updateToolbarVisibility();
   }
 
+  public setTheme(theme: 'light' | 'dark'): void {
+    this.configService.setTheme(theme);
+    this.options.theme = theme;
+  }
+
   public setMode(mode: 'source' | 'visual'): void {
     if (mode === this.currentMode) return;
 
@@ -433,6 +490,94 @@ export class DualLatexEditor {
         `Failed to set mode to ${mode}`,
         { mode, currentMode: this.currentMode, error }
       );
+    }
+  }
+
+  private applyTheme(): void {
+    const config = this.configService.get();
+    const wrapper = this.container.querySelector('.latex-dual-editor') as HTMLElement;
+    
+    if (wrapper) {
+      // Update theme class
+      wrapper.classList.remove('theme-light', 'theme-dark');
+      wrapper.classList.add(`theme-${config.theme}`);
+      
+      // Update wrapper styles
+      wrapper.style.backgroundColor = config.styles.colors.background;
+      wrapper.style.color = config.styles.colors.foreground;
+      wrapper.style.borderColor = config.styles.colors.border;
+      
+      // Update CSS custom properties for consistent theming
+      this.setCSSProperties(config);
+      this.updateMathLiveTheme(config);
+      
+      // Update toolbar styles
+      this.updateToolbarStyles(config);
+    }
+  }
+
+  private setCSSProperties(config: LatexEditorConfig): void {
+    const root = document.documentElement;
+    const colors = config.styles.colors;
+    
+    root.style.setProperty('--latex-bg', colors.background);
+    root.style.setProperty('--latex-fg', colors.foreground);
+    root.style.setProperty('--latex-surface', colors.surface);
+    root.style.setProperty('--latex-border', colors.border);
+    root.style.setProperty('--latex-primary', colors.primary);
+    root.style.setProperty('--latex-secondary', colors.secondary);
+    root.style.setProperty('--latex-success', colors.success);
+    root.style.setProperty('--latex-warning', colors.warning);
+    root.style.setProperty('--latex-danger', colors.danger);
+    root.style.setProperty('--latex-math', colors.math);
+    root.style.setProperty('--latex-environment', colors.environment);
+    root.style.setProperty('--latex-command', colors.command);
+    root.style.setProperty('--latex-table', colors.table);
+  }
+
+  private updateMathLiveTheme(config: LatexEditorConfig): void {
+    const root = document.documentElement;
+    const colors = config.styles.colors;
+    const isDark = config.theme === 'dark';
+    
+    // Set MathLive CSS custom properties
+    root.style.setProperty('--ml-color', colors.foreground);
+    root.style.setProperty('--ml-background', colors.background);
+    root.style.setProperty('--ml-accent', colors.primary);
+    
+    if (isDark) {
+      root.style.setProperty('--ml-highlight', '#4da6ff');
+      root.style.setProperty('--ml-primary', '#4da6ff');
+      root.style.setProperty('--ml-text', '#f9fafb');
+      root.style.setProperty('--ml-surface', '#374151');
+    } else {
+      root.style.setProperty('--ml-highlight', '#007acc');
+      root.style.setProperty('--ml-primary', '#007acc');
+      root.style.setProperty('--ml-text', '#000000');
+      root.style.setProperty('--ml-surface', '#f8f9fa');
+    }
+  }
+
+  private updateToolbarStyles(config: LatexEditorConfig): void {
+    if (this.toolbar) {
+      this.toolbar.style.backgroundColor = config.styles.colors.surface;
+      this.toolbar.style.borderBottomColor = config.styles.colors.border;
+      
+      // Update all toolbar buttons
+      const buttons = this.toolbar.querySelectorAll('.mode-btn, .toggle-cmd-btn, .toggle-math-hover-btn, .toggle-toolbar-btn');
+      buttons.forEach((button: Element) => {
+        const btn = button as HTMLElement;
+        if (!btn.classList.contains('active')) {
+          btn.style.backgroundColor = config.styles.colors.background;
+          btn.style.color = config.styles.colors.foreground;
+          btn.style.borderColor = config.styles.colors.border;
+        }
+      });
+    }
+
+    if (this.toolbarContainer) {
+      this.toolbarContainer.style.backgroundColor = config.styles.colors.surface;
+      this.toolbarContainer.style.borderBottomColor = config.styles.colors.border;
     }
   }
 
@@ -491,6 +636,17 @@ export class DualLatexEditor {
     if (cmdBtn) {
       cmdBtn.textContent = showCommands ? 'Hide LaTeX' : 'Show LaTeX';
       cmdBtn.classList.toggle('active', showCommands);
+      
+      const config = this.configService.get();
+      if (showCommands) {
+        cmdBtn.style.backgroundColor = config.styles.colors.success;
+        cmdBtn.style.borderColor = config.styles.colors.success;
+        cmdBtn.style.color = 'white';
+      } else {
+        cmdBtn.style.backgroundColor = config.styles.colors.background;
+        cmdBtn.style.borderColor = config.styles.colors.border;
+        cmdBtn.style.color = config.styles.colors.foreground;
+      }
     }
   }
 
@@ -498,6 +654,7 @@ export class DualLatexEditor {
     const mathHoverBtn = this.toolbar.querySelector('.toggle-math-hover-btn') as HTMLButtonElement;
     if (!mathHoverBtn || !this.mathHoverManager) return;
 
+    const config = this.configService.get();
     const isEnabled = this.options.enableMathHover ?? true;
     const isActive = this.mathHoverManager.getEnabled();
     
@@ -508,8 +665,19 @@ export class DualLatexEditor {
     mathHoverBtn.disabled = this.currentMode === 'visual';
     if (this.currentMode === 'visual') {
       mathHoverBtn.title = 'Math Hover (only available in source mode)';
+      mathHoverBtn.style.backgroundColor = config.styles.colors.secondary;
+      mathHoverBtn.style.color = 'white';
     } else {
       mathHoverBtn.title = 'Toggle Math Hover Preview (Ctrl+Shift+M)';
+      if (isEnabled) {
+        mathHoverBtn.style.backgroundColor = config.styles.colors.success;
+        mathHoverBtn.style.borderColor = config.styles.colors.success;
+        mathHoverBtn.style.color = 'white';
+      } else {
+        mathHoverBtn.style.backgroundColor = config.styles.colors.background;
+        mathHoverBtn.style.borderColor = config.styles.colors.border;
+        mathHoverBtn.style.color = config.styles.colors.foreground;
+      }
     }
   }
 
@@ -520,15 +688,38 @@ export class DualLatexEditor {
     if (toolbarBtn) {
       toolbarBtn.textContent = config.showToolbar ? 'Hide Toolbar' : 'Show Toolbar';
       toolbarBtn.classList.toggle('active', !config.showToolbar);
+      
+      if (!config.showToolbar) {
+        toolbarBtn.style.backgroundColor = config.styles.colors.warning;
+        toolbarBtn.style.borderColor = config.styles.colors.warning;
+        toolbarBtn.style.color = 'white';
+      } else {
+        toolbarBtn.style.backgroundColor = config.styles.colors.background;
+        toolbarBtn.style.borderColor = config.styles.colors.border;
+        toolbarBtn.style.color = config.styles.colors.foreground;
+      }
     }
 
     this.toolbarContainer.style.display = config.showToolbar ? 'block' : 'none';
   }
 
   private updateToolbar(): void {
+    const config = this.configService.get();
+    
     this.toolbar.querySelectorAll('.mode-btn').forEach((btn: Element) => {
       const button = btn as HTMLButtonElement;
-      button.classList.toggle('active', button.dataset.mode === this.currentMode);
+      const isActive = button.dataset.mode === this.currentMode;
+      button.classList.toggle('active', isActive);
+      
+      if (isActive) {
+        button.style.backgroundColor = config.styles.colors.primary;
+        button.style.borderColor = config.styles.colors.primary;
+        button.style.color = 'white';
+      } else {
+        button.style.backgroundColor = config.styles.colors.background;
+        button.style.borderColor = config.styles.colors.border;
+        button.style.color = config.styles.colors.foreground;
+      }
     });
 
     // Update math hover button state when mode changes

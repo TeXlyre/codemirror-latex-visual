@@ -1,3 +1,4 @@
+// src/visual-codemirror/widgets/math-widget.ts
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
 import { createEditableMath } from '../../math-field-utils';
@@ -48,7 +49,7 @@ export class MathWidget extends BaseLatexWidget {
     button.style.right = this.isDisplay ? '6px' : '-6px';
     button.style.width = this.isDisplay ? '18px' : '14px';
     button.style.height = this.isDisplay ? '18px' : '14px';
-    button.style.background = '#007acc';
+    button.style.background = 'var(--latex-primary)';
     button.style.color = 'white';
     button.style.fontSize = this.isDisplay ? '10px' : '8px';
     button.style.border = 'none';
@@ -89,13 +90,14 @@ export class MathWidget extends BaseLatexWidget {
     const wrapper = document.createElement('div');
     wrapper.className = 'latex-math-command-wrapper';
     wrapper.style.fontFamily = 'monospace';
-    wrapper.style.background = 'rgba(111, 66, 193, 0.1)';
-    wrapper.style.border = '1px solid rgba(111, 66, 193, 0.3)';
+    wrapper.style.background = 'var(--latex-surface)';
+    wrapper.style.border = '1px solid var(--latex-math)';
     wrapper.style.borderRadius = '4px';
     wrapper.style.padding = '8px';
     wrapper.style.margin = '0';
     wrapper.style.display = this.isDisplay ? 'block' : 'inline-block';
     wrapper.style.lineHeight = '1.4';
+    wrapper.style.color = 'var(--latex-fg)';
 
     if (this.isDisplay) {
       this.preserveLineHeight(wrapper, this.token.latex);
@@ -105,7 +107,7 @@ export class MathWidget extends BaseLatexWidget {
 
     const prefix = document.createElement('span');
     prefix.textContent = delimiter;
-    prefix.style.color = '#6f42c1';
+    prefix.style.color = 'var(--latex-math)';
     prefix.style.fontWeight = '600';
 
     const mathInput = document.createElement('span');
@@ -115,13 +117,15 @@ export class MathWidget extends BaseLatexWidget {
     mathInput.style.outline = 'none';
     mathInput.style.fontFamily = 'monospace';
     mathInput.style.minWidth = '3em';
-    mathInput.style.background = 'rgba(255, 255, 255, 0.8)';
+    mathInput.style.background = 'var(--latex-bg)';
+    mathInput.style.color = 'var(--latex-fg)';
     mathInput.style.padding = '2px 4px';
     mathInput.style.borderRadius = '2px';
+    mathInput.style.border = '1px solid var(--latex-border)';
 
     const suffix = document.createElement('span');
     suffix.textContent = delimiter;
-    suffix.style.color = '#6f42c1';
+    suffix.style.color = 'var(--latex-math)';
     suffix.style.fontWeight = '600';
 
     mathInput.addEventListener('blur', () => {
@@ -180,8 +184,8 @@ export class MathWidget extends BaseLatexWidget {
     const editorWrapper = document.createElement('div');
     editorWrapper.className = 'math-inline-editor';
     editorWrapper.style.fontFamily = 'monospace';
-    editorWrapper.style.background = 'rgba(111, 66, 193, 0.1)';
-    editorWrapper.style.border = '1px solid rgba(111, 66, 193, 0.3)';
+    editorWrapper.style.background = 'var(--latex-surface)';
+    editorWrapper.style.border = '1px solid var(--latex-math)';
     editorWrapper.style.borderRadius = '4px';
     editorWrapper.style.padding = '6px';
     editorWrapper.style.display = this.isDisplay ? 'block' : 'inline-block';
@@ -189,7 +193,7 @@ export class MathWidget extends BaseLatexWidget {
 
     const prefixSpan = document.createElement('span');
     prefixSpan.textContent = delimiter;
-    prefixSpan.style.color = '#6f42c1';
+    prefixSpan.style.color = 'var(--latex-math)';
     prefixSpan.style.fontWeight = 'bold';
 
     const inputField = document.createElement('input');
@@ -202,12 +206,12 @@ export class MathWidget extends BaseLatexWidget {
     inputField.style.margin = '0 4px';
     inputField.style.minWidth = '30px';
     inputField.style.width = `${Math.max(this.token.content.length * 8, 60)}px`;
-    inputField.style.color = '#000';
+    inputField.style.color = 'var(--latex-fg)';
     inputField.style.fontSize = '14px';
 
     const suffixSpan = document.createElement('span');
     suffixSpan.textContent = delimiter;
-    suffixSpan.style.color = '#6f42c1';
+    suffixSpan.style.color = 'var(--latex-math)';
     suffixSpan.style.fontWeight = 'bold';
 
     editorWrapper.appendChild(prefixSpan);
@@ -288,8 +292,9 @@ export class MathWidget extends BaseLatexWidget {
     overlay.style.top = `${rect.top - 10}px`;
     overlay.style.minWidth = `${Math.max(rect.width + 20, 300)}px`;
     overlay.style.minHeight = '100px';
-    overlay.style.background = 'white';
-    overlay.style.border = '2px solid #007acc';
+    overlay.style.background = 'var(--latex-bg)';
+    overlay.style.color = 'var(--latex-fg)';
+    overlay.style.border = '2px solid var(--latex-primary)';
     overlay.style.borderRadius = '8px';
     overlay.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
     overlay.style.padding = '15px';
@@ -309,7 +314,7 @@ export class MathWidget extends BaseLatexWidget {
     cancelButton.style.padding = '8px 16px';
     cancelButton.style.border = 'none';
     cancelButton.style.borderRadius = '4px';
-    cancelButton.style.background = '#6c757d';
+    cancelButton.style.background = 'var(--latex-secondary)';
     cancelButton.style.color = 'white';
     cancelButton.style.cursor = 'pointer';
 
@@ -318,7 +323,7 @@ export class MathWidget extends BaseLatexWidget {
     saveButton.style.padding = '8px 16px';
     saveButton.style.border = 'none';
     saveButton.style.borderRadius = '4px';
-    saveButton.style.background = '#007acc';
+    saveButton.style.background = 'var(--latex-primary)';
     saveButton.style.color = 'white';
     saveButton.style.cursor = 'pointer';
 

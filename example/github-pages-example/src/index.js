@@ -11,7 +11,7 @@ import './styles.css';
 import 'katex/dist/katex.min.css';
 
 const initialLatex = `\\section{Introduction}
-This is a sample document demonstrating the visual LaTeX editor with math hover support.
+This is a sample document demonstrating the visual LaTeX editor with math hover support and theming.
 
 \\subsection{Mathematical Expressions}
 Here is an inline formula: $E = mc^2$, and here is another one: $\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}$.
@@ -37,13 +37,52 @@ The proof follows from the identity: $\\zeta(2) = \\sum_{n=1}^{\\infty} \\frac{1
 \\section{Text Formatting}
 This section demonstrates various \\textbf{formatting} and \\emph{emphasis} commands.
 
-Try hovering over any math expression when in source mode!`;
+Try hovering over any math expression when in source mode! Also try switching between light and dark themes.`;
+
+let dualEditor; // Global reference for control functions
+let currentTheme = 'light'; // Track current theme
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Detect system theme preference
+  detectSystemTheme();
+  
   setupSideBySideDemo();
   setupDualEditorDemo();
   setupMathHoverControls();
+  setupThemeControls();
 });
+
+function detectSystemTheme() {
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  currentTheme = prefersDark ? 'dark' : 'light';
+  
+  // Apply theme to document body for consistency
+  document.body.classList.toggle('theme-dark', currentTheme === 'dark');
+  
+  // Listen for system theme changes
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      const newTheme = e.matches ? 'dark' : 'light';
+      setGlobalTheme(newTheme);
+    });
+  }
+}
+
+function setGlobalTheme(theme) {
+  currentTheme = theme;
+  document.body.classList.toggle('theme-dark', theme === 'dark');
+  
+  // Update dual editor theme if it exists
+  if (dualEditor) {
+    dualEditor.setTheme(theme);
+  }
+  
+  // Update theme controls
+  updateThemeControls();
+  
+  // Update notification colors based on theme
+  updateNotificationTheme();
+}
 
 function setupSideBySideDemo() {
   const cmEditorSource = new EditorView({
@@ -73,7 +112,10 @@ function setupSideBySideDemo() {
   });
 
   const visualEditor = new VisualCodeMirrorEditor(cmEditorVisual, {
-    showCommands: false
+    showCommands: false,
+    config: {
+      theme: currentTheme
+    }
   });
 
   visualEditor.setVisualMode(true);
@@ -129,8 +171,6 @@ function setupSideBySideDemo() {
   })(cmEditorVisual.dispatch.bind(cmEditorVisual));
 }
 
-let dualEditor; // Global reference for control functions
-
 function setupDualEditorDemo() {
   const cmEditor = new EditorView({
     state: EditorState.create({
@@ -148,20 +188,16 @@ function setupDualEditorDemo() {
     document.getElementById('dual-editor'),
     cmEditor,
     {
+      theme: currentTheme,
       initialMode: 'source',
       showCommands: false,
       showToolbar: true,
-      enableMathHover: true, // Enable math hover by default
+      enableMathHover: true,
       onModeChange: (mode) => {
         console.log('Mode changed to:', mode);
         
-        // Update UI indicators
         updateModeIndicators(mode);
-        
-        // Update math hover status display
         updateMathHoverStatus();
-        
-        // Show/hide math hover specific controls
         updateMathHoverControlsVisibility(mode);
       }
     }
@@ -174,11 +210,118 @@ function setupDualEditorDemo() {
 }
 
 function setupMathHoverControls() {
-  // Create math hover control panel
   createMathHoverControlPanel();
-  
-  // Add event listeners for the control buttons
   setupControlEventListeners();
+}
+
+function setupThemeControls() {
+  createThemeControlPanel();
+  setupThemeEventListeners();
+}
+
+function createThemeControlPanel() {
+  const themePanel = document.createElement('div');
+  themePanel.id = 'theme-controls';
+  themePanel.className = 'theme-controls';
+  themePanel.innerHTML = `
+    <div class="control-section">
+      <h3>Theme Controls</h3>
+      <div class="control-group">
+        <button id="toggle-theme-btn" class="control-btn">🌙 Switch to Dark</button>
+        <button id="auto-theme-btn" class="control-btn">🔄 Auto Theme</button>
+        <span id="current-theme-indicator" class="status-indicator">Theme: Light</span>
+      </div>
+      <div class="theme-preview">
+        <div class="theme-sample light-sample">
+          <div class="sample-header">Light Theme</div>
+          <div class="sample-content">
+            <span class="sample-text">Text</span>
+            <span class="sample-math">$x^2$</span>
+            <span class="sample-env">Environment</span>
+          </div>
+        </div>
+        <div class="theme-sample dark-sample">
+          <div class="sample-header">Dark Theme</div>
+          <div class="sample-content">
+            <span class="sample-text">Text</span>
+            <span class="sample-math">$x^2$</span>
+            <span class="sample-env">Environment</span>
+          </div>
+        </div>
+      </div>
+      <div class="control-info">
+        <p><strong>Theme Options:</strong></p>
+        <ul>
+          <li><strong>Toggle:</strong> Switch between light and dark themes manually</li>
+          <li><strong>Auto:</strong> Follow system theme preference</li>
+          <li>Use <kbd>Ctrl+Shift+D</kbd> to quickly toggle themes</li>
+        </ul>
+      </div>
+    </div>
+  `;
+
+  // Insert before math hover controls
+  const mathControls = document.getElementById('math-hover-controls');
+  if (mathControls) {
+    mathControls.parentNode.insertBefore(themePanel, mathControls);
+  } else {
+    const dualEditorContainer = document.getElementById('dual-editor');
+    dualEditorContainer.parentNode.insertBefore(themePanel, dualEditorContainer);
+  }
+
+  updateThemeControls();
+}
+
+function setupThemeEventListeners() {
+  // Theme toggle button
+  document.getElementById('toggle-theme-btn').addEventListener('click', () => {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setGlobalTheme(newTheme);
+    showNotification(`Switched to ${newTheme} theme!`);
+  });
+
+  // Auto theme button
+  document.getElementById('auto-theme-btn').addEventListener('click', () => {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const systemTheme = prefersDark ? 'dark' : 'light';
+    setGlobalTheme(systemTheme);
+    showNotification(`Applied system theme: ${systemTheme}`);
+  });
+
+  // Keyboard shortcut for theme toggle
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      setGlobalTheme(newTheme);
+      showNotification(`Theme toggled to ${newTheme} via keyboard!`);
+    }
+  });
+}
+
+function updateThemeControls() {
+  const themeIndicator = document.getElementById('current-theme-indicator');
+  const toggleBtn = document.getElementById('toggle-theme-btn');
+  
+  if (themeIndicator) {
+    themeIndicator.textContent = `Theme: ${currentTheme.charAt(0).toUpperCase() + currentTheme.slice(1)}`;
+    themeIndicator.className = `status-indicator theme-${currentTheme}`;
+  }
+
+  if (toggleBtn) {
+    const isDark = currentTheme === 'dark';
+    toggleBtn.innerHTML = isDark ? '☀️ Switch to Light' : '🌙 Switch to Dark';
+    toggleBtn.classList.toggle('active', isDark);
+  }
+
+  // Update theme samples
+  const lightSample = document.querySelector('.light-sample');
+  const darkSample = document.querySelector('.dark-sample');
+  
+  if (lightSample && darkSample) {
+    lightSample.classList.toggle('active', currentTheme === 'light');
+    darkSample.classList.toggle('active', currentTheme === 'dark');
+  }
 }
 
 function createMathHoverControlPanel() {
@@ -210,13 +353,11 @@ function createMathHoverControlPanel() {
     </div>
   `;
 
-  // Insert the control panel before the dual editor
   const dualEditorContainer = document.getElementById('dual-editor');
   dualEditorContainer.parentNode.insertBefore(controlPanel, dualEditorContainer);
 }
 
 function setupControlEventListeners() {
-  // Toggle math hover button
   document.getElementById('toggle-math-hover-btn').addEventListener('click', () => {
     if (dualEditor) {
       dualEditor.toggleMathHover();
@@ -224,7 +365,6 @@ function setupControlEventListeners() {
     }
   });
 
-  // Mode switching buttons
   document.getElementById('switch-to-source-btn').addEventListener('click', () => {
     if (dualEditor) {
       dualEditor.setMode('source');
@@ -237,15 +377,12 @@ function setupControlEventListeners() {
     }
   });
 
-  // Add keyboard shortcut info
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M') {
-      // This will be handled by the editor, but we can show a notification
       showNotification('Math hover toggled via keyboard shortcut!');
     }
     
     if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-      // Mode toggle shortcut
       setTimeout(() => {
         updateMathHoverStatus();
       }, 100);
@@ -260,7 +397,6 @@ function updateModeIndicators(mode) {
     modeIndicator.className = `status-indicator mode-${mode}`;
   }
 
-  // Update button states
   const sourceBtn = document.getElementById('switch-to-source-btn');
   const visualBtn = document.getElementById('switch-to-visual-btn');
   
@@ -276,7 +412,7 @@ function updateMathHoverStatus() {
   
   if (dualEditor && statusIndicator && toggleBtn) {
     const isEnabled = dualEditor.isMathHoverEnabled();
-    const currentMode = dualEditor.currentMode || 'source'; // Fallback
+    const currentMode = dualEditor.currentMode || 'source';
     
     if (currentMode === 'visual') {
       statusIndicator.textContent = 'Status: Disabled (Visual Mode)';
@@ -305,20 +441,29 @@ function updateMathHoverControlsVisibility(mode) {
   }
 }
 
+function updateNotificationTheme() {
+  // This function ensures notifications follow the current theme
+  // The actual styling is handled in the showNotification function
+}
+
 function showNotification(message) {
-  // Create and show a temporary notification
+  const isDark = currentTheme === 'dark';
+  const bgColor = isDark ? '#374151' : '#007acc';
+  const textColor = isDark ? '#f9fafb' : 'white';
+  const shadowOpacity = isDark ? '0.4' : '0.2';
+
   const notification = document.createElement('div');
-  notification.className = 'notification';
+  notification.className = `notification theme-${currentTheme}`;
   notification.textContent = message;
   notification.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
-    background: #007acc;
-    color: white;
+    background: ${bgColor};
+    color: ${textColor};
     padding: 12px 20px;
     border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, ${shadowOpacity});
     z-index: 10001;
     font-size: 14px;
     max-width: 300px;
@@ -329,23 +474,23 @@ function showNotification(message) {
   
   document.body.appendChild(notification);
   
-  // Animate in
   requestAnimationFrame(() => {
     notification.style.opacity = '1';
     notification.style.transform = 'translateY(0)';
   });
   
-  // Remove after 3 seconds
   setTimeout(() => {
     notification.style.opacity = '0';
     notification.style.transform = 'translateY(-10px)';
     setTimeout(() => {
-      document.body.removeChild(notification);
+      if (notification.parentNode) {
+        document.body.removeChild(notification);
+      }
     }, 300);
   }, 3000);
 }
 
-// Add some demo functionality for testing
+// Enhanced demo functionality with theme controls
 window.demoFunctions = {
   toggleMathHover: () => {
     if (dualEditor) {
@@ -369,6 +514,28 @@ window.demoFunctions = {
     }
   },
   
+  toggleTheme: () => {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setGlobalTheme(newTheme);
+    showNotification(`Theme toggled to ${newTheme} programmatically!`);
+  },
+  
+  setTheme: (theme) => {
+    if (theme === 'light' || theme === 'dark') {
+      setGlobalTheme(theme);
+      showNotification(`Theme set to ${theme}!`);
+    } else {
+      console.error('Invalid theme. Use "light" or "dark".');
+    }
+  },
+  
+  autoTheme: () => {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const systemTheme = prefersDark ? 'dark' : 'light';
+    setGlobalTheme(systemTheme);
+    showNotification(`Applied system theme: ${systemTheme}`);
+  },
+  
   checkMathHoverStatus: () => {
     if (dualEditor) {
       const isEnabled = dualEditor.isMathHoverEnabled();
@@ -376,18 +543,31 @@ window.demoFunctions = {
       return isEnabled;
     }
     return false;
+  },
+  
+  getCurrentTheme: () => {
+    showNotification(`Current theme: ${currentTheme}`);
+    return currentTheme;
   }
 };
 
-// Console helper
-console.log('Math Hover Demo Functions Available:');
+// Enhanced console helper
+console.log('Enhanced Demo Functions Available:');
+console.log('Math Hover Controls:');
 console.log('- window.demoFunctions.toggleMathHover()');
 console.log('- window.demoFunctions.switchToSource()');
 console.log('- window.demoFunctions.switchToVisual()');
 console.log('- window.demoFunctions.checkMathHoverStatus()');
+console.log('');
+console.log('Theme Controls:');
+console.log('- window.demoFunctions.toggleTheme()');
+console.log('- window.demoFunctions.setTheme("light" | "dark")');
+console.log('- window.demoFunctions.autoTheme()');
+console.log('- window.demoFunctions.getCurrentTheme()');
 console.log('');
 console.log('Keyboard Shortcuts:');
 console.log('- Ctrl+E / Cmd+E: Toggle source/visual mode');
 console.log('- Ctrl+Shift+M / Cmd+Shift+M: Toggle math hover');
 console.log('- Ctrl+Shift+C / Cmd+Shift+C: Toggle command visibility');
 console.log('- Ctrl+Shift+T / Cmd+Shift+T: Toggle toolbar');
+console.log('- Ctrl+Shift+D / Cmd+Shift+D: Toggle theme');
