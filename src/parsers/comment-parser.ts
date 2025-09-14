@@ -1,4 +1,4 @@
-// src/parsers/comment-parser.ts (Updated for Phase 2)
+// src/parsers/comment-parser.ts
 import { BaseLatexParser, LatexToken } from './base-parser';
 
 export class CommentParser extends BaseLatexParser {

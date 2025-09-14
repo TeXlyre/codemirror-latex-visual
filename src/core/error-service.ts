@@ -1,4 +1,4 @@
-// src/core/error-service.ts (Updated for Phase 2)
+// src/core/error-service.ts
 export enum ErrorSeverity {
   INFO = 'info',
   WARN = 'warn',

@@ -1,42 +1,59 @@
+// src/visual-codemirror/widgets/environment-widget.ts
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
 import { NestedContentRenderer } from '../nested-content-renderer';
+
+type Pair = { from: number; to: number; contentStart: number };
 
 export class EnvironmentWidget extends BaseLatexWidget {
   private contentDiv?: HTMLElement;
   private isEditing: boolean = false;
   private currentEnvName: string;
   private currentContent: string;
+  private isNested: boolean = false;
+  private parentWidget?: HTMLElement;
+  private pairIndex?: number;
 
   constructor(token: any, showCommands: boolean = false) {
     super(token, showCommands);
     this.currentEnvName = token.name || '';
     this.currentContent = token.content || '';
+    this.isNested = this.detectIfNested();
+  }
+
+  private detectIfNested(): boolean {
+    const latex = this.token.latex || '';
+    const envName = this.currentEnvName;
+    const doc = latex;
+    const beginPattern = `\\begin{${envName}}`;
+    let beginCount = 0;
+    let pos = 0;
+    while ((pos = doc.indexOf(beginPattern, pos)) !== -1) {
+      beginCount++;
+      pos += beginPattern.length;
+    }
+    return beginCount > 1;
   }
 
   toDOM(view: EditorView): HTMLElement {
     if (this.showCommands) {
       return this.createCommandView(view);
     }
-
+    this.pairIndex = this.computePairIndex(view);
+    (this.token as any)._pairIndex = this.pairIndex;
     const wrapper = document.createElement('div');
     wrapper.className = `latex-visual-environment latex-env-${this.currentEnvName}`;
     wrapper.style.margin = '0';
     wrapper.style.padding = '10px';
     wrapper.style.borderRadius = '4px';
     wrapper.style.lineHeight = '1.4';
-
     this.preserveLineHeight(wrapper, this.token.latex);
-
     const header = this.createHeader();
     this.contentDiv = this.createContentDiv(view);
-
     this.applyEnvironmentStyles(wrapper, header);
     this.setupHeaderEditing(header, wrapper, view);
-
     wrapper.appendChild(header);
     wrapper.appendChild(this.contentDiv);
-
     return wrapper;
   }
 
@@ -53,19 +70,16 @@ export class EnvironmentWidget extends BaseLatexWidget {
     header.style.borderRadius = '3px';
     header.style.transition = 'background-color 0.2s';
     header.title = 'Click to edit environment';
-
     header.addEventListener('mouseenter', () => {
       if (!this.isEditing) {
         header.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
       }
     });
-
     header.addEventListener('mouseleave', () => {
       if (!this.isEditing) {
         header.style.backgroundColor = '';
       }
     });
-
     return header;
   }
 
@@ -73,7 +87,6 @@ export class EnvironmentWidget extends BaseLatexWidget {
     const contentDiv = document.createElement('div');
     contentDiv.className = 'env-content';
     contentDiv.style.lineHeight = '1.4';
-
     NestedContentRenderer.setupEditableNestedContent(
       contentDiv,
       this.currentContent,
@@ -81,7 +94,6 @@ export class EnvironmentWidget extends BaseLatexWidget {
       (newContent) => this.updateEnvironmentContent(view, newContent),
       this.showCommands
     );
-
     return contentDiv;
   }
 
@@ -95,22 +107,18 @@ export class EnvironmentWidget extends BaseLatexWidget {
     wrapper.style.borderRadius = '4px';
     wrapper.style.fontFamily = 'monospace';
     wrapper.style.lineHeight = '1.4';
-
     this.preserveLineHeight(wrapper, this.token.latex);
-
     const beginDiv = document.createElement('div');
     beginDiv.className = 'env-begin';
     beginDiv.textContent = `\\begin{${this.currentEnvName}}`;
     beginDiv.style.color = '#28a745';
     beginDiv.style.fontWeight = '600';
     beginDiv.style.margin = '0 0 5px 0';
-
     const contentDiv = document.createElement('div');
     contentDiv.className = 'env-content';
     contentDiv.style.margin = '5px 0';
     contentDiv.style.paddingLeft = '20px';
     contentDiv.style.borderLeft = '2px solid rgba(40, 167, 69, 0.3)';
-
     NestedContentRenderer.setupEditableNestedContent(
       contentDiv,
       this.currentContent,
@@ -118,18 +126,15 @@ export class EnvironmentWidget extends BaseLatexWidget {
       (newContent) => this.updateEnvironmentContent(view, newContent),
       this.showCommands
     );
-
     const endDiv = document.createElement('div');
     endDiv.className = 'env-end';
     endDiv.textContent = `\\end{${this.currentEnvName}}`;
     endDiv.style.color = '#28a745';
     endDiv.style.fontWeight = '600';
     endDiv.style.margin = '5px 0 0 0';
-
     wrapper.appendChild(beginDiv);
     wrapper.appendChild(contentDiv);
     wrapper.appendChild(endDiv);
-
     return wrapper;
   }
 
@@ -144,18 +149,12 @@ export class EnvironmentWidget extends BaseLatexWidget {
   private startHeaderEditing(header: HTMLElement, wrapper: HTMLElement, view: EditorView) {
     if (this.isEditing) return;
     this.isEditing = true;
-
-    // Hide the normal environment display
     header.style.display = 'none';
     if (this.contentDiv) {
       this.contentDiv.style.display = 'none';
     }
-
-    // Create the editing interface
     const editContainer = this.createEditingInterface(view);
     wrapper.appendChild(editContainer);
-
-    // Focus the environment name input
     setTimeout(() => {
       const nameInput = editContainer.querySelector('.env-name-input') as HTMLInputElement;
       if (nameInput) {
@@ -163,8 +162,6 @@ export class EnvironmentWidget extends BaseLatexWidget {
         nameInput.select();
       }
     }, 10);
-
-    // Setup save/cancel handlers
     this.setupEditingHandlers(editContainer, header, wrapper, view);
   }
 
@@ -177,20 +174,16 @@ export class EnvironmentWidget extends BaseLatexWidget {
     container.style.borderRadius = '4px';
     container.style.padding = '12px';
     container.style.position = 'relative';
-
-    // Begin line
     const beginLine = document.createElement('div');
     beginLine.style.marginBottom = '10px';
     beginLine.style.display = 'flex';
     beginLine.style.alignItems = 'center';
     beginLine.style.flexWrap = 'wrap';
-
     const beginPrefix = document.createElement('span');
     beginPrefix.textContent = '\\begin{';
     beginPrefix.style.color = '#28a745';
     beginPrefix.style.fontWeight = '600';
     beginPrefix.style.marginRight = '2px';
-
     const nameInput = document.createElement('input');
     nameInput.className = 'env-name-input';
     nameInput.type = 'text';
@@ -205,17 +198,13 @@ export class EnvironmentWidget extends BaseLatexWidget {
     nameInput.style.color = '#28a745';
     nameInput.style.minWidth = '100px';
     nameInput.style.marginRight = '2px';
-
     const beginSuffix = document.createElement('span');
     beginSuffix.textContent = '}';
     beginSuffix.style.color = '#28a745';
     beginSuffix.style.fontWeight = '600';
-
     beginLine.appendChild(beginPrefix);
     beginLine.appendChild(nameInput);
     beginLine.appendChild(beginSuffix);
-
-    // Content area
     const contentArea = document.createElement('div');
     contentArea.className = 'env-content-editing';
     contentArea.contentEditable = 'true';
@@ -229,59 +218,43 @@ export class EnvironmentWidget extends BaseLatexWidget {
     contentArea.style.fontFamily = 'inherit';
     contentArea.style.lineHeight = '1.4';
     contentArea.style.whiteSpace = 'pre-wrap';
-
-    // Render current content
     NestedContentRenderer.renderNestedContent(contentArea, this.currentContent, view, this.showCommands);
-
-    // End line
     const endLine = document.createElement('div');
     endLine.style.display = 'flex';
     endLine.style.alignItems = 'center';
-
     const endPrefix = document.createElement('span');
     endPrefix.textContent = '\\end{';
     endPrefix.style.color = '#28a745';
     endPrefix.style.fontWeight = '600';
-
     const endName = document.createElement('span');
     endName.className = 'env-end-name';
     endName.textContent = this.currentEnvName;
     endName.style.color = '#28a745';
     endName.style.fontWeight = '600';
-
     const endSuffix = document.createElement('span');
     endSuffix.textContent = '}';
     endSuffix.style.color = '#28a745';
     endSuffix.style.fontWeight = '600';
-
     endLine.appendChild(endPrefix);
     endLine.appendChild(endName);
     endLine.appendChild(endSuffix);
-
-    // Action buttons
     const buttonContainer = document.createElement('div');
     buttonContainer.style.position = 'absolute';
     buttonContainer.style.top = '8px';
     buttonContainer.style.right = '8px';
     buttonContainer.style.display = 'flex';
     buttonContainer.style.gap = '6px';
-
     const saveBtn = this.createActionButton('✓', '#28a745', 'Save changes');
     const cancelBtn = this.createActionButton('×', '#dc3545', 'Cancel editing');
-
     buttonContainer.appendChild(saveBtn);
     buttonContainer.appendChild(cancelBtn);
-
-    // Update end name when begin name changes
     nameInput.addEventListener('input', () => {
       endName.textContent = nameInput.value;
     });
-
     container.appendChild(beginLine);
     container.appendChild(contentArea);
     container.appendChild(endLine);
     container.appendChild(buttonContainer);
-
     return container;
   }
 
@@ -309,35 +282,26 @@ export class EnvironmentWidget extends BaseLatexWidget {
     const contentArea = editContainer.querySelector('.env-content-editing') as HTMLElement;
     const saveBtn = editContainer.querySelector('button[title="Save changes"]') as HTMLButtonElement;
     const cancelBtn = editContainer.querySelector('button[title="Cancel editing"]') as HTMLButtonElement;
-
     const saveChanges = () => {
       const newName = nameInput.value.trim();
       const newContent = NestedContentRenderer.extractContentFromContainer(contentArea);
-
       if (newName && (newName !== this.currentEnvName || newContent !== this.currentContent)) {
         this.updateEnvironment(view, newName, newContent);
         this.updateVisualElements(header, wrapper, newName, newContent, view);
       }
-
       this.finishEditing(editContainer, header);
     };
-
     const cancelChanges = () => {
       this.finishEditing(editContainer, header);
     };
-
-    // Button handlers
     saveBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       saveChanges();
     });
-
     cancelBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       cancelChanges();
     });
-
-    // Keyboard handlers
     nameInput.addEventListener('keydown', (e) => {
       e.stopPropagation();
       if (e.key === 'Enter') {
@@ -351,17 +315,13 @@ export class EnvironmentWidget extends BaseLatexWidget {
         contentArea.focus();
       }
     });
-
     contentArea.addEventListener('keydown', (e) => {
       e.stopPropagation();
       if (e.key === 'Escape') {
         e.preventDefault();
         cancelChanges();
       }
-      // Allow normal text editing in content area
     });
-
-    // Prevent event propagation
     [nameInput, contentArea, saveBtn, cancelBtn].forEach(element => {
       element.addEventListener('mousedown', (e) => e.stopPropagation());
       element.addEventListener('click', (e) => e.stopPropagation());
@@ -370,65 +330,188 @@ export class EnvironmentWidget extends BaseLatexWidget {
 
   private updateEnvironment(view: EditorView, newName: string, newContent: string) {
     const newLatex = `\\begin{${newName}}\n${newContent.trim()}\n\\end{${newName}}`;
-
-    // Find the current environment position in the document
     const pos = this.findCurrentEnvironmentPosition(view);
     if (pos) {
-      // Update the document
-      view.dispatch({
-        changes: { from: pos.from, to: pos.to, insert: newLatex }
-      });
-
-      // Update our internal state
-      this.currentEnvName = newName;
-      this.currentContent = newContent.trim();
-      this.token.name = newName;
-      this.token.content = newContent.trim();
-      this.token.latex = newLatex;
+      try {
+        const approxLen = this.token.latex?.length ?? newLatex.length;
+        const foundLen = pos.to - pos.from;
+        if (foundLen > approxLen * 10) return;
+        view.dispatch({
+          changes: { from: pos.from, to: pos.to, insert: newLatex }
+        });
+        this.currentEnvName = newName;
+        this.currentContent = newContent.trim();
+        this.token.name = newName;
+        this.token.content = newContent.trim();
+        this.token.latex = newLatex;
+        this.token.start = pos.from;
+        this.token.end = pos.from + newLatex.length;
+        this.pairIndex = this.computePairIndex(view);
+        (this.token as any)._pairIndex = this.pairIndex;
+      } catch {}
     }
   }
 
   private findCurrentEnvironmentPosition(view: EditorView): { from: number; to: number } | null {
     const doc = view.state.doc.toString();
+    if (typeof this.token.start === 'number' && typeof this.token.end === 'number') {
+      if (this.token.start < doc.length && this.token.end <= doc.length) {
+        const originalLatex = doc.slice(this.token.start, this.token.end);
+        if (originalLatex === this.token.latex) {
+          return { from: this.token.start, to: this.token.end };
+        }
+      }
+    }
+    const exactMatch = this.findExactTokenMatch(doc);
+    if (exactMatch) return exactMatch;
+    return this.findEnvironmentByPairs(doc);
+  }
 
-    // Build current latex string to search for
-    const currentLatex = `\\begin{${this.currentEnvName}}`;
-    let searchPos = doc.indexOf(currentLatex);
+  private findExactTokenMatch(doc: string): { from: number; to: number } | null {
+    const tokenLatex = this.token.latex;
+    if (!tokenLatex) return null;
+    let startPos = 0;
+    while ((startPos = doc.indexOf(tokenLatex, startPos)) !== -1) {
+      const endPos = startPos + tokenLatex.length;
+      return { from: startPos, to: endPos };
+    }
+    return null;
+  }
 
-    // If we can't find exact match, try with the original token
-    if (searchPos === -1) {
-      const originalStart = doc.indexOf(this.token.latex);
-      if (originalStart !== -1) {
-        searchPos = originalStart;
+  private computePairs(doc: string, envName: string): Pair[] {
+    const escaped = envName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const beginRe = new RegExp('\\\\begin\\{' + escaped + '\\}', 'g');
+    const optArgRe = /\[[^\]]*\]/y;
+    const mandArgRe = /\{[^}]*\}/y;
+    const endStr = `\\end{${envName}}`;
+    const endRe = new RegExp(endStr, 'g');
+    const events: Array<{ kind: 'b' | 'e'; index: number; contentStart?: number }> = [];
+    let m: RegExpExecArray | null;
+
+    while ((m = beginRe.exec(doc)) !== null) {
+      let cs = beginRe.lastIndex;
+      optArgRe.lastIndex = cs;
+      const opt = optArgRe.exec(doc);
+      if (opt && opt.index === cs) cs = optArgRe.lastIndex;
+      mandArgRe.lastIndex = cs;
+      const mand = mandArgRe.exec(doc);
+      if (mand && mand.index === cs) cs = mandArgRe.lastIndex;
+      events.push({ kind: 'b', index: m.index, contentStart: cs });
+      if (beginRe.lastIndex === m.index) beginRe.lastIndex++;
+    }
+
+    while ((m = endRe.exec(doc)) !== null) {
+      events.push({ kind: 'e', index: m.index });
+      if (endRe.lastIndex === m.index) endRe.lastIndex++;
+    }
+
+    events.sort((a, b) => a.index - b.index || (a.kind === 'e' ? -1 : 1));
+
+    const stack: Array<{ from: number; contentStart: number }> = [];
+    const pairs: Pair[] = [];
+    for (const ev of events) {
+      if (ev.kind === 'b') {
+        stack.push({ from: ev.index, contentStart: ev.contentStart! });
+      } else {
+        const top = stack.pop();
+        if (top) pairs.push({ from: top.from, to: ev.index + endStr.length, contentStart: top.contentStart });
       }
     }
 
-    if (searchPos === -1) return null;
+    pairs.sort((a, b) => a.from - b.from);
+    return pairs;
+  }
 
-    // Find the complete environment from this position
-    const fromPos = searchPos;
-    const endPattern = `\\end{${this.currentEnvName}}`;
-    const endPos = doc.indexOf(endPattern, fromPos);
+  private computePairIndex(view: EditorView): number | undefined {
+    const doc = view.state.doc.toString();
+    const pairs = this.computePairs(doc, this.currentEnvName);
+    if (!pairs.length) return undefined;
 
-    if (endPos === -1) return null;
+    if (typeof this.token.start === 'number') {
+      for (let i = 0; i < pairs.length; i++) {
+        const p = pairs[i];
+        if (this.token.start >= p.from && this.token.start <= p.to) return i;
+      }
+    }
 
-    return {
-      from: fromPos,
-      to: endPos + endPattern.length
-    };
+    if (this.token.latex) {
+      const pos = doc.indexOf(this.token.latex);
+      if (pos !== -1) {
+        for (let i = 0; i < pairs.length; i++) {
+          const p = pairs[i];
+          if (pos >= p.from && pos <= p.to) return i;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private findEnvironmentByPairs(doc: string): { from: number; to: number } | null {
+    const pairs = this.computePairs(doc, this.currentEnvName);
+    if (!pairs.length) return null;
+
+    const idx = (this.token as any)._pairIndex;
+    if (typeof idx === 'number' && idx >= 0 && idx < pairs.length) {
+      const p = pairs[idx];
+      return { from: p.from, to: p.to };
+    }
+
+    const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+    const wanted = normalize(this.currentContent);
+    for (const p of pairs) {
+      const candidate = doc.slice(p.contentStart, p.to - (`\\end{${this.currentEnvName}}`).length);
+      if (normalize(candidate) === wanted) return { from: p.from, to: p.to };
+    }
+
+    if (typeof this.token.start === 'number') {
+      let best = pairs[0];
+      let bestDist = Math.abs(best.from - this.token.start);
+      for (let i = 1; i < pairs.length; i++) {
+        const d = Math.abs(pairs[i].from - this.token.start);
+        if (d < bestDist) {
+          best = pairs[i];
+          bestDist = d;
+        }
+      }
+      return { from: best.from, to: best.to };
+    }
+
+    return { from: pairs[0].from, to: pairs[0].to };
+  }
+
+  private findMatchingEnd(latex: string, startPos: number, envName: string): number {
+    const beginPattern = `\\begin{${envName}}`;
+    const endPattern = `\\end{${envName}}`;
+    let pos = startPos + beginPattern.length;
+    let depth = 1;
+    let iterations = 0;
+    const maxIterations = 1000;
+    while (pos < latex.length && depth > 0 && iterations < maxIterations) {
+      iterations++;
+      const nextBegin = latex.indexOf(beginPattern, pos);
+      const nextEnd = latex.indexOf(endPattern, pos);
+      if (nextEnd === -1) {
+        return -1;
+      }
+      if (nextBegin !== -1 && nextBegin < nextEnd) {
+        depth++;
+        pos = nextBegin + beginPattern.length;
+      } else {
+        depth--;
+        if (depth === 0) {
+          return nextEnd;
+        }
+        pos = nextEnd + endPattern.length;
+      }
+    }
+    return -1;
   }
 
   private updateVisualElements(header: HTMLElement, wrapper: HTMLElement, newName: string, newContent: string, view: EditorView) {
-    // Update header text
     header.textContent = newName.charAt(0).toUpperCase() + newName.slice(1);
-
-    // Update wrapper class
     wrapper.className = `latex-visual-environment latex-env-${newName}`;
-
-    // Apply new styling
     this.applyEnvironmentStyles(wrapper, header);
-
-    // Update content div
     if (this.contentDiv) {
       this.contentDiv.innerHTML = '';
       NestedContentRenderer.renderNestedContent(this.contentDiv, newContent, view, this.showCommands);
@@ -443,13 +526,9 @@ export class EnvironmentWidget extends BaseLatexWidget {
 
   private finishEditing(editContainer: HTMLElement, header: HTMLElement) {
     this.isEditing = false;
-
-    // Remove editing interface
     if (editContainer.parentNode) {
-      editContainer.parentNode.removeChild(editContainer);
+      (editContainer.parentNode as HTMLElement).removeChild(editContainer);
     }
-
-    // Show normal display
     header.style.display = 'block';
     if (this.contentDiv) {
       this.contentDiv.style.display = 'block';
@@ -458,12 +537,9 @@ export class EnvironmentWidget extends BaseLatexWidget {
 
   private applyEnvironmentStyles(wrapper: HTMLElement, header: HTMLElement) {
     const envName = this.currentEnvName;
-
-    // Reset styles
     wrapper.style.borderLeft = '';
     wrapper.style.background = '';
     header.style.color = '';
-
     switch (envName) {
       case 'theorem':
         wrapper.style.borderLeft = '3px solid #6f42c1';

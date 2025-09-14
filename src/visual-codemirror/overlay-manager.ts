@@ -1,4 +1,4 @@
-// src/visual-codemirror/overlay-manager.ts (Phase 2 Updated)
+// src/visual-codemirror/overlay-manager.ts
 import { EditorState } from '@codemirror/state';
 import { Decoration, DecorationSet } from '@codemirror/view';
 import { ParserService } from '../core/parser-service';

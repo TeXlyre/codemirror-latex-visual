@@ -1,4 +1,4 @@
-// src/parsers/main-parser.ts (Phase 2 Refactored)
+// src/parsers/main-parser.ts
 import { LatexToken, BaseLatexParser } from './base-parser';
 import { CommentParser } from './comment-parser';
 import { MathParser } from './math-parser';

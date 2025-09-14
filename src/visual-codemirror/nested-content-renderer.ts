@@ -1,4 +1,4 @@
-// src/visual-codemirror/nested-content-renderer.ts (Phase 2 Refactored)
+// src/visual-codemirror/nested-content-renderer.ts
 import { EditorView } from '@codemirror/view';
 import { LatexToken } from '../parsers/base-parser';
 import { ParserService } from '../core/parser-service';
@@ -226,6 +226,8 @@ export class NestedContentRenderer {
         element.dataset.latexOriginal = token.latex;
         element.dataset.tokenType = token.type;
         (element as any)._widgetToken = token;
+        element.classList.add('latex-visual-widget');
+        element.setAttribute('contenteditable', 'false');
         fragment.appendChild(element);
       } else {
         this.appendTextWithLineBreaks(fragment, token.latex);

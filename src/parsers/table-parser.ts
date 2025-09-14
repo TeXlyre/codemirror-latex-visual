@@ -1,4 +1,4 @@
-// src/parsers/table-parser.ts (Updated for Phase 2)
+// src/parsers/table-parser.ts
 import { BaseLatexParser, LatexToken } from './base-parser';
 import { ParserService } from '../core/parser-service';
 import { ConfigService } from '../core/config';

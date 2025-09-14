@@ -1,4 +1,4 @@
-// src/parsers/command-parser.ts (Updated for Phase 2)
+// src/parsers/command-parser.ts
 import { BaseLatexParser, LatexToken } from './base-parser';
 import { errorService, ErrorCategory, ErrorSeverity } from '../core/error-service';
 
