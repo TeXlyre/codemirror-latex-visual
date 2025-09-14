@@ -1,4 +1,4 @@
-// src/visual-codemirror/widgets/math-hover-widget.ts - Clean simple implementation
+// src/visual-codemirror/widgets/math-hover-widget.ts
 import { EditorView } from '@codemirror/view';
 import { StateField, StateEffect, Extension } from '@codemirror/state';
 import { createEditableMath } from '../../math-field-utils';
@@ -145,11 +145,14 @@ export class MathHoverManager {
 
     this.widget = document.createElement('div');
     this.widget.dataset.mathContent = math.content;
+    this.widget.className = 'latex-visual-widget latex-math-hover';
+
     this.widget.style.cssText = `
       position: fixed;
       z-index: 10000;
-      background: white;
-      border: 2px solid #007acc;
+      background: var(--latex-bg);
+      color: var(--latex-fg);
+      border: 2px solid var(--latex-primary);
       border-radius: 8px;
       padding: 12px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -160,17 +163,17 @@ export class MathHoverManager {
 
     const mathfield = createEditableMath(math.content, math.isDisplay);
     (mathfield as any).readOnly = true;
-    mathfield.style.pointerEvents = 'none';
 
     const editButton = document.createElement('button');
     editButton.innerHTML = '✏️';
+    editButton.className = 'math-edit-button';
     editButton.style.cssText = `
       position: absolute;
       top: 8px;
       right: 8px;
       width: 24px;
       height: 24px;
-      background: #007acc;
+      background: var(--latex-primary);
       color: white;
       border: none;
       border-radius: 50%;
@@ -215,6 +218,9 @@ export class MathHoverManager {
 
     this.widget.innerHTML = '';
     this.widget.style.cursor = 'auto';
+    this.widget.style.background = 'var(--latex-bg)';
+    this.widget.style.color = 'var(--latex-fg)';
+    this.widget.style.borderColor = 'var(--latex-primary)';
 
     const mathfield = createEditableMath(math.content, math.isDisplay);
     (mathfield as any).readOnly = false;
@@ -225,7 +231,7 @@ export class MathHoverManager {
       display: flex;
       gap: 8px;
       justify-content: flex-end;
-      border-top: 1px solid #eee;
+      border-top: 1px solid var(--latex-border);
       padding-top: 8px;
     `;
 
@@ -235,7 +241,7 @@ export class MathHoverManager {
       padding: 6px 12px;
       border: none;
       border-radius: 4px;
-      background: #6c757d;
+      background: var(--latex-secondary);
       color: white;
       cursor: pointer;
     `;
@@ -246,7 +252,7 @@ export class MathHoverManager {
       padding: 6px 12px;
       border: none;
       border-radius: 4px;
-      background: #007acc;
+      background: var(--latex-primary);
       color: white;
       cursor: pointer;
     `;

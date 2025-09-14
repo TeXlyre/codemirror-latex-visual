@@ -1094,3 +1094,5 @@ math-field.focused {
     transition: none;
   }
 }
+
+.ML__popover, .ML__menu, .ML__keyboard { z-index: 10001; }
