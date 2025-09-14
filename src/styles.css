@@ -1096,3 +1096,66 @@ math-field.focused {
 }
 
 .ML__popover, .ML__menu, .ML__keyboard { z-index: 10001; }
+
+body {
+  /* toolbar */
+  --keyboard-accent-color: var(--latex-primary);
+  --keyboard-toolbar-text: var(--latex-fg);
+  --keyboard-toolbar-text-active: #fff;
+  --keyboard-toolbar-background: var(--latex-surface, var(--latex-bg));
+  --keyboard-toolbar-background-hover: var(--latex-primary);
+  --keyboard-toolbar-background-selected: var(--latex-primary);
+
+  /* keycaps */
+  --keycap-background: var(--latex-surface, var(--latex-bg));
+  --keycap-background-hover: var(--latex-primary);
+  --keycap-background-active: var(--latex-primary);
+  --keycap-background-pressed: var(--latex-primary);
+  --keycap-border: var(--latex-border);
+  --keycap-border-bottom: var(--latex-border);
+  --keycap-text: var(--latex-fg);
+  --keycap-text-hover: #fff;
+  --keycap-text-active: #fff;
+  --keycap-text-pressed: #fff;
+  --keycap-shift-text: var(--latex-fg);
+  --keycap-shift-color: var(--latex-primary);
+
+  /* primary/secondary “special” keys */
+  --keycap-primary-background: var(--latex-primary);
+  --keycap-primary-text: #fff;
+  --keycap-primary-background-hover: var(--latex-primary);
+  --keycap-secondary-background: var(--latex-surface, var(--latex-bg));
+  --keycap-secondary-background-hover: var(--latex-primary);
+  --keycap-secondary-text: var(--latex-fg);
+  --keycap-secondary-border: var(--latex-border);
+  --keycap-secondary-border-bottom: var(--latex-border);
+
+  /* variant popup */
+  --variant-panel-background: var(--latex-bg);
+  --variant-keycap-text: var(--latex-fg);
+  --variant-keycap-text-active: #fff;
+  --variant-keycap-background-active: var(--latex-primary);
+
+  /* borders / separators */
+  --keyboard-border: 1px solid var(--latex-border);
+  --keyboard-horizontal-rule: 1px solid var(--latex-border);
+}
+
+.ML__menu,
+.ML__popover,
+.ML__keyboard {
+  color: var(--latex-fg) !important;
+  border: 1px solid var(--latex-border) !important;
+  border-radius: 6px;
+}
+.ML__keyboard button,
+.ML__menu button {
+  background: var(--latex-surface, var(--latex-bg));
+  color: var(--latex-fg);
+  border: 1px solid var(--latex-border);
+}
+.ML__keyboard button:hover,
+.ML__menu button:hover {
+  background: var(--latex-primary);
+  color: #fff;
+}

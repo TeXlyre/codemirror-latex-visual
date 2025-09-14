@@ -581,3 +581,18 @@ body.theme-dark .editor-panel h3 {
     padding: 15px;
   }
 }
+
+/* mathfield (caret, accents, etc.) */
+math-field {
+  background: var(--latex-bg);
+  color: var(--latex-fg);
+  border: 1px solid var(--latex-border);
+
+  /* MathLive field variables */
+  --primary-color: var(--latex-primary);
+  /* optional: tweak caret/selection hue (0–360) */
+  /* --hue: 220; */
+}
+
+
+
