@@ -2,7 +2,7 @@
 import { EditorView, keymap } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
-import { Toolbar } from './visual-toolbar';
+import { Toolbar } from './toolbar';
 import { ConfigService, DEFAULT_CONFIG, LatexEditorConfig, DARK_THEME_COLORS, LIGHT_THEME_COLORS } from './core/config';
 import { EventService } from './core/event-service';
 import { FocusService } from './core/focus-service';

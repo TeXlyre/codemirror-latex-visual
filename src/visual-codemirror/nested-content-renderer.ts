@@ -342,13 +342,24 @@ export class NestedContentRenderer {
           if (element.tagName === 'BR') {
             result += '\n';
           } else if (element.dataset.latexOriginal) {
+            // Use the exact original LaTeX for this element
             result += element.dataset.latexOriginal;
           } else if (element.classList.contains('latex-visual-widget')) {
             const widgetToken = (element as any)._widgetToken;
             if (widgetToken && widgetToken.latex) {
+              // For nested widgets, use their current latex value
               result += widgetToken.latex;
             } else {
               result += element.textContent || '';
+            }
+          } else if (element.classList.contains('latex-command-wrapper')) {
+            // Extract command wrapper content more carefully
+            const editableSpan = element.querySelector('span[contenteditable="true"]');
+            if (editableSpan && element.dataset.originalLatex) {
+              // If we're currently editing, preserve the structure
+              result += element.dataset.originalLatex;
+            } else {
+              result += this.extractContentFromContainer(element);
             }
           } else {
             result += this.extractContentFromContainer(element);

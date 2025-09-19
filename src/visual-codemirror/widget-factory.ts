@@ -1,3 +1,4 @@
+// src/visual-codemirror/widget-factory.ts
 import { WidgetType } from '@codemirror/view';
 import { LatexToken } from '../parsers/base-parser';
 import { SectionWidget } from './widgets/section-widget';
@@ -13,6 +14,9 @@ export class WidgetFactory {
     if (!this.isCompleteToken(token)) {
       return null;
     }
+
+    // Ensure token has position information for accurate updates
+    this.ensureTokenPositioning(token);
 
     switch (token.type) {
       case 'section':
@@ -35,6 +39,16 @@ export class WidgetFactory {
       default:
         return null;
     }
+  }
+
+  private static ensureTokenPositioning(token: LatexToken): void {
+    // Add a unique identifier to help with tracking
+    if (!token.id) {
+      token.id = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
+    // Store creation timestamp for debugging
+    (token as any)._created = Date.now();
   }
 
   private static isListEnvironment(envName: string): boolean {

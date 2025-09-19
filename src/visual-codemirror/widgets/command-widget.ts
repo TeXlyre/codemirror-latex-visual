@@ -1,6 +1,6 @@
+// src/visual-codemirror/widgets/command-widget.ts
 import { EditorView } from '@codemirror/view';
 import { BaseLatexWidget } from './base-widget';
-import { LatexToken } from '../../parsers/base-parser';
 import { NestedContentRenderer } from '../nested-content-renderer';
 
 export class CommandWidget extends BaseLatexWidget {
@@ -26,6 +26,70 @@ export class CommandWidget extends BaseLatexWidget {
     }
 
     this.token.latex = latex;
+  }
+
+  // Override the base class method to be more surgical
+  protected updateTokenInEditor(view: EditorView, newLatex: string) {
+    // Find the exact position of THIS command token within the document
+    const pos = this.findExactCommandPosition(view);
+    if (pos === null) return;
+
+    const { from, to } = pos;
+
+    // Update token properties first
+    this.token.latex = newLatex;
+    if (newLatex.includes('{') && newLatex.includes('}')) {
+      const contentMatch = newLatex.match(/\{([^}]*)\}$/);
+      if (contentMatch) {
+        this.token.content = contentMatch[1];
+      }
+    }
+
+    // Only update the specific command, not the entire document
+    setTimeout(() => {
+      view.dispatch({
+        changes: { from, to, insert: newLatex }
+      });
+    }, 0);
+  }
+
+  private findExactCommandPosition(view: EditorView): { from: number; to: number } | null {
+    const doc = view.state.doc.toString();
+    const tokenLatex = this.token.latex;
+    
+    if (!tokenLatex) return null;
+
+    // If we have stored position information, try that first
+    if (typeof this.token.start === 'number' && typeof this.token.end === 'number') {
+      if (this.token.start < doc.length && this.token.end <= doc.length) {
+        const actualContent = doc.slice(this.token.start, this.token.end);
+        if (actualContent === tokenLatex) {
+          return { from: this.token.start, to: this.token.end };
+        }
+      }
+    }
+
+    // Look for exact matches of our command
+    let searchStart = 0;
+    while (true) {
+      const index = doc.indexOf(tokenLatex, searchStart);
+      if (index === -1) break;
+
+      // Check if this is a standalone command (not part of a larger string)
+      const before = index > 0 ? doc[index - 1] : ' ';
+      const after = index + tokenLatex.length < doc.length ? doc[index + tokenLatex.length] : ' ';
+      
+      // Commands should be preceded by whitespace, newline, or start of document
+      // and followed by whitespace, newline, or end of document
+      if ((before.match(/\s/) || index === 0) && 
+          (after.match(/\s/) || index + tokenLatex.length === doc.length)) {
+        return { from: index, to: index + tokenLatex.length };
+      }
+      
+      searchStart = index + 1;
+    }
+
+    return null;
   }
 
   toDOM(view: EditorView): HTMLElement {
@@ -60,6 +124,9 @@ export class CommandWidget extends BaseLatexWidget {
     editableSpan.style.background = 'transparent';
     editableSpan.style.minWidth = '3em';
     editableSpan.style.display = 'inline-block';
+
+    // Store original latex for fallback
+    wrapper.dataset.originalLatex = this.token.latex;
 
     editableSpan.addEventListener('blur', () => {
       const newLatex = editableSpan.textContent || '';
@@ -108,6 +175,9 @@ export class CommandWidget extends BaseLatexWidget {
     wrapper.style.cursor = 'text';
     wrapper.tabIndex = 0;
     wrapper.style.outline = 'none';
+
+    // Store original latex for preservation
+    wrapper.dataset.originalLatex = this.token.latex;
 
     const visualSpan = document.createElement('span');
     visualSpan.className = `latex-visual-command ${cmdName}`;
@@ -172,7 +242,6 @@ export class CommandWidget extends BaseLatexWidget {
       }
       this.editableSpan = undefined;
 
-      // Remove focus from wrapper to prevent stuck editing state
       wrapper.blur();
     };
 
@@ -188,11 +257,9 @@ export class CommandWidget extends BaseLatexWidget {
       wrapper.blur();
     };
 
-    // Enhanced blur detection
     let blurTimeout: number;
 
     this.editableSpan.addEventListener('blur', (e) => {
-      // Delay to allow for refocus within the same widget
       blurTimeout = window.setTimeout(() => {
         if (this.isEditing && document.activeElement !== this.editableSpan) {
           finishEditing();
@@ -227,7 +294,6 @@ export class CommandWidget extends BaseLatexWidget {
     this.editableSpan.addEventListener('mousedown', (e) => e.stopPropagation());
     this.editableSpan.addEventListener('click', (e) => e.stopPropagation());
 
-    // Global click handler to detect clicks outside
     const handleGlobalClick = (e: Event) => {
       if (this.isEditing && this.editableSpan && !this.editableSpan.contains(e.target as Node)) {
         finishEditing();
@@ -235,7 +301,6 @@ export class CommandWidget extends BaseLatexWidget {
       }
     };
 
-    // Add global click listener after a short delay
     setTimeout(() => {
       document.addEventListener('click', handleGlobalClick, true);
     }, 100);

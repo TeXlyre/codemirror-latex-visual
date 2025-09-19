@@ -480,34 +480,6 @@ export class EnvironmentWidget extends BaseLatexWidget {
     return { from: pairs[0].from, to: pairs[0].to };
   }
 
-  private findMatchingEnd(latex: string, startPos: number, envName: string): number {
-    const beginPattern = `\\begin{${envName}}`;
-    const endPattern = `\\end{${envName}}`;
-    let pos = startPos + beginPattern.length;
-    let depth = 1;
-    let iterations = 0;
-    const maxIterations = 1000;
-    while (pos < latex.length && depth > 0 && iterations < maxIterations) {
-      iterations++;
-      const nextBegin = latex.indexOf(beginPattern, pos);
-      const nextEnd = latex.indexOf(endPattern, pos);
-      if (nextEnd === -1) {
-        return -1;
-      }
-      if (nextBegin !== -1 && nextBegin < nextEnd) {
-        depth++;
-        pos = nextBegin + beginPattern.length;
-      } else {
-        depth--;
-        if (depth === 0) {
-          return nextEnd;
-        }
-        pos = nextEnd + endPattern.length;
-      }
-    }
-    return -1;
-  }
-
   private updateVisualElements(header: HTMLElement, wrapper: HTMLElement, newName: string, newContent: string, view: EditorView) {
     header.textContent = newName.charAt(0).toUpperCase() + newName.slice(1);
     wrapper.className = `latex-visual-environment latex-env-${newName}`;
@@ -519,10 +491,32 @@ export class EnvironmentWidget extends BaseLatexWidget {
   }
 
   private updateEnvironmentContent(view: EditorView, newContent: string) {
+    if (this.isEditing) return;
+    
     if (newContent !== this.currentContent) {
-      this.updateEnvironment(view, this.currentEnvName, newContent);
+      if (this.updateTimeout) {
+        clearTimeout(this.updateTimeout);
+      }
+      
+      this.updateTimeout = setTimeout(() => {
+        // Store the old content temporarily
+        const oldContent = this.currentContent;
+        
+        this.currentContent = newContent;
+        
+        const normalizedOld = oldContent.replace(/\s+/g, ' ').trim();
+        const normalizedNew = newContent.replace(/\s+/g, ' ').trim();
+        
+        if (normalizedOld !== normalizedNew) {
+          this.updateEnvironment(view, this.currentEnvName, newContent);
+        }
+        
+        this.updateTimeout = null;
+      }, 150);
     }
   }
+
+  private updateTimeout: number | null = null;
 
   private finishEditing(editContainer: HTMLElement, header: HTMLElement) {
     this.isEditing = false;

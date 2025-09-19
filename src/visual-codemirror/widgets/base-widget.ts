@@ -1,3 +1,4 @@
+// src/visual-codemirror/widgets/base-widget.ts
 import { WidgetType, EditorView } from '@codemirror/view';
 import { LatexToken } from '../../parsers/base-parser';
 

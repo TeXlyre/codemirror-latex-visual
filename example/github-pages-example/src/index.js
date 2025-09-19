@@ -326,28 +326,33 @@ function updateThemeControls() {
 
 function createMathHoverControlPanel() {
   const controlPanel = document.createElement('div');
-  controlPanel.id = 'math-hover-controls';
-  controlPanel.className = 'math-hover-controls';
+  controlPanel.id = 'editor-controls';
+  controlPanel.className = 'editor-controls';
   controlPanel.innerHTML = `
     <div class="control-section">
-      <h3>Math Hover Controls</h3>
+      <h3>Editor Controls</h3>
       <div class="control-group">
-        <button id="toggle-math-hover-btn" class="control-btn">Toggle Math Hover</button>
-        <span id="math-hover-status" class="status-indicator">Status: Enabled</span>
-      </div>
-      <div class="control-group">
-        <button id="switch-to-source-btn" class="control-btn">Switch to Source</button>
-        <button id="switch-to-visual-btn" class="control-btn">Switch to Visual</button>
+        <button id="switch-to-source-btn" class="control-btn">Source Mode</button>
+        <button id="switch-to-visual-btn" class="control-btn">Visual Mode</button>
         <span id="current-mode-indicator" class="status-indicator">Mode: Source</span>
       </div>
+      <div class="control-group">
+        <button id="toggle-math-hover-btn" class="control-btn">Toggle Math Hover</button>
+        <span id="math-hover-status" class="status-indicator">Math Hover: Enabled</span>
+      </div>
       <div class="control-info">
-        <p><strong>How to use Math Hover:</strong></p>
+        <p><strong>Visual Mode Features:</strong></p>
         <ul>
-          <li>Switch to <strong>Source</strong> mode</li>
-          <li>Hover over any <code>$...$</code> or <code>$$...$$</code> expression</li>
-          <li>Wait 300ms for preview to appear</li>
-          <li>Click preview to edit with MathLive</li>
-          <li>Use <kbd>Ctrl+Shift+M</kbd> to toggle math hover</li>
+          <li>Sections and environments become interactive widgets</li>
+          <li>Math expressions render with click-to-edit functionality</li>
+          <li>Commands can be hidden for cleaner editing experience</li>
+          <li>All changes directly update the source document</li>
+        </ul>
+        <p><strong>Source Mode Features:</strong></p>
+        <ul>
+          <li>Full LaTeX source code visibility</li>
+          <li>Math hover preview on expressions</li>
+          <li>Traditional text editing experience</li>
         </ul>
       </div>
     </div>
@@ -358,34 +363,26 @@ function createMathHoverControlPanel() {
 }
 
 function setupControlEventListeners() {
-  document.getElementById('toggle-math-hover-btn').addEventListener('click', () => {
-    if (dualEditor) {
-      dualEditor.toggleMathHover();
-      updateMathHoverStatus();
-    }
-  });
-
   document.getElementById('switch-to-source-btn').addEventListener('click', () => {
     if (dualEditor) {
       dualEditor.setMode('source');
+      showNotification('Switched to source mode - traditional LaTeX editing');
     }
   });
 
   document.getElementById('switch-to-visual-btn').addEventListener('click', () => {
     if (dualEditor) {
       dualEditor.setMode('visual');
+      showNotification('Switched to visual mode - interactive LaTeX editing');
     }
   });
 
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M') {
-      showNotification('Math hover toggled via keyboard shortcut!');
-    }
-    
-    if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-      setTimeout(() => {
-        updateMathHoverStatus();
-      }, 100);
+  document.getElementById('toggle-math-hover-btn').addEventListener('click', () => {
+    if (dualEditor) {
+      dualEditor.toggleMathHover();
+      updateMathHoverStatus();
+      const status = dualEditor.isMathHoverEnabled() ? 'enabled' : 'disabled';
+      showNotification(`Math hover ${status} (source mode only)`);
     }
   });
 }

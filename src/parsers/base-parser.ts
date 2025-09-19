@@ -1,4 +1,4 @@
-// src/parsers/base-parser.ts (Updated for Phase 2)
+// src/parsers/base-parser.ts
 import { errorService, ErrorCategory, ErrorSeverity } from '../core/error-service';
 
 export interface LatexToken {
@@ -7,6 +7,7 @@ export interface LatexToken {
   latex: string;
   start: number;
   end: number;
+  id?: string; // Add unique identifier for tracking
   level?: number;
   name?: string;
   params?: string;

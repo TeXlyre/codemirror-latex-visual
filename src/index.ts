@@ -14,7 +14,7 @@ export { VisualCodeMirrorEditor } from './visual-codemirror/visual-editor';
 export { OverlayManager } from './visual-codemirror/overlay-manager';
 export { WidgetFactory } from './visual-codemirror/widget-factory';
 export { NestedContentRenderer } from './visual-codemirror/nested-content-renderer';
-export { Toolbar } from './visual-toolbar';
+export { Toolbar } from './toolbar';
 
 // Math hover widget
 export { MathHoverManager, createMathHoverExtension } from './visual-codemirror/widgets/math-hover-widget';
@@ -85,4 +85,4 @@ export type {
 
 export type {
   ToolbarOptions
-} from './visual-toolbar';
+} from './toolbar';
